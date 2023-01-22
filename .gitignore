@@ -5,3 +5,5 @@ output/*
 
 py310
 git
+
+train/*
