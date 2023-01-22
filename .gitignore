@@ -2,3 +2,6 @@ venv
 
 output/*
 !output/.keep
+
+py310
+git
