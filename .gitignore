@@ -1,0 +1,4 @@
+venv
+
+output/*
+!output/.keep
