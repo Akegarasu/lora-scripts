@@ -10,9 +10,9 @@ $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支�
 $batch_size = 1 # batch size
 $max_train_epoches = 10 # max train epoches | 最大训练 epoch
 $save_every_n_epochs = 2 # save every n epochs | 每 N 个 epoch 保存一次
-$network_dim = 32 # network dim
-$clip_skip = 2
-$train_unet_only = 0 # train U-Net only | 仅训练 U-Net
+$network_dim = 32 # network dim | 常用 4~128，不是越大越好
+$clip_skip = 2 # clip skip | 玄学 一般用 2
+$train_unet_only = 0 # train U-Net only | 仅训练 U-Net，开启这个会牺牲效果大幅减少显存使用。6G显存可以开启
 $train_text_encoder_only = 0 # train Text Encoder only | 仅训练 文本编码器
 
 # Learning rate | 学习率
@@ -23,7 +23,7 @@ $lr_scheduler = "cosine_with_restarts" # "linear", "cosine", "cosine_with_restar
 
 # Output settings | 输出设置
 $output_name = "aki" # output model name | 模型保存名称
-$save_model_as = "safetensors" # model save ext | 模型保存格式
+$save_model_as = "safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
 # Activate python venv
 .\venv\Scripts\activate
