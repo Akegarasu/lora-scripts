@@ -10,5 +10,9 @@ py310
 git
 
 train/*
+logs/*
 sd-models/*
 !sd-models/put stable diffusion model here.txt
+!logs/.keep
+
+huggingface/hub/models--openai--clip-vit-large-patch14
