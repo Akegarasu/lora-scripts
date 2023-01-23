@@ -16,3 +16,6 @@ Write-Output "Installing bitsandbytes for windows..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
+
+Write-Output "Install completed"
+Read-Host | Out-Null ;
