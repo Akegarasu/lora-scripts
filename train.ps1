@@ -2,7 +2,6 @@
 
 # Train data path | 设置训练用模型、图片
 $pretrained_model = "./sd-models/model.ckpt" # base model path | 底模路径
-$vae = "./sd-models/animevae.pt" # vae path | vae 路径
 $train_data_dir = "./train/aki" # train dataset path | 训练数据集路径
 
 # Train related params | 训练相关参数
@@ -43,7 +42,6 @@ if ($train_text_encoder_only) {
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
   --pretrained_model_name_or_path=$pretrained_model `
-  --vae=$vae `
   --train_data_dir=$train_data_dir `
   --output_dir="./output" `
   --logging_dir="./logs" `
@@ -69,4 +67,5 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --save_model_as=$save_model_as `
   --xformers --shuffle_caption --use_8bit_adam $ext_args
 
+Write-Output "Train finished"
 Read-Host | Out-Null ;
