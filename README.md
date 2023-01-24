@@ -7,9 +7,7 @@ LoRA training scripts for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-s
 ### Clone repo
 
 ```sh
-git clone https://github.com/Akegarasu/lora-scripts
-git submodule init
-git submodule update
+git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 ```
 
 ### Windows 
