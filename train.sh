@@ -20,6 +20,7 @@ lr="1e-4"
 unet_lr="1e-4"
 text_encoder_lr="1e-5"
 lr_scheduler="cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"
+lr_warmup_steps=0 # warmup steps | 仅在 lr_scheduler 为 constant_with_warmup 时需要填写这个值
 
 # Output settings | 输出设置
 output_name="aki" # output model name | 模型保存名称
@@ -29,6 +30,17 @@ save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safe
 
 export HF_HOME="huggingface"
 export TF_CPP_MIN_LOG_LEVEL=3
+
+extArgs=()
+
+if [ $train_unet_only == 1 ]; then extArgs+=("--network_train_unet_only"); fi
+
+if [ $train_text_encoder_only == 1 ]; then extArgs+=("--network_train_text_encoder_only"); fi
+
+if [ $lr_scheduler == "constant_with_warmup" ]; then
+     warm_steps="--lr_warmup_steps $lr_warmup_steps"
+     extArgs+=($warm_steps)
+fi
 
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
@@ -57,4 +69,4 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --max_token_length=225 \
   --caption_extension=".txt" \
   --save_model_as=$save_model_as \
-  --xformers --shuffle_caption --use_8bit_adam
+  --xformers --shuffle_caption --use_8bit_adam ${extArgs[@]}
