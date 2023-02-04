@@ -47,10 +47,6 @@ if ($train_text_encoder_only) {
   [void]$ext_args.Add("--network_train_text_encoder_only")
 }
 
-if ($lr_warmup_steps) {
-  [void]$ext_args.Add("--lr_warmup_steps=" + $lr_warmup_steps)
-}
-
 if ($network_weights) {
   [void]$ext_args.Add("--network_weights=" + $network_weights)
 }
@@ -68,10 +64,11 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --learning_rate=$lr `
   --unet_lr=$unet_lr `
   --text_encoder_lr=$text_encoder_lr `
+  --lr_scheduler=$lr_scheduler `
+  --lr_warmup_steps=$lr_warmup_steps `
   --network_dim=$network_dim `
   --network_alpha=$network_alpha `
   --output_name=$output_name `
-  --lr_scheduler=$lr_scheduler `
   --train_batch_size=$batch_size `
   --save_every_n_epochs=$save_every_n_epochs `
   --mixed_precision="fp16" `

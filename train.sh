@@ -26,8 +26,13 @@ lr_warmup_steps=0 # warmup steps | 仅在 lr_scheduler 为 constant_with_warmup 
 output_name="aki" # output model name | 模型保存名称
 save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
+# 其他设置
+network_weights="" # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
+min_bucket_reso="256" # arb min resolution | arb 最小分辨率
+max_bucket_reso="1024" # arb max resolution | arb 最大分辨率
 
 
+# ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 export HF_HOME="huggingface"
 export TF_CPP_MIN_LOG_LEVEL=3
 
@@ -37,10 +42,7 @@ if [ $train_unet_only == 1 ]; then extArgs+=("--network_train_unet_only"); fi
 
 if [ $train_text_encoder_only == 1 ]; then extArgs+=("--network_train_text_encoder_only"); fi
 
-if [ $lr_scheduler == "constant_with_warmup" ]; then
-     warm_steps="--lr_warmup_steps $lr_warmup_steps"
-     extArgs+=($warm_steps)
-fi
+if [ $network_weights ]; then extArgs+=("--network_weights $network_weights"); fi
 
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
@@ -54,10 +56,11 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --learning_rate=$lr \
   --unet_lr=$unet_lr \
   --text_encoder_lr=$text_encoder_lr \
+  --lr_scheduler=$lr_scheduler \
+  --lr_warmup_steps=$lr_warmup_steps \
   --network_dim=$network_dim \
   --network_alpha=$network_alpha \
   --output_name=$output_name \
-  --lr_scheduler=$lr_scheduler \
   --train_batch_size=$batch_size \
   --save_every_n_epochs=$save_every_n_epochs \
   --mixed_precision="fp16" \
@@ -69,4 +72,6 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --max_token_length=225 \
   --caption_extension=".txt" \
   --save_model_as=$save_model_as \
+  --min_bucket_reso=$min_bucket_reso \
+  --max_bucket_reso=$max_bucket_reso \
   --xformers --shuffle_caption --use_8bit_adam ${extArgs[@]}
