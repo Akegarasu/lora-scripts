@@ -15,4 +15,6 @@ sd-models/*
 !sd-models/put stable diffusion model here.txt
 !logs/.keep
 
+tests/
+
 huggingface/hub/models--openai--clip-vit-large-patch14

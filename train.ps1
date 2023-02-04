@@ -20,11 +20,19 @@ $lr = "1e-4"
 $unet_lr = "1e-4"
 $text_encoder_lr = "1e-5"
 $lr_scheduler = "cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"
+$lr_warmup_steps = 0 # warmup steps | 仅在 lr_scheduler 为 constant_with_warmup 时需要填写这个值
 
 # Output settings | 输出设置
 $output_name = "aki" # output model name | 模型保存名称
 $save_model_as = "safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
+# 其他设置
+$network_weights = "" # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
+$min_bucket_reso = "256" # arb min resolution | arb 最小分辨率
+$max_bucket_reso = "1024" # arb max resolution | arb 最大分辨率
+
+
+# ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 # Activate python venv
 .\venv\Scripts\activate
 
@@ -37,6 +45,14 @@ if ($train_unet_only) {
 
 if ($train_text_encoder_only) {
   [void]$ext_args.Add("--network_train_text_encoder_only")
+}
+
+if ($lr_warmup_steps) {
+  [void]$ext_args.Add("--lr_warmup_steps=" + $lr_warmup_steps)
+}
+
+if ($network_weights) {
+  [void]$ext_args.Add("--network_weights=" + $network_weights)
 }
 
 # run train
@@ -67,6 +83,8 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --max_token_length=225 `
   --caption_extension=".txt" `
   --save_model_as=$save_model_as `
+  --min_bucket_reso=$min_bucket_reso `
+  --max_bucket_reso=$max_bucket_reso `
   --xformers --shuffle_caption --use_8bit_adam $ext_args
 
 Write-Output "Train finished"
