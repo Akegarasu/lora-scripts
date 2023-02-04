@@ -28,8 +28,8 @@ save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safe
 
 # 其他设置
 network_weights="" # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
-min_bucket_reso="256" # arb min resolution | arb 最小分辨率
-max_bucket_reso="1024" # arb max resolution | arb 最大分辨率
+min_bucket_reso=256 # arb min resolution | arb 最小分辨率
+max_bucket_reso=1024 # arb max resolution | arb 最大分辨率
 
 
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
