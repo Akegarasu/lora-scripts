@@ -1,4 +1,5 @@
 $Env:HF_HOME = "huggingface"
+$Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
 function InstallFail {
     Write-Output "°²×°Ê§°Ü¡£"
     Read-Host | Out-Null ;
