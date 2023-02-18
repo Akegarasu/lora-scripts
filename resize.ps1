@@ -1,11 +1,11 @@
 # LoRA resize script by @bdsqlsz
 
-$save_precision = "bf16" # precision in saving, default float | 保存精度,可选float、fp16、bf16,不选默认float
-$new_rank = 4 # dim rank of output LoRA | dim rank等级,默认4
-$model = "./output/aruru_otsuki(starlight).safetensors" #original Lora model need to resize,save as cpkt or safetensors| 需要压缩的模型地址,保存格式cpkt或safetensors
-$save_to = "./output/aruru_otsuki(starlight)_s.safetensors" # output Lora model,save as ckpt or safetensors  |输出地址,保存格式cpkt或safetensors
-$device = "cuda" #device to use, cuda for GPU | 使用cuda GPU跑,不选默认CPU
-$verbose = 1 #Display verbose resizing information | rank变更时,显示详细信息
+$save_precision = "fp16" # precision in saving, default float | 保存精度, 可选 float、fp16、bf16, 默认 float
+$new_rank = 4 # dim rank of output LoRA | dim rank等级, 默认 4
+$model = "./output/lora_name.safetensors" # original LoRA model path need to resize, save as cpkt or safetensors | 需要调整大小的模型路径, 保存格式 cpkt 或 safetensors
+$save_to = "./output/lora_name_new.safetensors" # output LoRA model path, save as ckpt or safetensors | 输出路径, 保存格式 cpkt 或 safetensors
+$device = "cuda" # device to use, cuda for GPU | 使用 GPU跑, 默认 CPU
+$verbose = 1 # display verbose resizing information | rank变更时, 显示详细信息
 
 
 # Activate python venv
