@@ -34,6 +34,8 @@ pip install --upgrade -r requirements.txt -i https://mirrors.bfsu.edu.cn/pypi/we
 Check "其他依赖安装失败。"
 pip install -U -I --no-deps https://jihulab.com/api/v4/projects/82097/packages/pypi/files/e8508fe14c8f2552a822f5e6f5620b24fdd4ba3129c2a31a39b56425bcc023bc/xformers-0.0.14.dev0+torch12-cp310-cp310-win_amd64.whl
 Check "xformers 安装失败。"
+pip install --upgrade -r lion-pytorch -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+Check "Lion 优化器安装失败。"
 
 Write-Output "安装 bitsandbytes..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
