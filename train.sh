@@ -49,11 +49,11 @@ if [ $train_text_encoder_only == 1 ]; then extArgs+=("--network_train_text_encod
 
 if [ $network_weights ]; then extArgs+=("--network_weights $network_weights"); fi
 
-if [ $use_8bit_adam ]; then extArgs+=("--use_8bit_adam"); fi
+if [ $use_8bit_adam == 1 ]; then extArgs+=("--use_8bit_adam"); fi
 
-if [ $use_lion ]; then extArgs+=("--use_lion_optimizer"); fi
+if [ $use_lion == 1 ]; then extArgs+=("--use_lion_optimizer"); fi
 
-if [ $persistent_data_loader_workers ]; then extArgs+=("--persistent_data_loader_workers"); fi
+if [ $persistent_data_loader_workers == 1 ]; then extArgs+=("--persistent_data_loader_workers"); fi
 
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
