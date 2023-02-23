@@ -30,7 +30,7 @@ save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safe
 network_weights="" # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
 min_bucket_reso=256 # arb min resolution | arb 最小分辨率
 max_bucket_reso=1024 # arb max resolution | arb 最大分辨率
-persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆显存，保留加载训练集的worker，减少每个 epoch 之间的停顿
+persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆内存，保留加载训练集的worker，减少每个 epoch 之间的停顿
 
 # 优化器设置
 use_8bit_adam=1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
