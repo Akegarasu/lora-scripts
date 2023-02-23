@@ -4,20 +4,17 @@ LoRA training scripts for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-s
 
 ## Usage
 
-### Clone repo
+### Clone repo with submodules
 
 ```sh
 git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 ```
 
+### Required Dependencies
+
+Python 3.10.8 and Git
+
 ### Windows
-
-#### Required Dependencies
-
-Python 3.10.8 and Git:
-
-- Python 3.10.8: https://www.python.org/ftp/python/3.10.8/python-3.10.8-amd64.exe
-- git: https://git-scm.com/download/win
 
 #### Installation
 
@@ -29,20 +26,13 @@ Edit `train.ps1`, and run it.
 
 ### Linux
 
-#### Required Dependencies
-
-Python 3.10.8 and Git:
-
-- Python 3.10.8
-- git
-
 #### Installation
 
-Run `install.bash` will automaticilly create a venv for you and install necessary deps.
+Run `install.bash` will create a venv and install necessary deps.
 
 #### Train
 
-Training script `train.sh` will not activate venv for you. You should activate venv first.
+Training script `train.sh` **will not** activate venv for you. You should activate venv first.
 
 ```sh
 source venv/bin/activate
