@@ -30,6 +30,11 @@ save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safe
 network_weights="" # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
 min_bucket_reso=256 # arb min resolution | arb 最小分辨率
 max_bucket_reso=1024 # arb max resolution | arb 最大分辨率
+persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆显存，保留加载训练集的worker，减少每个 epoch 之间的停顿
+
+# 优化器设置
+use_8bit_adam=1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
+use_lion=0 # use lion optimizer | 使用 Lion 优化器
 
 
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
@@ -43,6 +48,12 @@ if [ $train_unet_only == 1 ]; then extArgs+=("--network_train_unet_only"); fi
 if [ $train_text_encoder_only == 1 ]; then extArgs+=("--network_train_text_encoder_only"); fi
 
 if [ $network_weights ]; then extArgs+=("--network_weights $network_weights"); fi
+
+if [ $use_8bit_adam ]; then extArgs+=("--use_8bit_adam"); fi
+
+if [ $use_lion ]; then extArgs+=("--use_lion_optimizer"); fi
+
+if [ $persistent_data_loader_workers ]; then extArgs+=("--persistent_data_loader_workers"); fi
 
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
@@ -74,4 +85,4 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --save_model_as=$save_model_as \
   --min_bucket_reso=$min_bucket_reso \
   --max_bucket_reso=$max_bucket_reso \
-  --xformers --shuffle_caption --use_8bit_adam ${extArgs[@]}
+  --xformers --shuffle_caption ${extArgs[@]}
