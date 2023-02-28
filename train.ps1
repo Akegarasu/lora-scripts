@@ -58,7 +58,7 @@ if ($network_weights) {
 }
 
 if ($reg_data_dir) {
-  [void]$ext_args.Add("--reg_data_dir=" + $network_weights)
+  [void]$ext_args.Add("--reg_data_dir=" + $reg_data_dir)
 }
 
 if ($use_8bit_adam) {

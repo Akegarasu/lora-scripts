@@ -50,7 +50,7 @@ if [ $train_text_encoder_only == 1 ]; then extArgs+=("--network_train_text_encod
 
 if [ $network_weights ]; then extArgs+=("--network_weights $network_weights"); fi
 
-if [ $reg_data_dir ]; then extArgs+=("--reg_data_dir $network_weights"); fi
+if [ $reg_data_dir ]; then extArgs+=("--reg_data_dir $reg_data_dir"); fi
 
 if [ $use_8bit_adam == 1 ]; then extArgs+=("--use_8bit_adam"); fi
 
