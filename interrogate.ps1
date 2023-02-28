@@ -1,5 +1,4 @@
 # LoRA interrogate script by @bdsqlsz
-# 关键字搜索
 
 $v2 = 0 # load Stable Diffusion v2.x model / Stable Diffusion 2.x模型读取
 $sd_model = "./output/sd_model.safetensors" # Stable Diffusion model to load: ckpt or safetensors file | 读取的基础SD模型, 保存格式 cpkt 或 safetensors
@@ -18,7 +17,7 @@ if ($v2) {
   [void]$ext_args.Add("--v2")
 }
 
-# run resize
+# run interrogate
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/networks/lora_interrogator.py" `
 	--sd_model=$sd_model `
 	--model=$model `
@@ -26,5 +25,5 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/networks/lora_in
 	--clip_skip=$clip_skip `
 	$ext_args 
 
-Write-Output "Resize finished"
+Write-Output "Interrogate finished"
 Read-Host | Out-Null ;
