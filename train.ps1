@@ -3,6 +3,7 @@
 # Train data path | 设置训练用模型、图片
 $pretrained_model = "./sd-models/model.ckpt" # base model path | 底模路径
 $train_data_dir = "./train/aki" # train dataset path | 训练数据集路径
+$reg_data_dir = "" # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
 # Train related params | 训练相关参数
 $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
@@ -54,6 +55,10 @@ if ($train_text_encoder_only) {
 
 if ($network_weights) {
   [void]$ext_args.Add("--network_weights=" + $network_weights)
+}
+
+if ($reg_data_dir) {
+  [void]$ext_args.Add("--reg_data_dir=" + $network_weights)
 }
 
 if ($use_8bit_adam) {
