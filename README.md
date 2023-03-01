@@ -39,3 +39,9 @@ source venv/bin/activate
 ```
 
 Edit `train.sh`, and run it.
+
+#### TensorBoard
+
+Run `tensorboard.ps1` will start TensorBoard at http://localhost:6006/
+
+![](./assets/tensorboard-example.png)
