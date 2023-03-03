@@ -36,6 +36,9 @@ pip install -U -I --no-deps https://jihulab.com/api/v4/projects/82097/packages/p
 Check "xformers 安装失败。"
 pip install --upgrade lion-pytorch -i https://mirrors.bfsu.edu.cn/pypi/web/simple
 Check "Lion 优化器安装失败。"
+pip install --upgrade locon -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+Check "locon 安装失败。"
+
 
 Write-Output "安装 bitsandbytes..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\

@@ -38,12 +38,17 @@ $persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆�
 $use_8bit_adam = 1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
 $use_lion = 0 # use lion optimizer | 使用 Lion 优化器
 
+# LoCon 训练设置
+$enable_locon_train = 0 # enable LoCon train | 启用 LoCon 训练 启用后 network_dim 和 network_alpha 应当选择较小的值，比如 2~16
+$conv_dim = 4 # conv dim | 类似于 network_dim，推荐为 4
+$conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
 
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 # Activate python venv
 .\venv\Scripts\activate
 
 $Env:HF_HOME = "huggingface"
+$network_module = "networks.lora"
 $ext_args = [System.Collections.ArrayList]::new()
 
 if ($train_unet_only) {
@@ -74,6 +79,13 @@ if ($persistent_data_loader_workers) {
   [void]$ext_args.Add("--persistent_data_loader_workers")
 }
 
+if ($enable_locon_train) {
+  $network_module = "locon.locon_kohya"
+  [void]$ext_args.Add("--network_args")
+  [void]$ext_args.Add("conv_dim=$conv_dim")
+  [void]$ext_args.Add("conv_alpha=$conv_alpha")
+}
+
 # run train
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
@@ -82,7 +94,7 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --output_dir="./output" `
   --logging_dir="./logs" `
   --resolution=$resolution `
-  --network_module=networks.lora `
+  --network_module=$network_module `
   --max_train_epochs=$max_train_epoches `
   --learning_rate=$lr `
   --unet_lr=$unet_lr `

@@ -1,4 +1,4 @@
-$Env:HF_HOME="huggingface"
+$Env:HF_HOME = "huggingface"
 
 if (!(Test-Path -Path "venv")) {
     Write-Output  "Creating venv for python..."
@@ -16,6 +16,8 @@ Write-Output "Installing bitsandbytes for windows..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
+
+pip install --upgrade lion-pytorch locon
 
 Write-Output "Install completed"
 Read-Host | Out-Null ;
