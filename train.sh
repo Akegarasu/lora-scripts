@@ -15,6 +15,7 @@ network_alpha=32          # network alpha | 常用与 network_dim 相同的值�
 clip_skip=2               # clip skip | 玄学 一般用 2
 train_unet_only=0         # train U-Net only | 仅训练 U-Net，开启这个会牺牲效果大幅减少显存使用。6G显存可以开启
 train_text_encoder_only=0 # train Text Encoder only | 仅训练 文本编码器
+keep_tokens=0             # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
 
 # Learning rate | 学习率
 lr="1e-4"
@@ -100,4 +101,5 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --save_model_as=$save_model_as \
   --min_bucket_reso=$min_bucket_reso \
   --max_bucket_reso=$max_bucket_reso \
+  --keep_tokens=$keep_tokens \
   --xformers --shuffle_caption ${extArgs[@]}
