@@ -34,6 +34,7 @@ $network_weights = "" # pretrained weights for LoRA network | 若需要从已有
 $min_bucket_reso = 256 # arb min resolution | arb 最小分辨率
 $max_bucket_reso = 1024 # arb max resolution | arb 最大分辨率
 $persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆内存，保留加载训练集的worker，减少每个 epoch 之间的停顿
+$noise_offset = 0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，推荐参数为0.1
 
 # 优化器设置
 $use_8bit_adam = 1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
@@ -87,6 +88,10 @@ if ($enable_locon_train) {
   [void]$ext_args.Add("conv_alpha=$conv_alpha")
 }
 
+if ($noise_offset){
+  [void]$ext_args.Add("--noise_offset=$noise_offset")
+}
+
 # run train
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
@@ -121,6 +126,5 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --max_bucket_reso=$max_bucket_reso `
   --keep_tokens=$keep_tokens `
   --xformers --shuffle_caption $ext_args
-
 Write-Output "Train finished"
 Read-Host | Out-Null ;
