@@ -10,11 +10,14 @@ $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支�
 $batch_size = 1 # batch size
 $max_train_epoches = 10 # max train epoches | 最大训练 epoch
 $save_every_n_epochs = 2 # save every n epochs | 每 N 个 epoch 保存一次
+
 $network_dim = 32 # network dim | 常用 4~128，不是越大越好
 $network_alpha = 32 # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
-$clip_skip = 2 # clip skip | 玄学 一般用 2
+
 $train_unet_only = 0 # train U-Net only | 仅训练 U-Net，开启这个会牺牲效果大幅减少显存使用。6G显存可以开启
 $train_text_encoder_only = 0 # train Text Encoder only | 仅训练 文本编码器
+
+$noise_offset = 0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用，推荐参数为 0.1
 $keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
 
 # Learning rate | 学习率
@@ -34,7 +37,7 @@ $network_weights = "" # pretrained weights for LoRA network | 若需要从已有
 $min_bucket_reso = 256 # arb min resolution | arb 最小分辨率
 $max_bucket_reso = 1024 # arb max resolution | arb 最大分辨率
 $persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆内存，保留加载训练集的worker，减少每个 epoch 之间的停顿
-$noise_offset = 0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，推荐参数为0.1
+$clip_skip = 2 # clip skip | 玄学 一般用 2
 
 # 优化器设置
 $use_8bit_adam = 1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
@@ -88,7 +91,7 @@ if ($enable_locon_train) {
   [void]$ext_args.Add("conv_alpha=$conv_alpha")
 }
 
-if ($noise_offset){
+if ($noise_offset) {
   [void]$ext_args.Add("--noise_offset=$noise_offset")
 }
 
