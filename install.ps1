@@ -17,7 +17,7 @@ cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
 
-pip install --upgrade lion-pytorch locon
+pip install --upgrade lion-pytorch lycoris-lora
 
 Write-Output "Install completed"
 Read-Host | Out-Null ;
