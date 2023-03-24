@@ -6,8 +6,8 @@ train_data_dir="./train/aki"              # train dataset path | 训练数据集
 reg_data_dir=""                           # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
 # Network settings | 网络设置
-$network_module="networks.lora" # 在这里将会设置训练的网络种类，默认为 networks.lora 也就是 LoRA 训练。如果你想训练 LyCORIS（LoCon、LoHa） 等，则修改这个值为 lycoris.kohya
-$network_weights=""             # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
+network_module="networks.lora" # 在这里将会设置训练的网络种类，默认为 networks.lora 也就是 LoRA 训练。如果你想训练 LyCORIS（LoCon、LoHa） 等，则修改这个值为 lycoris.kohya
+network_weights=""             # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
 network_dim=32                  # network dim | 常用 4~128，不是越大越好
 network_alpha=32                # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
 
@@ -36,7 +36,6 @@ output_name="aki"           # output model name | 模型保存名称
 save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
 # 其他设置
-network_weights=""               # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
 min_bucket_reso=256              # arb min resolution | arb 最小分辨率
 max_bucket_reso=1024             # arb max resolution | arb 最大分辨率
 persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆内存，保留加载训练集的worker，减少每个 epoch 之间的停顿
