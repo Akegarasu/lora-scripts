@@ -84,7 +84,7 @@ if ($persistent_data_loader_workers) {
   [void]$ext_args.Add("--persistent_data_loader_workers")
 }
 
-if ($network_module == "lycoris.kohya") {
+if ($network_module -eq "lycoris.kohya") {
   [void]$ext_args.Add("--network_args")
   [void]$ext_args.Add("conv_dim=$conv_dim")
   [void]$ext_args.Add("conv_alpha=$conv_alpha")
