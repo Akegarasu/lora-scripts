@@ -46,6 +46,7 @@ $use_8bit_adam = 1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省�
 $use_lion = 0 # use lion optimizer | 使用 Lion 优化器
 
 # LyCORIS 训练设置
+$algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha。lora即为locon
 $conv_dim = 4 # conv dim | 类似于 network_dim，推荐为 4
 $conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
 
@@ -88,6 +89,7 @@ if ($network_module -eq "lycoris.kohya") {
   [void]$ext_args.Add("--network_args")
   [void]$ext_args.Add("conv_dim=$conv_dim")
   [void]$ext_args.Add("conv_alpha=$conv_alpha")
+  [void]$ext_args.Add("algo=$algo")
 }
 
 if ($noise_offset) {
