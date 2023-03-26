@@ -7,6 +7,6 @@ pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url http
 pip install --upgrade -r requirements.txt
 pip install git+https://github.com/facebookresearch/xformers.git@0bad001ddd56c080524d37c84ff58d9cd030ebfd
 pip install triton==2.0.0.dev20221202
-pip install --upgrade lion-pytorch locon
+pip install --upgrade lion-pytorch lycoris-lora
 
 echo "Install completed"
