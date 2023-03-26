@@ -2,7 +2,7 @@ $Env:HF_HOME = "huggingface"
 $Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
 $Env:PIP_NO_CACHE_DIR = 1
 function InstallFail {
-    Write-Output "°²×°Ê§°Ü¡£"
+    Write-Output "å®‰è£…å¤±è´¥ã€‚"
     Read-Host | Out-Null ;
     Exit
 }
@@ -18,32 +18,32 @@ function Check {
 }
 
 if (!(Test-Path -Path "venv")) {
-    Write-Output "ÕıÔÚ´´½¨ĞéÄâ»·¾³..."
+    Write-Output "æ­£åœ¨åˆ›å»ºè™šæ‹Ÿç¯å¢ƒ..."
     python -m venv venv
-    Check "´´½¨ĞéÄâ»·¾³Ê§°Ü£¬Çë¼ì²é python ÊÇ·ñ°²×°Íê±ÏÒÔ¼° python °æ±¾¡£"
+    Check "åˆ›å»ºè™šæ‹Ÿç¯å¢ƒå¤±è´¥ï¼Œè¯·æ£€æŸ¥ python æ˜¯å¦å®‰è£…å®Œæ¯•ä»¥åŠ python ç‰ˆæœ¬ã€‚"
 }
 
 .\venv\Scripts\activate
-Check "¼¤»îĞéÄâ»·¾³Ê§°Ü¡£"
+Check "æ¿€æ´»è™šæ‹Ÿç¯å¢ƒå¤±è´¥ã€‚"
 
-Write-Output "°²×°³ÌĞòËùĞèÒÀÀµ (ÒÑ½øĞĞ¹úÄÚ¼ÓËÙ£¬ÈôÎŞ·¨Ê¹ÓÃ¼ÓËÙÔ´ÇëÓÃ install.ps1)..."
+Write-Output "å®‰è£…ç¨‹åºæ‰€éœ€ä¾èµ– (å·²è¿›è¡Œå›½å†…åŠ é€Ÿï¼Œè‹¥æ— æ³•ä½¿ç”¨åŠ é€Ÿæºè¯·ç”¨ install.ps1)..."
 Set-Location .\sd-scripts
-pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "torch °²×°Ê§°Ü£¬ÇëÉ¾³ı venv ÎÄ¼ş¼ĞºóÖØĞÂÔËĞĞ¡£"
+pip install torch==2.0.0+cu118 torchvision==0.15.1+cu116 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+Check "torch å®‰è£…å¤±è´¥ï¼Œè¯·åˆ é™¤ venv æ–‡ä»¶å¤¹åé‡æ–°è¿è¡Œã€‚"
 pip install --upgrade -r requirements.txt -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "ÆäËûÒÀÀµ°²×°Ê§°Ü¡£"
-pip install -U -I --no-deps https://jihulab.com/api/v4/projects/82097/packages/pypi/files/e8508fe14c8f2552a822f5e6f5620b24fdd4ba3129c2a31a39b56425bcc023bc/xformers-0.0.14.dev0+torch12-cp310-cp310-win_amd64.whl
-Check "xformers °²×°Ê§°Ü¡£"
+Check "å…¶ä»–ä¾èµ–å®‰è£…å¤±è´¥ã€‚"
+pip install -U -I --no-deps xformers==0.0.17rc482 -i https://mirrors.aliyun.com/pypi/simple/
+Check "xformers å®‰è£…å¤±è´¥ã€‚"
 pip install --upgrade lion-pytorch -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "Lion ÓÅ»¯Æ÷°²×°Ê§°Ü¡£"
+Check "Lion ä¼˜åŒ–å™¨å®‰è£…å¤±è´¥ã€‚"
 pip install --upgrade lycoris-lora -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "lycoris °²×°Ê§°Ü¡£"
+Check "lycoris å®‰è£…å¤±è´¥ã€‚"
 
 
-Write-Output "°²×° bitsandbytes..."
+Write-Output "å®‰è£… bitsandbytes..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
 
-Write-Output "°²×°Íê±Ï¡£"
+Write-Output "å®‰è£…å®Œæ¯•ã€‚"
 Read-Host | Out-Null ;
