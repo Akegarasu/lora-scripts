@@ -2,7 +2,7 @@ $Env:HF_HOME = "huggingface"
 $Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
 $Env:PIP_NO_CACHE_DIR = 1
 function InstallFail {
-    Write-Output "å®‰è£…å¤±è´¥ã€‚"
+    Write-Output "°²×°Ê§°Ü¡£"
     Read-Host | Out-Null ;
     Exit
 }
@@ -18,32 +18,32 @@ function Check {
 }
 
 if (!(Test-Path -Path "venv")) {
-    Write-Output "æ­£åœ¨åˆ›å»ºè™šæ‹Ÿç¯å¢ƒ..."
+    Write-Output "ÕıÔÚ´´½¨ĞéÄâ»·¾³..."
     python -m venv venv
-    Check "åˆ›å»ºè™šæ‹Ÿç¯å¢ƒå¤±è´¥ï¼Œè¯·æ£€æŸ¥ python æ˜¯å¦å®‰è£…å®Œæ¯•ä»¥åŠ python ç‰ˆæœ¬ã€‚"
+    Check "´´½¨ĞéÄâ»·¾³Ê§°Ü£¬Çë¼ì²é python ÊÇ·ñ°²×°Íê±ÏÒÔ¼° python °æ±¾¡£"
 }
 
 .\venv\Scripts\activate
-Check "æ¿€æ´»è™šæ‹Ÿç¯å¢ƒå¤±è´¥ã€‚"
+Check "¼¤»îĞéÄâ»·¾³Ê§°Ü¡£"
 
-Write-Output "å®‰è£…ç¨‹åºæ‰€éœ€ä¾èµ– (å·²è¿›è¡Œå›½å†…åŠ é€Ÿï¼Œè‹¥æ— æ³•ä½¿ç”¨åŠ é€Ÿæºè¯·ç”¨ install.ps1)..."
+Write-Output "°²×°³ÌĞòËùĞèÒÀÀµ (ÒÑ½øĞĞ¹úÄÚ¼ÓËÙ£¬ÈôÎŞ·¨Ê¹ÓÃ¼ÓËÙÔ´ÇëÓÃ install.ps1)..."
 Set-Location .\sd-scripts
 pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "torch å®‰è£…å¤±è´¥ï¼Œè¯·åˆ é™¤ venv æ–‡ä»¶å¤¹åé‡æ–°è¿è¡Œã€‚"
+Check "torch °²×°Ê§°Ü£¬ÇëÉ¾³ı venv ÎÄ¼ş¼ĞºóÖØĞÂÔËĞĞ¡£"
 pip install --upgrade -r requirements.txt -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "å…¶ä»–ä¾èµ–å®‰è£…å¤±è´¥ã€‚"
+Check "ÆäËûÒÀÀµ°²×°Ê§°Ü¡£"
 pip install -U -I --no-deps xformers==0.0.17rc482 -i https://mirrors.aliyun.com/pypi/simple/
-Check "xformers å®‰è£…å¤±è´¥ã€‚"
+Check "xformers °²×°Ê§°Ü¡£"
 pip install --upgrade lion-pytorch -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "Lion ä¼˜åŒ–å™¨å®‰è£…å¤±è´¥ã€‚"
+Check "Lion ÓÅ»¯Æ÷°²×°Ê§°Ü¡£"
 pip install --upgrade lycoris-lora -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "lycoris å®‰è£…å¤±è´¥ã€‚"
+Check "lycoris °²×°Ê§°Ü¡£"
 
 
-Write-Output "å®‰è£… bitsandbytes..."
+Write-Output "°²×° bitsandbytes..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
 
-Write-Output "å®‰è£…å®Œæ¯•ã€‚"
+Write-Output "°²×°Íê±Ï"
 Read-Host | Out-Null ;
