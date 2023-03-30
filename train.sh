@@ -1,3 +1,4 @@
+#!/bin/bash
 # LoRA train script by @Akegarasu
 
 # Train data path | 设置训练用模型、图片
