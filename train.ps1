@@ -103,6 +103,7 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --train_data_dir=$train_data_dir `
   --output_dir="./output" `
   --logging_dir="./logs" `
+  --log_prefix=$output_name `
   --resolution=$resolution `
   --network_module=$network_module `
   --max_train_epochs=$max_train_epoches `
