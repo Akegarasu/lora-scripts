@@ -9,8 +9,8 @@ reg_data_dir=""                           # directory for regularization images 
 # Network settings | 网络设置
 network_module="networks.lora" # 在这里将会设置训练的网络种类，默认为 networks.lora 也就是 LoRA 训练。如果你想训练 LyCORIS（LoCon、LoHa） 等，则修改这个值为 lycoris.kohya
 network_weights=""             # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
-network_dim=32                  # network dim | 常用 4~128，不是越大越好
-network_alpha=32                # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
+network_dim=32                 # network dim | 常用 4~128，不是越大越好
+network_alpha=32               # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
 
 # Train related params | 训练相关参数
 resolution="512,512"  # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
