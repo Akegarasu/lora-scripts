@@ -20,13 +20,13 @@ function Check {
 if (!(Test-Path -Path "venv")) {
     Write-Output "正在创建虚拟环境..."
     python -m venv venv
-    Check "创建虚拟环境失败，请检查 python 是否安装完毕以及 python 版本。"
+    Check "创建虚拟环境失败，请检查 python 是否安装完毕以及 python 版本是否为64位版本的python 3.10、或python的目录是否在环境变量PATH内。"
 }
 
 .\venv\Scripts\activate
 Check "激活虚拟环境失败。"
 
-Write-Output "安装程序所需依赖 (已进行国内加速，若无法使用加速源请用 install.ps1)..."
+Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 install.ps1 脚本)"
 Set-Location .\sd-scripts
 pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirrors.bfsu.edu.cn/pypi/web/simple
 Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
