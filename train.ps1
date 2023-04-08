@@ -134,6 +134,10 @@ if ($reg_data_dir) {
   [void]$ext_args.Add("--reg_data_dir=" + $reg_data_dir)
 }
 
+if ($stop_text_encoder_training) {
+  [void]$ext_args.Add("--stop_text_encoder_training=$stop_text_encoder_training")
+}
+
 if ($use_8bit_adam) {
   [void]$ext_args.Add("--use_8bit_adam")
 }
