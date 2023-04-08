@@ -45,13 +45,7 @@ persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆内�
 clip_skip=2                      # clip skip | 玄学 一般用 2
 
 # 优化器设置
-use_8bit_adam=1             # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
-use_lion=0                  # use lion optimizer | 使用 Lion 优化器
-use_dadaptation=0           # use dadaptation optimizer | 使用 D-Adaptation 优化器 使用该优化器时 建议使用大学习率 推荐1.0/1.0/1.0 使用前需提前执行 pip install dadaptation
-use_adam=0                  # use AdamW optimizer | 使用 AdamW 优化器 非 8bit 版
-use_sgdnesterov=0           # use SGDNesterov optimizer | 使用 SGDNesterov 优化器
-use_8bit_sgdnesterov=0      # use 8bit SGDNesterov opitimizer | 使用 8bit SGDNesterov 优化器
-use_adafactor=0             # use AdaFactor opitimizer | 使用 AdaFactor 优化器 该优化器会无视 unet_lr/text_encoder_lr 参数 使用 lr 作为初始学习率
+optimizer_type="8bit_adam"           # type of optimizer | 优化器的类型 默认为 8bit_adam 脚本所支持的优化器有 8bit_adam lion dadaptation adam sgdnesterov 8bit_sgdnesterov adafactor 其中 dadaptation 需要额外安装
 
 # LyCORIS 训练设置
 algo="lora"  # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha。lora即为locon
@@ -63,7 +57,7 @@ export HF_HOME="huggingface"
 export TF_CPP_MIN_LOG_LEVEL=3
 
 extArgs=()
-if [ $is_v2_mode == 1 ]; then extArgs+=("--v2") fi
+if [[ $is_v2_model == 0 && $clip_skip ]]; then extArgs+=("--clip_skip $clip_skip"); fi
 
 if [ $parameterization == 1 ]; then extArgs+=("--v_parameterization") fi
 
@@ -75,17 +69,13 @@ if [ $network_weights ]; then extArgs+=("--network_weights $network_weights"); f
 
 if [ $reg_data_dir ]; then extArgs+=("--reg_data_dir $reg_data_dir"); fi
 
-if [ $use_8bit_adam == 1 ]; then extArgs+=("--use_8bit_adam"); fi
-
-if [ $use_lion == 1 ]; then extArgs+=("--use_lion_optimizer"); fi
+if [ $optimizer_type ]; then extArgs+=("--optimizer_type $optimizer_type") fi
 
 if [ $persistent_data_loader_workers == 1 ]; then extArgs+=("--persistent_data_loader_workers"); fi
 
 if [ $network_module == "lycoris.kohya" ]; then
   extArgs+=("--network_args conv_dim=$conv_dim conv_alpha=$conv_alpha algo=$algo")
 fi
-
-if [[ $is_v2_model == 0 && $clip_skip ]]; then extArgs+=("--clip_skip $clip_skip"); fi
 
 if [ $noise_offset ]; then extArgs+=("--noise_offset $noise_offset"); fi
 
