@@ -184,7 +184,7 @@ if (($enbale_locon_train -eq 1) -and ($use_lycoris_module -eq 0)) {
   [void]$ext_args.Add("conv_alpha=$conv_alpha")
 }
 
-if (($enable_locon_train -eq 1) -and ($enable_locon_train -eq 1)) {
+if (($enable_locon_train -eq 1) -and ($enable_locon_module -eq 1)) {
   $network_module = "locon.locon_kohya"
   [void]$ext_args.Add("--network_args")
   [void]$ext_args.Add("conv_dim=$conv_dim")
