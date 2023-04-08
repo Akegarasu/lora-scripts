@@ -3,6 +3,8 @@
 
 # Train data path | 设置训练用模型、图片
 pretrained_model="./sd-models/model.ckpt" # base model path | 底模路径
+is_v2_model=0                             #SD2.0 model | SD2.0模型 2.0模型下 clip_skip 默认无效
+parameterization=0                        # parameterization | 参数化 本参数需要和 V2 参数同步使用 实验性功能
 train_data_dir="./train/aki"              # train dataset path | 训练数据集路径
 reg_data_dir=""                           # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
@@ -43,8 +45,13 @@ persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆内�
 clip_skip=2                      # clip skip | 玄学 一般用 2
 
 # 优化器设置
-use_8bit_adam=1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
-use_lion=0      # use lion optimizer | 使用 Lion 优化器
+use_8bit_adam=1             # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
+use_lion=0                  # use lion optimizer | 使用 Lion 优化器
+use_dadaptation=0           # use dadaptation optimizer | 使用 D-Adaptation 优化器 使用该优化器时 建议使用大学习率 推荐1.0/1.0/1.0 使用前需提前执行 pip install dadaptation
+use_adam=0                  # use AdamW optimizer | 使用 AdamW 优化器 非 8bit 版
+use_sgdnesterov=0           # use SGDNesterov optimizer | 使用 SGDNesterov 优化器
+use_8bit_sgdnesterov=0      # use 8bit SGDNesterov opitimizer | 使用 8bit SGDNesterov 优化器
+use_adafactor=0             # use AdaFactor opitimizer | 使用 AdaFactor 优化器 该优化器会无视 unet_lr/text_encoder_lr 参数 使用 lr 作为初始学习率
 
 # LyCORIS 训练设置
 algo="lora"  # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha。lora即为locon
@@ -56,6 +63,9 @@ export HF_HOME="huggingface"
 export TF_CPP_MIN_LOG_LEVEL=3
 
 extArgs=()
+if [ $is_v2_mode == 1 ]; then extArgs+=("--v2") fi
+
+if [ $parameterization == 1 ]; then extArgs+=("--v_parameterization") fi
 
 if [ $train_unet_only == 1 ]; then extArgs+=("--network_train_unet_only"); fi
 
@@ -74,6 +84,8 @@ if [ $persistent_data_loader_workers == 1 ]; then extArgs+=("--persistent_data_l
 if [ $network_module == "lycoris.kohya" ]; then
   extArgs+=("--network_args conv_dim=$conv_dim conv_alpha=$conv_alpha algo=$algo")
 fi
+
+if [[ $is_v2_model == 0 && $clip_skip ]]; then extArgs+=("--clip_skip $clip_skip"); fi
 
 if [ $noise_offset ]; then extArgs+=("--noise_offset $noise_offset"); fi
 
@@ -102,7 +114,6 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --save_precision="fp16" \
   --seed="1337" \
   --cache_latents \
-  --clip_skip=$clip_skip \
   --prior_loss_weight=1 \
   --max_token_length=225 \
   --caption_extension=".txt" \
