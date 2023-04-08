@@ -38,6 +38,10 @@ lr_restart_cycles=1                 # cosine_with_restarts restart cycles | 余�
 output_name="aki"           # output model name | 模型保存名称
 save_model_as="safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
+# Resume training state | 恢复训练设置  
+save_training_state=""      # save training state | 保存训练状态 本参数需要指定保存的文件夹位置 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
+resume=""                   # resume from state | 从某个状态文件夹中恢复训练 需配合上方参数同时使用 由于规范文件限制 epoch 数和全局步数不会保存 即使恢复时它们也从 1 开始 与 network_weights 的具体实现操作并不一致
+
 # 其他设置
 min_bucket_reso=256              # arb min resolution | arb 最小分辨率
 max_bucket_reso=1024             # arb max resolution | arb 最大分辨率
@@ -57,6 +61,8 @@ export HF_HOME="huggingface"
 export TF_CPP_MIN_LOG_LEVEL=3
 
 extArgs=()
+if [ $is_v2_model == 1 ]; extArgs+=("--v2"); then fi
+
 if [[ $is_v2_model == 0 && $clip_skip ]]; then extArgs+=("--clip_skip $clip_skip"); fi
 
 if [ $parameterization == 1 ]; then extArgs+=("--v_parameterization") fi
@@ -69,7 +75,11 @@ if [ $network_weights ]; then extArgs+=("--network_weights $network_weights"); f
 
 if [ $reg_data_dir ]; then extArgs+=("--reg_data_dir $reg_data_dir"); fi
 
-if [ $optimizer_type ]; then extArgs+=("--optimizer_type $optimizer_type") fi
+if [ $optimizer_type ]; then extArgs+=("--optimizer_type $optimizer_type"); fi
+
+if [ $save_training_state ]; then extArgs+=("--save_training_state $save_training_state"); fi
+
+if [ $resume ]; then extArgs+=("--resume $resume"); fi
 
 if [ $persistent_data_loader_workers == 1 ]; then extArgs+=("--persistent_data_loader_workers"); fi
 
