@@ -49,7 +49,7 @@ $persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆�
 $clip_skip = 2 # clip skip | 玄学 一般用 2
 
 # 优化器设置
-$optimizer_type = "8bit_adam" # Optimizer type | 优化器类型 类型包括 8bit_adam lion dadaptaion adam sgdnesterov 8bit_sgdnesterov adafactor 默认为 8bit_adam 其中 dadaptaion 需要额外安装依赖包
+$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 类型包括 AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor 默认为 AdamW8bit 其中 DAdaptation 需要额外安装依赖包
 
 # LyCORIS 训练设置
 $algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 stanard、lora、loha。lora即为locon 如果使用的是 lycoris 的开发版本 则 ia3/lokr 参数有效
