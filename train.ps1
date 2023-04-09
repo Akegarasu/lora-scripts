@@ -71,6 +71,7 @@ $ext_args = [System.Collections.ArrayList]::new()
 
 if ($is_v2_model){
   [void]$ext_args.Add("--v2")
+  [void]$ext_args.Add("--clip_skip=0")
 }
 
 if ($parameterization){
