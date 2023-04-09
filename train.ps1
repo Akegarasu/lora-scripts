@@ -14,6 +14,7 @@ $network_dim = 32 # network dim | 常用 4~128，不是越大越好
 $network_alpha = 32 # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
 
 # Train related params | 训练相关参数
+$multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
 $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
 $batch_size = 1 # batch size
 $max_train_epoches = 10 # max train epoches | 最大训练 epoch
@@ -62,6 +63,11 @@ $conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_di
 
 $Env:HF_HOME = "huggingface"
 $ext_args = [System.Collections.ArrayList]::new()
+$launch_args = [System.Collections.ArrayList]::new()
+
+if ($multi_gpu){
+  [void]$launch_args.Add("--multi_gpu")
+}
 
 if ($is_v2_model){
   [void]$ext_args.Add("--v2")
@@ -120,7 +126,7 @@ if ($min_snr_gamma) {
 } 
 
 # run train
-accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
+accelerate launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
   --pretrained_model_name_or_path=$pretrained_model `
   --train_data_dir=$train_data_dir `
