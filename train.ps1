@@ -49,13 +49,7 @@ $persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆�
 $clip_skip = 2 # clip skip | 玄学 一般用 2
 
 # 优化器设置
-$use_8bit_adam = 1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
-$use_lion = 0 # use lion optimizer | 使用 Lion 优化器
-$use_dadaptation = 0 # use dadaptation optimizer | 使用 D-Adaptation 优化器 使用该优化器时 建议使用大学习率 推荐1.0/1.0/1.0 使用前需提前执行 pip install dadaptation
-$use_adam = 0 # use AdamW optimizer | 使用 AdamW 优化器 非 8bit 版
-$use_sgdnesterov = 0 # use SGDNesterov optimizer | 使用 SGDNesterov 优化器
-$use_8bit_sgdnesterov = 0 # use 8bit SGDNesterov opitimizer | 使用 8bit SGDNesterov 优化器
-$use_adafactor = 0 # use AdaFactor opitimizer | 使用 AdaFactor 优化器 该优化器会无视 unet_lr/text_encoder_lr 参数 使用 lr 作为初始学习率
+$optimizer_type = "8bit_adam" # Optimizer type | 优化器类型 类型包括 8bit_adam lion dadaptaion adam sgdnesterov 8bit_sgdnesterov adafactor 默认为 8bit_adam 其中 dadaptaion 需要额外安装依赖包
 
 # LyCORIS 训练设置
 $algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 stanard、lora、loha。lora即为locon 如果使用的是 lycoris 的开发版本 则 ia3/lokr 参数有效
@@ -98,36 +92,8 @@ if ($reg_data_dir) {
   [void]$ext_args.Add("--reg_data_dir=" + $reg_data_dir)
 }
 
-if ($use_8bit_adam) {
-  [void]$ext_args.Add("--use_8bit_adam")
-}
-
-if ($use_lion) {
-  [void]$ext_args.Add("--use_lion_optimizer")
-}
-
-if ($use_dadaptation){
-  [void]$ext_args.Add("--optimizer_type=dadaptation")
-}
-
-if ($use_8bit_sgdnesterov){
-  [void]$ext_args.Add("--optimizer_type=SGDNesterov8bit")
-}
-
-if ($use_sgdnesterov){
-  [void]$ext_args.Add("--optimizer_type=SGDNesterov")
-}
-
-if ($use_adam){
-  [void]$ext_args.Add("--optimizer_type=Adam")
-}
-
-if ($use_adafactor){
-  [void]$ext_args.Add("--optimizer_type=AdaFactor")
-}
-
-if ($persistent_data_loader_workers) {
-  [void]$ext_args.Add("--persistent_data_loader_workers")
+if ($optimizer_type) {
+  [void]$ext_args.Add("--optimizer_type=" + $optimizer_type)
 }
 
 if ($network_module -eq "lycoris.kohya") {
