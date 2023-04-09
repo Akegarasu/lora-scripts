@@ -64,9 +64,13 @@ export TF_CPP_MIN_LOG_LEVEL=3
 
 extArgs=()
 launchArgs=()
-if [ $multi_gpu == 1 ]; launchArgs+=("--multi_gpu"); then fi
+if [ $multi_gpu == 1 ]; then launchArgs+=("--multi_gpu"); fi
 
-if [ $is_v2_model == 1 ]; extArgs+=("--v2 --clip_skip 0"); then fi
+if [ $is_v2_model == 1 ]; then 
+  extArgs+=("--v2"); 
+  clip_skip=0; 
+  extArgs+=("--clip_skip $clip_skip"); 
+fi
 
 if [[ $is_v2_model == 0 && $clip_skip ]]; then extArgs+=("--clip_skip $clip_skip"); fi
 
