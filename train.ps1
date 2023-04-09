@@ -24,6 +24,7 @@ $train_text_encoder_only = 0 # train Text Encoder only | 仅训练 文本编码�
 
 $noise_offset = 0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用，推荐参数为 0.1
 $keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
+$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | 伽马射线事件的最小信噪比（SNR）值  默认为 0
 
 # Learning rate | 学习率
 $lr = "1e-4"
@@ -147,6 +148,9 @@ if ($resume) {
   [void]$ext_args.Add("--resume=" + $resume)
 }
 
+if ($min_snr_gamma) {
+  [void]$ext_args.Add("--min_snr_gamma=$min_snr_gamma")
+} 
 
 # run train
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
