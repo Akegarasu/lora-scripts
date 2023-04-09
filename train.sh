@@ -23,8 +23,9 @@ save_every_n_epochs=2 # save every n epochs | 每 N 个 epoch 保存一次
 train_unet_only=0         # train U-Net only | 仅训练 U-Net，开启这个会牺牲效果大幅减少显存使用。6G显存可以开启
 train_text_encoder_only=0 # train Text Encoder only | 仅训练 文本编码器
 
-noise_offset=0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用，推荐参数为0.1
-keep_tokens=0  # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
+noise_offset=0            # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用，推荐参数为0.1
+keep_tokens=0             # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
+min_snr_gamma=0           # minimum signal-to-noise ratio (SNR) value for gamma-ray | 伽马射线事件的最小信噪比（SNR）值  默认为 0
 
 # Learning rate | 学习率
 lr="1e-4"
@@ -61,7 +62,7 @@ export HF_HOME="huggingface"
 export TF_CPP_MIN_LOG_LEVEL=3
 
 extArgs=()
-if [ $is_v2_model == 1 ]; extArgs+=("--v2"); then fi
+if [ $is_v2_model == 1 ]; extArgs+=("--v2 --clip_skip 0"); then fi
 
 if [[ $is_v2_model == 0 && $clip_skip ]]; then extArgs+=("--clip_skip $clip_skip"); fi
 
@@ -88,6 +89,8 @@ if [ $network_module == "lycoris.kohya" ]; then
 fi
 
 if [ $noise_offset ]; then extArgs+=("--noise_offset $noise_offset"); fi
+
+if [ $min_snr_gamma ]; then extArgs+=("--min_snr_gamma $min_snr_gamma"); fi
 
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
