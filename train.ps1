@@ -15,6 +15,7 @@ $network_alpha = 32 # network alpha | 常用与 network_dim 相同的值或者�
 
 # Train related params | 训练相关参数
 $multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
+$lowram = 0 # lowram mode | 低内存模式
 $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
 $batch_size = 1 # batch size
 $max_train_epoches = 10 # max train epoches | 最大训练 epoch
@@ -67,6 +68,10 @@ $launch_args = [System.Collections.ArrayList]::new()
 
 if ($multi_gpu){
   [void]$launch_args.Add("--multi_gpu")
+}
+
+if ($lowram) {
+  [void]$ext_args.Add("--lowram")
 }
 
 if ($is_v2_model){
