@@ -66,9 +66,9 @@ launchArgs=()
 if [ $multi_gpu == 1 ]; then launchArgs+=("--multi_gpu"); fi
 
 if [ $is_v2_model == 1 ]; then
-  extArgs+=("--v2")
+  extArgs+=("--v2");
 else
-  extArgs+=("--clip_skip $clip_skip")
+  extArgs+=("--clip_skip $clip_skip");
 fi
 
 if [ $parameterization == 1 ]; then extArgs+=("--v_parameterization"); fi
