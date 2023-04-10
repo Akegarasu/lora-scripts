@@ -112,7 +112,7 @@ if ($network_module -eq "lycoris.kohya") {
   [void]$ext_args.Add("algo=$algo")
 }
 
-if ($noise_offset) {
+if ($noise_offset -ne 0) {
   [void]$ext_args.Add("--noise_offset=$noise_offset")
 }
 
@@ -124,7 +124,7 @@ if ($resume) {
   [void]$ext_args.Add("--resume=" + $resume)
 }
 
-if ($min_snr_gamma) {
+if ($min_snr_gamma -ne 0) {
   [void]$ext_args.Add("--min_snr_gamma=$min_snr_gamma")
 } 
 
