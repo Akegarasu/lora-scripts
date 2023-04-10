@@ -83,7 +83,7 @@ if [ $reg_data_dir ]; then extArgs+=("--reg_data_dir $reg_data_dir"); fi
 
 if [ $optimizer_type ]; then extArgs+=("--optimizer_type $optimizer_type"); fi
 
-if [ $save_state ]; then extArgs+=("--save_state"); fi
+if [ $save_state == 1 ]; then extArgs+=("--save_state"); fi
 
 if [ $resume ]; then extArgs+=("--resume $resume"); fi
 
@@ -93,9 +93,9 @@ if [ $network_module == "lycoris.kohya" ]; then
   extArgs+=("--network_args conv_dim=$conv_dim conv_alpha=$conv_alpha algo=$algo")
 fi
 
-if [ $noise_offset ]; then extArgs+=("--noise_offset $noise_offset"); fi
+if [ $noise_offset -ne 0 ]; then extArgs+=("--noise_offset $noise_offset"); fi
 
-if [ $min_snr_gamma ]; then extArgs+=("--min_snr_gamma $min_snr_gamma"); fi
+if [ $min_snr_gamma -ne 0 ]; then extArgs+=("--min_snr_gamma $min_snr_gamma"); fi
 
 accelerate launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
