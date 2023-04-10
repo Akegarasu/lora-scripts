@@ -15,7 +15,7 @@ $network_alpha = 32 # network alpha | 常用与 network_dim 相同的值或者�
 
 # Train related params | 训练相关参数
 $multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
-$lowram = 0 # lowram mode | 低内存模式
+$lowram = 0 # lowram mode | 低内存模式 该模式下会将 U-net 文本编码器 VAE 转移到 GPU 显存中 启用该模式可能会对显存有一定影响
 $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
 $batch_size = 1 # batch size
 $max_train_epoches = 10 # max train epoches | 最大训练 epoch
@@ -41,7 +41,7 @@ $output_name = "aki" # output model name | 模型保存名称
 $save_model_as = "safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
 # Resume training state | 恢复训练设置  
-$save_state = "" # save training state | 保存训练状态 本参数需要指定保存的文件夹位置 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
+$save_state = 0 # save training state | 保存训练状态 本参数需要指定保存的文件夹位置 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
 $resume = "" # resume from state | 从某个状态文件夹中恢复训练 需配合上方参数同时使用 由于规范文件限制 epoch 数和全局步数不会保存 即使恢复时它们也从 1 开始 与 network_weights 的具体实现操作并不一致
 
 # 其他设置
@@ -84,6 +84,7 @@ else {
 if ($parameterization){
   [void]$ext_args.Add("--v_parameterization")
 }
+
 if ($train_unet_only) {
   [void]$ext_args.Add("--network_train_unet_only")
 }
@@ -115,8 +116,8 @@ if ($noise_offset) {
   [void]$ext_args.Add("--noise_offset=$noise_offset")
 }
 
-if ($save_state) {
-  [void]$ext_args.Add("--save_state=" + $save_state)
+if ($save_state -eq 1) {
+  [void]$ext_args.Add("--save_state")
 }
 
 if ($resume) {
