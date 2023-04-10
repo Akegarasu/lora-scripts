@@ -32,7 +32,7 @@ lr="1e-4"
 unet_lr="1e-4"
 text_encoder_lr="1e-5"
 lr_scheduler="cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"
-lr_warmup_steps=0                   # warmup steps | 仅在 lr_scheduler 为 constant_with_warmup 时需要填写这个值
+lr_warmup_steps=0                   # warmup steps | 学习率预热步数，lr_scheduler 为 constant 或 adafactor 时该值需要设为0。
 lr_restart_cycles=1                 # cosine_with_restarts restart cycles | 余弦退火重启次数，仅在 lr_scheduler 为 cosine_with_restarts 时起效。
 
 # Output settings | 输出设置
