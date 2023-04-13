@@ -41,7 +41,7 @@ $output_name = "aki" # output model name | 模型保存名称
 $save_model_as = "safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
 # Resume training state | 恢复训练设置  
-$save_state = 0 # save training state | 保存训练状态 本参数需要指定保存的文件夹位置 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
+$save_state = 0 # save training state | 保存训练状态 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
 $resume = "" # resume from state | 从某个状态文件夹中恢复训练 需配合上方参数同时使用 由于规范文件限制 epoch 数和全局步数不会保存 即使恢复时它们也从 1 开始 与 network_weights 的具体实现操作并不一致
 
 # 其他设置
