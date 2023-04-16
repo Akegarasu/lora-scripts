@@ -57,7 +57,7 @@ optimizer_type="AdamW8bit" # Optimizer type | 优化器类型 默认为 8bitadam
 algo="lora"  # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha、lokr、ia3、dylora。lora即为locon
 conv_dim=4   # conv dim | 类似于 network_dim，推荐为 4
 conv_alpha=4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
-dropout_rate="0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dropout 越多，推荐 0~0.5， LoHa/LoKr/(IA)^3暂时不支持
+dropout="0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dropout 越多，推荐 0~0.5， LoHa/LoKr/(IA)^3暂时不支持
 
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 export HF_HOME="huggingface"
@@ -94,7 +94,7 @@ if [[ $resume ]]; then extArgs+=("--resume $resume"); fi
 if [[ $persistent_data_loader_workers == 1 ]]; then extArgs+=("--persistent_data_loader_workers"); fi
 
 if [[ $network_module == "lycoris.kohya" ]]; then
-  extArgs+=("--network_args conv_dim=$conv_dim conv_alpha=$conv_alpha algo=$algo dropout=$dropout_rate")
+  extArgs+=("--network_args conv_dim=$conv_dim conv_alpha=$conv_alpha algo=$algo dropout=$dropout")
 fi
 
 if [[ $stop_text_encoder_training -ne 0 ]]; then extArgs+=("--stop_text_encoder_training $stop_text_encoder_training"); fi
