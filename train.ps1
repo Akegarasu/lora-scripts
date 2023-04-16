@@ -2,6 +2,8 @@
 
 # Train data path | 设置训练用模型、图片
 $pretrained_model = "./sd-models/model.ckpt" # base model path | 底模路径
+$is_v2_model = 0 # SD2.0 model | SD2.0模型 2.0模型下 clip_skip 默认无效
+$parameterization = 0 # parameterization | 参数化 本参数需要和 V2 参数同步使用 实验性功能
 $train_data_dir = "./train/aki" # train dataset path | 训练数据集路径
 $reg_data_dir = "" # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
@@ -12,6 +14,8 @@ $network_dim = 32 # network dim | 常用 4~128，不是越大越好
 $network_alpha = 32 # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
 
 # Train related params | 训练相关参数
+$multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
+$lowram = 0 # lowram mode | 低内存模式 该模式下会将 U-net 文本编码器 VAE 转移到 GPU 显存中 启用该模式可能会对显存有一定影响
 $resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
 $batch_size = 1 # batch size
 $max_train_epoches = 10 # max train epoches | 最大训练 epoch
@@ -22,6 +26,7 @@ $train_text_encoder_only = 0 # train Text Encoder only | 仅训练 文本编码�
 
 $noise_offset = 0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用，推荐参数为 0.1
 $keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
+$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | 伽马射线事件的最小信噪比（SNR）值  默认为 0
 
 # Learning rate | 学习率
 $lr = "1e-4"
@@ -35,6 +40,10 @@ $lr_restart_cycles = 1 # cosine_with_restarts restart cycles | 余弦退火重�
 $output_name = "aki" # output model name | 模型保存名称
 $save_model_as = "safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
+# Resume training state | 恢复训练设置  
+$save_state = 0 # save training state | 保存训练状态 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
+$resume = "" # resume from state | 从某个状态文件夹中恢复训练 需配合上方参数同时使用 由于规范文件限制 epoch 数和全局步数不会保存 即使恢复时它们也从 1 开始 与 network_weights 的具体实现操作并不一致
+
 # 其他设置
 $min_bucket_reso = 256 # arb min resolution | arb 最小分辨率
 $max_bucket_reso = 1024 # arb max resolution | arb 最大分辨率
@@ -42,11 +51,10 @@ $persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆�
 $clip_skip = 2 # clip skip | 玄学 一般用 2
 
 # 优化器设置
-$use_8bit_adam = 1 # use 8bit adam optimizer | 使用 8bit adam 优化器节省显存，默认启用。部分 10 系老显卡无法使用，修改为 0 禁用。
-$use_lion = 0 # use lion optimizer | 使用 Lion 优化器
+$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 类型包括 AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor 默认为 AdamW8bit 其中 DAdaptation 需要额外安装依赖包
 
 # LyCORIS 训练设置
-$algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha。lora即为locon
+$algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 stanard、lora、loha。lora即为locon 如果使用的是 lycoris 的开发版本 则 ia3/lokr 参数有效
 $conv_dim = 4 # conv dim | 类似于 network_dim，推荐为 4
 $conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
 
@@ -56,6 +64,26 @@ $conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_di
 
 $Env:HF_HOME = "huggingface"
 $ext_args = [System.Collections.ArrayList]::new()
+$launch_args = [System.Collections.ArrayList]::new()
+
+if ($multi_gpu){
+  [void]$launch_args.Add("--multi_gpu")
+}
+
+if ($lowram) {
+  [void]$ext_args.Add("--lowram")
+}
+
+if ($is_v2_model){
+  [void]$ext_args.Add("--v2") 
+}
+else {
+  [void]$ext_args.Add("--clip_skip=$clip_skip")
+}
+
+if ($parameterization){
+  [void]$ext_args.Add("--v_parameterization")
+}
 
 if ($train_unet_only) {
   [void]$ext_args.Add("--network_train_unet_only")
@@ -73,16 +101,8 @@ if ($reg_data_dir) {
   [void]$ext_args.Add("--reg_data_dir=" + $reg_data_dir)
 }
 
-if ($use_8bit_adam) {
-  [void]$ext_args.Add("--use_8bit_adam")
-}
-
-if ($use_lion) {
-  [void]$ext_args.Add("--use_lion_optimizer")
-}
-
-if ($persistent_data_loader_workers) {
-  [void]$ext_args.Add("--persistent_data_loader_workers")
+if ($optimizer_type) {
+  [void]$ext_args.Add("--optimizer_type=" + $optimizer_type)
 }
 
 if ($network_module -eq "lycoris.kohya") {
@@ -92,12 +112,24 @@ if ($network_module -eq "lycoris.kohya") {
   [void]$ext_args.Add("algo=$algo")
 }
 
-if ($noise_offset) {
+if ($noise_offset -ne 0) {
   [void]$ext_args.Add("--noise_offset=$noise_offset")
 }
 
+if ($save_state -eq 1) {
+  [void]$ext_args.Add("--save_state")
+}
+
+if ($resume) {
+  [void]$ext_args.Add("--resume=" + $resume)
+}
+
+if ($min_snr_gamma -ne 0) {
+  [void]$ext_args.Add("--min_snr_gamma=$min_snr_gamma")
+} 
+
 # run train
-accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
+accelerate launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
   --pretrained_model_name_or_path=$pretrained_model `
   --train_data_dir=$train_data_dir `
@@ -122,7 +154,6 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py
   --save_precision="fp16" `
   --seed="1337" `
   --cache_latents `
-  --clip_skip=$clip_skip `
   --prior_loss_weight=1 `
   --max_token_length=225 `
   --caption_extension=".txt" `
