@@ -29,6 +29,6 @@ echo "Installing deps..."
 cd ./sd-scripts
 
 pip install --upgrade -r requirements.txt
-pip install --upgrade lion-pytorch lycoris-lora
+pip install --upgrade lion-pytorch lycoris-lora dadaptation
 
 echo "Install completed"
