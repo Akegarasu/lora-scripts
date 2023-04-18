@@ -135,6 +135,10 @@ if ($min_snr_gamma -ne 0) {
   [void]$ext_args.Add("--min_snr_gamma=$min_snr_gamma")
 } 
 
+if($persistent_data_loader_workers) {
+  [void]$ext_args.Add("--persistent_data_loader_workers=$persistent_data_loader_workers")
+}
+
 # run train
 accelerate launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
