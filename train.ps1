@@ -136,7 +136,7 @@ if ($min_snr_gamma -ne 0) {
 } 
 
 if($persistent_data_loader_workers) {
-  [void]$ext_args.Add("--persistent_data_loader_workers=$persistent_data_loader_workers")
+  [void]$ext_args.Add("--persistent_data_loader_workers")
 }
 
 # run train
