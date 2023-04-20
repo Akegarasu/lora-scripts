@@ -59,5 +59,5 @@ save_last_n_epochs = 499
 save_state = false
 save_model_as = "safetensors"
 output_dir = "./output"
-logging_dir = "./output/logs"
+logging_dir = "./logs"
 log_prefix = "output_name"

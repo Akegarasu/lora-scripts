@@ -7,49 +7,56 @@ pretrained_model_name_or_path = "./sd-models/model.ckpt"
 train_data_dir = "./train/aki"
 reg_data_dir = ""
 resolution = "512,512"
-cache_latents = true
-keep_tokens = 0
-shuffle_caption = true
+prior_loss_weight = 1
 
 [additional_network_arguments]
-no_metadata = false
-unet_lr = "1e-4"
-text_encoder_lr = "1e-5"
-network_module = "networks.lora"
 network_dim = 32
-network_alpha = 32
-# network_args = [ "conv_dim=64", "conv_alpha=32",]
+network_alpha = 16
 network_train_unet_only = false
 network_train_text_encoder_only = false
+network_module = "networks.lora"
+network_args = []
 
 [optimizer_arguments]
+unet_lr = 1e-4
+text_encoder_lr = 1e-5
+
 optimizer_type = "AdamW8bit"
-# optimizer_args = [ "weight_decay=0.6",]
 lr_scheduler = "cosine_with_restarts"
 lr_warmup_steps = 0
 lr_restart_cycles = 1
 
 [training_arguments]
-max_train_epochs = 20
-output_dir = "./output"
-output_name = "aki"
-save_precision = "fp16"
-mixed_precision = "fp16"
-save_every_n_epochs = 1
-train_batch_size = 1
-max_token_length = 225
-xformers = true
-max_data_loader_n_workers = 8
-persistent_data_loader_workers = true
-gradient_checkpointing = false
-gradient_accumulation_steps = 1
-logging_dir = "./logs"
-clip_skip = 2
+batch_size = 1
 noise_offset = 0.0
+keep_tokens = 0
+min_bucket_reso = 256
+max_bucket_reso = 1024
+caption_extension = ".txt"
+max_token_length = 225
+seed = 1337
+xformers = true
 lowram = false
+max_train_epochs = 10
+resolution = "512,512"
+clip_skip = 2
+mixed_precision = "fp16"
 
-[dreambooth_arguments]
-prior_loss_weight = 1.0
+[sample_prompt_arguments]
+sample_sampler = "euler_a"
+sample_every_n_epochs = 5
 
 [saving_arguments]
+output_name = "output_name"
+save_every_n_epochs = 1
+save_state = false
 save_model_as = "safetensors"
+output_dir = "./output"
+logging_dir = "./logs"
+log_prefix = ""
+save_precision = "fp16"
+
+[others]
+cache_latents = true
+shuffle_caption = true
+enable_bucket = true
