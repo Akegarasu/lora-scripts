@@ -4,10 +4,10 @@ v_parameterization = false
 pretrained_model_name_or_path = "./sd-models/model.ckpt"
 
 [additional_network_arguments]
-unet_lr = 0.0001
+unet_lr = 1e-4
 text_encoder_lr = 1e-5
 network_dim = 32
-network_alpha = 16.0
+network_alpha = 16
 network_train_unet_only = false
 network_train_text_encoder_only = false
 network_module = "networks.lora"
@@ -27,7 +27,7 @@ enable_bucket = true
 
 [training_arguments]
 batch_size = 1
-noise_offset = 0.1
+noise_offset = 0.0
 keep_tokens = 0
 min_bucket_reso = 256
 max_bucket_reso = 1024
@@ -49,7 +49,7 @@ sample_every_n_epochs = 1
 [dreambooth_arguments]
 train_data_dir = "./train/input"
 reg_data_dir = ""
-prior_loss_weight = 0.3
+prior_loss_weight = 1
 
 [saving_arguments]
 output_name = "output_name"
