@@ -1,0 +1,1 @@
+(masterpiece, best quality, hires:1.2), 1girl, solo,  --n (worst quality, bad quality:1.4), lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry,  --w 512  --h 768  --l 7  --s 24  --d 1337
