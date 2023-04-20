@@ -1,11 +1,17 @@
-[model_arguments]
+[model]
 v2 = false
 v_parameterization = false
 pretrained_model_name_or_path = "./sd-models/model.ckpt"
 
-[additional_network_arguments]
-unet_lr = 1e-4
-text_encoder_lr = 1e-5
+[dataset]
+train_data_dir = "./train/input"
+reg_data_dir = ""
+prior_loss_weight = 1
+cache_latents = true
+shuffle_caption = true
+enable_bucket = true
+
+[additional_network]
 network_dim = 32
 network_alpha = 16
 network_train_unet_only = false
@@ -13,45 +19,31 @@ network_train_text_encoder_only = false
 network_module = "networks.lora"
 network_args = []
 
-[optimizer_arguments]
+[optimizer]
+unet_lr = 1e-4
+text_encoder_lr = 1e-5
 optimizer_type = "AdamW8bit"
 lr_scheduler = "cosine_with_restarts"
 lr_warmup_steps = 0
 lr_restart_cycles = 1
-learning_rate = 0.0001
 
-[dataset_arguments]
-cache_latents = true
-shuffle_caption = true
-enable_bucket = true
-
-[training_arguments]
+[training]
+resolution = "512,512"
 batch_size = 1
+max_train_epochs = 10
 noise_offset = 0.0
 keep_tokens = 0
-min_bucket_reso = 256
-max_bucket_reso = 1024
-caption_extension = ".txt"
-max_token_length = 225
-seed = 1337
 xformers = true
 lowram = false
-max_train_epochs = 10
-resolution = "512,512"
 clip_skip = 2
 mixed_precision = "fp16"
 save_precision = "fp16"
 
-[sample_prompt_arguments]
+[sample_prompt]
 sample_sampler = "euler_a"
 sample_every_n_epochs = 1
 
-[dreambooth_arguments]
-train_data_dir = "./train/input"
-reg_data_dir = ""
-prior_loss_weight = 1
-
-[saving_arguments]
+[saving]
 output_name = "output_name"
 save_every_n_epochs = 1
 save_n_epoch_ratio = 0
@@ -61,3 +53,10 @@ save_model_as = "safetensors"
 output_dir = "./output"
 logging_dir = "./logs"
 log_prefix = "output_name"
+
+[others]
+min_bucket_reso = 256
+max_bucket_reso = 1024
+caption_extension = ".txt"
+max_token_length = 225
+seed = 1337
