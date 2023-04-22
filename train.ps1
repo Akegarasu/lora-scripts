@@ -107,6 +107,10 @@ if ($optimizer_type) {
   [void]$ext_args.Add("--optimizer_type=" + $optimizer_type)
 }
 
+if ($optimizer_type -eq "DAdaptation") {
+  [void]$ext_args.Add("--optimizer_args decouple=True")
+}
+
 if ($network_module -eq "lycoris.kohya") {
   [void]$ext_args.Add("--network_args")
   [void]$ext_args.Add("conv_dim=$conv_dim")
