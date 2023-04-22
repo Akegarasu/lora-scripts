@@ -1,12 +1,12 @@
 # LoRA train script by @Akegarasu
 
-$multi_gpu = 0		 # multi gpu | å¤šæ˜¾å¡è®­ç»ƒ è¯¥å‚æ•°ä»…é™åœ¨æ˜¾å¡æ•° >= 2 ä½¿ç”¨
-$config_file = "./toml/default.toml"		 # config_file | ä½¿ç”¨tomlæ–‡ä»¶æŒ‡å®šè®­ç»ƒå‚æ•°
-$sample_prompts = "./toml/sample_prompts.txt"		 # sample_prompts | é‡‡æ ·promptsæ–‡ä»¶,ç•™ç©ºåˆ™ä¸å¯ç”¨é‡‡æ ·åŠŸèƒ½
-$utf8 = 1		 # utf8 | ä½¿ç”¨utf-8ç¼–ç è¯»å–tomlï¼›ä»¥utf-8ç¼–ç ç¼–å†™çš„ã€å«ä¸­æ–‡çš„tomlå¿…é¡»å¼€å¯
+$multi_gpu = 0		 # multi gpu | ¶àÏÔ¿¨ÑµÁ· ¸Ã²ÎÊı½öÏŞÔÚÏÔ¿¨Êı >= 2 Ê¹ÓÃ
+$config_file = "./toml/default.toml"		 # config_file | Ê¹ÓÃtomlÎÄ¼şÖ¸¶¨ÑµÁ·²ÎÊı
+$sample_prompts = "./toml/sample_prompts.txt"		 # sample_prompts | ²ÉÑùpromptsÎÄ¼ş,Áô¿ÕÔò²»ÆôÓÃ²ÉÑù¹¦ÄÜ
+$utf8 = 1		 # utf8 | Ê¹ÓÃutf-8±àÂë¶ÁÈ¡toml£»ÒÔutf-8±àÂë±àĞ´µÄ¡¢º¬ÖĞÎÄµÄtoml±ØĞë¿ªÆô
 
 
-# ============= DO NOT MODIFY CONTENTS BELOW | è¯·å‹¿ä¿®æ”¹ä¸‹æ–¹å†…å®¹ =====================
+# ============= DO NOT MODIFY CONTENTS BELOW | ÇëÎğĞŞ¸ÄÏÂ·½ÄÚÈİ =====================
 
 # Activate python venv
 .\venv\Scripts\activate
