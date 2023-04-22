@@ -52,7 +52,7 @@ $multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 �
 $lowram = 0 # lowram mode | 低内存模式 该模式下会将 U-net 文本编码器 VAE 转移到 GPU 显存中 启用该模式可能会对显存有一定影响
 
 # 优化器设置
-$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 默认为 8bitadam，可选：AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
+$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
 
 # LyCORIS 训练设置
 $algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha、lokr、ia3、dylora。lora即为locon
