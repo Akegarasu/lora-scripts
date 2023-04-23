@@ -42,6 +42,8 @@ pip install --upgrade lion-pytorch dadaptation -i https://mirrors.bfsu.edu.cn/py
 Check "Lion、dadaptation 优化器安装失败。"
 pip install --upgrade lycoris-lora -i https://mirrors.bfsu.edu.cn/pypi/web/simple
 Check "lycoris 安装失败。"
+pip install --upgrade wandb -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+Check "wandb 安装失败。"
 
 
 Write-Output "安装 bitsandbytes..."
