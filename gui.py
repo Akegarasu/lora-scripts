@@ -1,8 +1,10 @@
 import os
 import json
 import toml
+import time
 import uvicorn
 import subprocess
+import webbrowser
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -50,6 +52,11 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     background_tasks.add_task(run_train, toml_file)
     return {"status": "success"}
 
+@app.middleware("http")
+async def add_cache_control_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "max-age=0"
+    return response
 
 @app.get("/")
 async def index():
@@ -60,4 +67,5 @@ app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
 
 if __name__ == "__main__":
     print("Server started at http://127.0.0.1:28000")
+    webbrowser.open(f"http://127.0.0.1:28000")
     uvicorn.run(app, host="127.0.0.1", port=28000, log_level="error")
