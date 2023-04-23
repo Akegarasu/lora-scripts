@@ -1,4 +1,6 @@
 import os
+import json
+import toml
 import uvicorn
 import subprocess
 from fastapi import FastAPI, Request, BackgroundTasks
@@ -42,9 +44,9 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = f"toml/{timestamp}.toml"
     toml_data = await request.body()
+    j = json.loads(toml_data.decode("utf-8"))
     with open(toml_file, "w") as f:
-        f.write(toml_data.decode("utf-8"))
-
+        f.write(toml.dumps(j))
     background_tasks.add_task(run_train, toml_file)
     return {"status": "success"}
 
