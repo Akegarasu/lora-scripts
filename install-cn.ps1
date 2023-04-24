@@ -2,7 +2,7 @@ $Env:HF_HOME = "huggingface"
 $Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
 $Env:PIP_NO_CACHE_DIR = 1
 function InstallFail {
-    Write-Output "å®‰è£…å¤±è´¥ã€‚"
+    Write-Output "°²×°Ê§°Ü¡£"
     Read-Host | Out-Null ;
     Exit
 }
@@ -18,40 +18,40 @@ function Check {
 }
 
 if (!(Test-Path -Path "venv")) {
-    Write-Output "æ­£åœ¨åˆ›å»ºè™šæ‹Ÿç¯å¢ƒ..."
+    Write-Output "ÕıÔÚ´´½¨ĞéÄâ»·¾³..."
     python -m venv venv
-    Check "åˆ›å»ºè™šæ‹Ÿç¯å¢ƒå¤±è´¥ï¼Œè¯·æ£€æŸ¥ python æ˜¯å¦å®‰è£…å®Œæ¯•ä»¥åŠ python ç‰ˆæœ¬æ˜¯å¦ä¸º64ä½ç‰ˆæœ¬çš„python 3.10ã€æˆ–pythonçš„ç›®å½•æ˜¯å¦åœ¨ç¯å¢ƒå˜é‡PATHå†…ã€‚"
+    Check "´´½¨ĞéÄâ»·¾³Ê§°Ü£¬Çë¼ì²é python ÊÇ·ñ°²×°Íê±ÏÒÔ¼° python °æ±¾ÊÇ·ñÎª64Î»°æ±¾µÄpython 3.10¡¢»òpythonµÄÄ¿Â¼ÊÇ·ñÔÚ»·¾³±äÁ¿PATHÄÚ¡£"
 }
 
 .\venv\Scripts\activate
-Check "æ¿€æ´»è™šæ‹Ÿç¯å¢ƒå¤±è´¥ã€‚"
+Check "¼¤»îĞéÄâ»·¾³Ê§°Ü¡£"
 
 Set-Location .\sd-scripts
-Write-Output "å®‰è£…ç¨‹åºæ‰€éœ€ä¾èµ– (å·²è¿›è¡Œå›½å†…åŠ é€Ÿï¼Œè‹¥åœ¨å›½å¤–æˆ–æ— æ³•ä½¿ç”¨åŠ é€Ÿæºè¯·æ¢ç”¨ install.ps1 è„šæœ¬)"
-$install_torch = Read-Host "æ˜¯å¦éœ€è¦å®‰è£… Torch+xformers? è‹¥æ‚¨æœ¬æ¬¡ä¸ºé¦–æ¬¡å®‰è£…è¯·é€‰æ‹© y ï¼Œè‹¥æœ¬æ¬¡ä¸ºå‡çº§ä¾èµ–å®‰è£…åˆ™é€‰æ‹© nã€‚[y/n] (é»˜è®¤ä¸º y)"
+Write-Output "°²×°³ÌĞòËùĞèÒÀÀµ (ÒÑ½øĞĞ¹úÄÚ¼ÓËÙ£¬ÈôÔÚ¹úÍâ»òÎŞ·¨Ê¹ÓÃ¼ÓËÙÔ´Çë»»ÓÃ install.ps1 ½Å±¾)"
+$install_torch = Read-Host "ÊÇ·ñĞèÒª°²×° Torch+xformers? ÈôÄú±¾´ÎÎªÊ×´Î°²×°ÇëÑ¡Ôñ y £¬Èô±¾´ÎÎªÉı¼¶ÒÀÀµ°²×°ÔòÑ¡Ôñ n¡£[y/n] (Ä¬ÈÏÎª y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq ""){
     pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-    Check "torch å®‰è£…å¤±è´¥ï¼Œè¯·åˆ é™¤ venv æ–‡ä»¶å¤¹åé‡æ–°è¿è¡Œã€‚"
+    Check "torch °²×°Ê§°Ü£¬ÇëÉ¾³ı venv ÎÄ¼ş¼ĞºóÖØĞÂÔËĞĞ¡£"
     pip install -U -I --no-deps xformers==0.0.17 -i https://mirrors.aliyun.com/pypi/simple/
-    Check "xformers å®‰è£…å¤±è´¥ã€‚"
+    Check "xformers °²×°Ê§°Ü¡£"
 }
 
 pip install --upgrade -r requirements.txt -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "å…¶ä»–ä¾èµ–å®‰è£…å¤±è´¥ã€‚"
+Check "ÆäËûÒÀÀµ°²×°Ê§°Ü¡£"
 pip install --upgrade lion-pytorch dadaptation -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "Lionã€dadaptation ä¼˜åŒ–å™¨å®‰è£…å¤±è´¥ã€‚"
+Check "Lion¡¢dadaptation ÓÅ»¯Æ÷°²×°Ê§°Ü¡£"
 pip install --upgrade lycoris-lora -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "lycoris å®‰è£…å¤±è´¥ã€‚"
+Check "lycoris °²×°Ê§°Ü¡£"
 pip install --upgrade fastapi uvicorn -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "UI æ‰€éœ€ä¾èµ–å®‰è£…å¤±è´¥ã€‚"
+Check "UI ËùĞèÒÀÀµ°²×°Ê§°Ü¡£"
 pip install --upgrade wandb -i https://mirrors.bfsu.edu.cn/pypi/web/simple
-Check "wandb å®‰è£…å¤±è´¥ã€‚"
+Check "wandb °²×°Ê§°Ü¡£"
 
 
-Write-Output "å®‰è£… bitsandbytes..."
+Write-Output "°²×° bitsandbytes..."
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
 
-Write-Output "å®‰è£…å®Œæ¯•"
+Write-Output "°²×°Íê±Ï"
 Read-Host | Out-Null ;
