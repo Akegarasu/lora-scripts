@@ -1,10 +1,11 @@
 import os
 import json
 import toml
-import time
+import sys
 import uvicorn
 import subprocess
 import webbrowser
+import argparse
 from fastapi import FastAPI, Request, BackgroundTasks
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,8 @@ app = FastAPI()
 
 lock = Lock()
 
+parser = argparse.ArgumentParser(description="GUI for training network")
+parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
 
 def run_train(toml_path: str):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
@@ -66,6 +69,11 @@ async def index():
 app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
 
 if __name__ == "__main__":
-    print("Server started at http://127.0.0.1:28000")
-    webbrowser.open(f"http://127.0.0.1:28000")
+    args = parser.parse_known_args()
+    print(f"Server started at http://127.0.0.1:{args.port}")
+    if sys.platform == "win32":
+        # disable triton on windows
+        os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
+    
+    webbrowser.open(f"http://127.0.0.1:{args.port}")
     uvicorn.run(app, host="127.0.0.1", port=28000, log_level="error")
