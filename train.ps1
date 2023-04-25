@@ -65,6 +65,7 @@ $dropout = "0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dr
 .\venv\Scripts\activate
 
 $Env:HF_HOME = "huggingface"
+$Env:XFORMERS_FORCE_DISABLE_TRITON = "1"
 $ext_args = [System.Collections.ArrayList]::new()
 $launch_args = [System.Collections.ArrayList]::new()
 
