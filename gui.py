@@ -69,7 +69,7 @@ async def index():
 app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
 
 if __name__ == "__main__":
-    args = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
     print(f"Server started at http://127.0.0.1:{args.port}")
     if sys.platform == "win32":
         # disable triton on windows
