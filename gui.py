@@ -1,20 +1,35 @@
-import os
-import json
-import toml
-import sys
-import uvicorn
-import subprocess
-import webbrowser
 import argparse
-from fastapi import FastAPI, Request, BackgroundTasks
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+import json
+import os
+import subprocess
+import sys
+import webbrowser
 from datetime import datetime
 from threading import Lock
+
+import uvicorn
+from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+
+import toml
 
 app = FastAPI()
 
 lock = Lock()
+
+# fix mimetype error in some fucking systems
+sf = StaticFiles(directory="frontend/dist")
+_o_fr = sf.file_response
+def _hooked_file_response(*args, **kwargs):
+    full_path = args[0]
+    r = _o_fr(*args, **kwargs)
+    if full_path.endswith(".js"):
+        r.media_type = "application/javascript"
+    elif full_path.endswith(".css"):
+        r.media_type = "text/css"
+    return r
+sf.file_response = _hooked_file_response
 
 parser = argparse.ArgumentParser(description="GUI for training network")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
@@ -66,7 +81,7 @@ async def index():
     return FileResponse("./frontend/dist/index.html")
 
 
-app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
+app.mount("/", sf, name="static")
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
