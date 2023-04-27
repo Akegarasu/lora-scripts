@@ -1,66 +1,71 @@
 # LoRA train script by @Akegarasu
 
-# Train data path | è®¾ç½®è®­ç»ƒç”¨æ¨¡å‹ã€å›¾ç‰‡
-$pretrained_model = "./sd-models/model.ckpt" # base model path | åº•æ¨¡è·¯å¾„
-$is_v2_model = 0 # SD2.0 model | SD2.0æ¨¡å‹ 2.0æ¨¡å‹ä¸‹ clip_skip é»˜è®¤æ— æ•ˆ
-$parameterization = 0 # parameterization | å‚æ•°åŒ– æœ¬å‚æ•°éœ€è¦å’Œ V2 å‚æ•°åŒæ­¥ä½¿ç”¨ å®éªŒæ€§åŠŸèƒ½
-$train_data_dir = "./train/aki" # train dataset path | è®­ç»ƒæ•°æ®é›†è·¯å¾„
-$reg_data_dir = "" # directory for regularization images | æ­£åˆ™åŒ–æ•°æ®é›†è·¯å¾„ï¼Œé»˜è®¤ä¸ä½¿ç”¨æ­£åˆ™åŒ–å›¾åƒã€‚
+# Train data path | ÉèÖÃÑµÁ·ÓÃÄ£ĞÍ¡¢Í¼Æ¬
+$pretrained_model = "./sd-models/model.ckpt" # base model path | µ×Ä£Â·¾¶
+$is_v2_model = 0 # SD2.0 model | SD2.0Ä£ĞÍ 2.0Ä£ĞÍÏÂ clip_skip Ä¬ÈÏÎŞĞ§
+$parameterization = 0 # parameterization | ²ÎÊı»¯ ±¾²ÎÊıĞèÒªºÍ V2 ²ÎÊıÍ¬²½Ê¹ÓÃ ÊµÑéĞÔ¹¦ÄÜ
+$train_data_dir = "./train/aki" # train dataset path | ÑµÁ·Êı¾İ¼¯Â·¾¶
+$reg_data_dir = "" # directory for regularization images | ÕıÔò»¯Êı¾İ¼¯Â·¾¶£¬Ä¬ÈÏ²»Ê¹ÓÃÕıÔò»¯Í¼Ïñ¡£
 
-# Network settings | ç½‘ç»œè®¾ç½®
-$network_module = "networks.lora" # åœ¨è¿™é‡Œå°†ä¼šè®¾ç½®è®­ç»ƒçš„ç½‘ç»œç§ç±»ï¼Œé»˜è®¤ä¸º networks.lora ä¹Ÿå°±æ˜¯ LoRA è®­ç»ƒã€‚å¦‚æœä½ æƒ³è®­ç»ƒ LyCORISï¼ˆLoConã€LoHaï¼‰ ç­‰ï¼Œåˆ™ä¿®æ”¹è¿™ä¸ªå€¼ä¸º lycoris.kohya
-$network_weights = "" # pretrained weights for LoRA network | è‹¥éœ€è¦ä»å·²æœ‰çš„ LoRA æ¨¡å‹ä¸Šç»§ç»­è®­ç»ƒï¼Œè¯·å¡«å†™ LoRA æ¨¡å‹è·¯å¾„ã€‚
-$network_dim = 32 # network dim | å¸¸ç”¨ 4~128ï¼Œä¸æ˜¯è¶Šå¤§è¶Šå¥½
-$network_alpha = 32 # network alpha | å¸¸ç”¨ä¸ network_dim ç›¸åŒçš„å€¼æˆ–è€…é‡‡ç”¨è¾ƒå°çš„å€¼ï¼Œå¦‚ network_dimçš„ä¸€åŠ é˜²æ­¢ä¸‹æº¢ã€‚é»˜è®¤å€¼ä¸º 1ï¼Œä½¿ç”¨è¾ƒå°çš„ alpha éœ€è¦æå‡å­¦ä¹ ç‡ã€‚
+# Network settings | ÍøÂçÉèÖÃ
+$network_module = "networks.lora" # ÔÚÕâÀï½«»áÉèÖÃÑµÁ·µÄÍøÂçÖÖÀà£¬Ä¬ÈÏÎª networks.lora Ò²¾ÍÊÇ LoRA ÑµÁ·¡£Èç¹ûÄãÏëÑµÁ· LyCORIS£¨LoCon¡¢LoHa£© µÈ£¬ÔòĞŞ¸ÄÕâ¸öÖµÎª lycoris.kohya
+$network_weights = "" # pretrained weights for LoRA network | ÈôĞèÒª´ÓÒÑÓĞµÄ LoRA Ä£ĞÍÉÏ¼ÌĞøÑµÁ·£¬ÇëÌîĞ´ LoRA Ä£ĞÍÂ·¾¶¡£
+$network_dim = 32 # network dim | ³£ÓÃ 4~128£¬²»ÊÇÔ½´óÔ½ºÃ
+$network_alpha = 32 # network alpha | ³£ÓÃÓë network_dim ÏàÍ¬µÄÖµ»òÕß²ÉÓÃ½ÏĞ¡µÄÖµ£¬Èç network_dimµÄÒ»°ë ·ÀÖ¹ÏÂÒç¡£Ä¬ÈÏÖµÎª 1£¬Ê¹ÓÃ½ÏĞ¡µÄ alpha ĞèÒªÌáÉıÑ§Ï°ÂÊ¡£
 
-# Train related params | è®­ç»ƒç›¸å…³å‚æ•°
-$resolution = "512,512" # image resolution w,h. å›¾ç‰‡åˆ†è¾¨ç‡ï¼Œå®½,é«˜ã€‚æ”¯æŒéæ­£æ–¹å½¢ï¼Œä½†å¿…é¡»æ˜¯ 64 å€æ•°ã€‚
+# Train related params | ÑµÁ·Ïà¹Ø²ÎÊı
+$resolution = "512,512" # image resolution w,h. Í¼Æ¬·Ö±æÂÊ£¬¿í,¸ß¡£Ö§³Ö·ÇÕı·½ĞÎ£¬µ«±ØĞëÊÇ 64 ±¶Êı¡£
 $batch_size = 1 # batch size
-$max_train_epoches = 10 # max train epoches | æœ€å¤§è®­ç»ƒ epoch
-$save_every_n_epochs = 2 # save every n epochs | æ¯ N ä¸ª epoch ä¿å­˜ä¸€æ¬¡
+$max_train_epoches = 10 # max train epoches | ×î´óÑµÁ· epoch
+$save_every_n_epochs = 2 # save every n epochs | Ã¿ N ¸ö epoch ±£´æÒ»´Î
 
-$train_unet_only = 0 # train U-Net only | ä»…è®­ç»ƒ U-Netï¼Œå¼€å¯è¿™ä¸ªä¼šç‰ºç‰²æ•ˆæœå¤§å¹…å‡å°‘æ˜¾å­˜ä½¿ç”¨ã€‚6Gæ˜¾å­˜å¯ä»¥å¼€å¯
-$train_text_encoder_only = 0 # train Text Encoder only | ä»…è®­ç»ƒ æ–‡æœ¬ç¼–ç å™¨
-$stop_text_encoder_training = 0 # stop text encoder training | åœ¨ç¬¬Næ­¥æ—¶åœæ­¢è®­ç»ƒæ–‡æœ¬ç¼–ç å™¨
+$train_unet_only = 0 # train U-Net only | ½öÑµÁ· U-Net£¬¿ªÆôÕâ¸ö»áÎşÉüĞ§¹û´ó·ù¼õÉÙÏÔ´æÊ¹ÓÃ¡£6GÏÔ´æ¿ÉÒÔ¿ªÆô
+$train_text_encoder_only = 0 # train Text Encoder only | ½öÑµÁ· ÎÄ±¾±àÂëÆ÷
+$stop_text_encoder_training = 0 # stop text encoder training | ÔÚµÚN²½Ê±Í£Ö¹ÑµÁ·ÎÄ±¾±àÂëÆ÷
 
-$noise_offset = 0 # noise offset | åœ¨è®­ç»ƒä¸­æ·»åŠ å™ªå£°åç§»æ¥æ”¹è‰¯ç”Ÿæˆéå¸¸æš—æˆ–è€…éå¸¸äº®çš„å›¾åƒï¼Œå¦‚æœå¯ç”¨ï¼Œæ¨èå‚æ•°ä¸º 0.1
-$keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | åœ¨éšæœºæ‰“ä¹± tokens æ—¶ï¼Œä¿ç•™å‰ N ä¸ªä¸å˜ã€‚
-$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | ä¼½é©¬å°„çº¿äº‹ä»¶çš„æœ€å°ä¿¡å™ªæ¯”ï¼ˆSNRï¼‰å€¼  é»˜è®¤ä¸º 0
+$noise_offset = 0 # noise offset | ÔÚÑµÁ·ÖĞÌí¼ÓÔëÉùÆ«ÒÆÀ´¸ÄÁ¼Éú³É·Ç³£°µ»òÕß·Ç³£ÁÁµÄÍ¼Ïñ£¬Èç¹ûÆôÓÃ£¬ÍÆ¼ö²ÎÊıÎª 0.1
+$keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | ÔÚËæ»ú´òÂÒ tokens Ê±£¬±£ÁôÇ° N ¸ö²»±ä¡£
+$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | Ù¤ÂíÉäÏßÊÂ¼şµÄ×îĞ¡ĞÅÔë±È£¨SNR£©Öµ  Ä¬ÈÏÎª 0
 
-# Learning rate | å­¦ä¹ ç‡
+# Learning rate | Ñ§Ï°ÂÊ
 $lr = "1e-4"
 $unet_lr = "1e-4"
 $text_encoder_lr = "1e-5"
 $lr_scheduler = "cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"
-$lr_warmup_steps = 0 # warmup steps | å­¦ä¹ ç‡é¢„çƒ­æ­¥æ•°ï¼Œlr_scheduler ä¸º constant æˆ– adafactor æ—¶è¯¥å€¼éœ€è¦è®¾ä¸º0ã€‚
-$lr_restart_cycles = 1 # cosine_with_restarts restart cycles | ä½™å¼¦é€€ç«é‡å¯æ¬¡æ•°ï¼Œä»…åœ¨ lr_scheduler ä¸º cosine_with_restarts æ—¶èµ·æ•ˆã€‚
+$lr_warmup_steps = 0 # warmup steps | Ñ§Ï°ÂÊÔ¤ÈÈ²½Êı£¬lr_scheduler Îª constant »ò adafactor Ê±¸ÃÖµĞèÒªÉèÎª0¡£
+$lr_restart_cycles = 1 # cosine_with_restarts restart cycles | ÓàÏÒÍË»ğÖØÆô´ÎÊı£¬½öÔÚ lr_scheduler Îª cosine_with_restarts Ê±ÆğĞ§¡£
 
-# Output settings | è¾“å‡ºè®¾ç½®
-$output_name = "aki" # output model name | æ¨¡å‹ä¿å­˜åç§°
-$save_model_as = "safetensors" # model save ext | æ¨¡å‹ä¿å­˜æ ¼å¼ ckpt, pt, safetensors
+# Output settings | Êä³öÉèÖÃ
+$output_name = "aki" # output model name | Ä£ĞÍ±£´æÃû³Æ
+$save_model_as = "safetensors" # model save ext | Ä£ĞÍ±£´æ¸ñÊ½ ckpt, pt, safetensors
 
-# Resume training state | æ¢å¤è®­ç»ƒè®¾ç½®  
-$save_state = 0 # save training state | ä¿å­˜è®­ç»ƒçŠ¶æ€ åç§°ç±»ä¼¼äº <output_name>-??????-state ?????? è¡¨ç¤º epoch æ•°
-$resume = "" # resume from state | ä»æŸä¸ªçŠ¶æ€æ–‡ä»¶å¤¹ä¸­æ¢å¤è®­ç»ƒ éœ€é…åˆä¸Šæ–¹å‚æ•°åŒæ—¶ä½¿ç”¨ ç”±äºè§„èŒƒæ–‡ä»¶é™åˆ¶ epoch æ•°å’Œå…¨å±€æ­¥æ•°ä¸ä¼šä¿å­˜ å³ä½¿æ¢å¤æ—¶å®ƒä»¬ä¹Ÿä» 1 å¼€å§‹ ä¸ network_weights çš„å…·ä½“å®ç°æ“ä½œå¹¶ä¸ä¸€è‡´
+# Resume training state | »Ö¸´ÑµÁ·ÉèÖÃ  
+$save_state = 0 # save training state | ±£´æÑµÁ·×´Ì¬ Ãû³ÆÀàËÆÓÚ <output_name>-??????-state ?????? ±íÊ¾ epoch Êı
+$resume = "" # resume from state | ´ÓÄ³¸ö×´Ì¬ÎÄ¼ş¼ĞÖĞ»Ö¸´ÑµÁ· ĞèÅäºÏÉÏ·½²ÎÊıÍ¬Ê±Ê¹ÓÃ ÓÉÓÚ¹æ·¶ÎÄ¼şÏŞÖÆ epoch ÊıºÍÈ«¾Ö²½Êı²»»á±£´æ ¼´Ê¹»Ö¸´Ê±ËüÃÇÒ²´Ó 1 ¿ªÊ¼ Óë network_weights µÄ¾ßÌåÊµÏÖ²Ù×÷²¢²»Ò»ÖÂ
 
-# å…¶ä»–è®¾ç½®
-$min_bucket_reso = 256 # arb min resolution | arb æœ€å°åˆ†è¾¨ç‡
-$max_bucket_reso = 1024 # arb max resolution | arb æœ€å¤§åˆ†è¾¨ç‡
-$persistent_data_loader_workers = 0 # persistent dataloader workers | å®¹æ˜“çˆ†å†…å­˜ï¼Œä¿ç•™åŠ è½½è®­ç»ƒé›†çš„workerï¼Œå‡å°‘æ¯ä¸ª epoch ä¹‹é—´çš„åœé¡¿
-$clip_skip = 2 # clip skip | ç„å­¦ ä¸€èˆ¬ç”¨ 2
-$multi_gpu = 0 # multi gpu | å¤šæ˜¾å¡è®­ç»ƒ è¯¥å‚æ•°ä»…é™åœ¨æ˜¾å¡æ•° >= 2 ä½¿ç”¨
-$lowram = 0 # lowram mode | ä½å†…å­˜æ¨¡å¼ è¯¥æ¨¡å¼ä¸‹ä¼šå°† U-net æ–‡æœ¬ç¼–ç å™¨ VAE è½¬ç§»åˆ° GPU æ˜¾å­˜ä¸­ å¯ç”¨è¯¥æ¨¡å¼å¯èƒ½ä¼šå¯¹æ˜¾å­˜æœ‰ä¸€å®šå½±å“
+# ÆäËûÉèÖÃ
+$min_bucket_reso = 256 # arb min resolution | arb ×îĞ¡·Ö±æÂÊ
+$max_bucket_reso = 1024 # arb max resolution | arb ×î´ó·Ö±æÂÊ
+$persistent_data_loader_workers = 0 # persistent dataloader workers | ÈİÒ×±¬ÄÚ´æ£¬±£Áô¼ÓÔØÑµÁ·¼¯µÄworker£¬¼õÉÙÃ¿¸ö epoch Ö®¼äµÄÍ£¶Ù
+$clip_skip = 2 # clip skip | ĞşÑ§ Ò»°ãÓÃ 2
+$multi_gpu = 0 # multi gpu | ¶àÏÔ¿¨ÑµÁ· ¸Ã²ÎÊı½öÏŞÔÚÏÔ¿¨Êı >= 2 Ê¹ÓÃ
+$lowram = 0 # lowram mode | µÍÄÚ´æÄ£Ê½ ¸ÃÄ£Ê½ÏÂ»á½« U-net ÎÄ±¾±àÂëÆ÷ VAE ×ªÒÆµ½ GPU ÏÔ´æÖĞ ÆôÓÃ¸ÃÄ£Ê½¿ÉÄÜ»á¶ÔÏÔ´æÓĞÒ»¶¨Ó°Ïì
 
-# ä¼˜åŒ–å™¨è®¾ç½®
-$optimizer_type = "AdamW8bit" # Optimizer type | ä¼˜åŒ–å™¨ç±»å‹ é»˜è®¤ä¸º AdamW8bitï¼Œå¯é€‰ï¼šAdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
+# ÓÅ»¯Æ÷ÉèÖÃ
+$optimizer_type = "AdamW8bit" # Optimizer type | ÓÅ»¯Æ÷ÀàĞÍ Ä¬ÈÏÎª AdamW8bit£¬¿ÉÑ¡£ºAdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
 
-# LyCORIS è®­ç»ƒè®¾ç½®
-$algo = "lora" # LyCORIS network algo | LyCORIS ç½‘ç»œç®—æ³• å¯é€‰ loraã€lohaã€lokrã€ia3ã€dyloraã€‚loraå³ä¸ºlocon
-$conv_dim = 4 # conv dim | ç±»ä¼¼äº network_dimï¼Œæ¨èä¸º 4
-$conv_alpha = 4 # conv alpha | ç±»ä¼¼äº network_alphaï¼Œå¯ä»¥é‡‡ç”¨ä¸ conv_dim ä¸€è‡´æˆ–è€…æ›´å°çš„å€¼
-$dropout = "0"  # dropout | dropout æ¦‚ç‡, 0 ä¸ºä¸ä½¿ç”¨ dropout, è¶Šå¤§åˆ™ dropout è¶Šå¤šï¼Œæ¨è 0~0.5ï¼Œ LoHa/LoKr/(IA)^3æš‚æ—¶ä¸æ”¯æŒ
+# LyCORIS ÑµÁ·ÉèÖÃ
+$algo = "lora" # LyCORIS network algo | LyCORIS ÍøÂçËã·¨ ¿ÉÑ¡ lora¡¢loha¡¢lokr¡¢ia3¡¢dylora¡£lora¼´Îªlocon
+$conv_dim = 4 # conv dim | ÀàËÆÓÚ network_dim£¬ÍÆ¼öÎª 4
+$conv_alpha = 4 # conv alpha | ÀàËÆÓÚ network_alpha£¬¿ÉÒÔ²ÉÓÃÓë conv_dim Ò»ÖÂ»òÕß¸üĞ¡µÄÖµ
+$dropout = "0"  # dropout | dropout ¸ÅÂÊ, 0 Îª²»Ê¹ÓÃ dropout, Ô½´óÔò dropout Ô½¶à£¬ÍÆ¼ö 0~0.5£¬ LoHa/LoKr/(IA)^3ÔİÊ±²»Ö§³Ö
 
-# ============= DO NOT MODIFY CONTENTS BELOW | è¯·å‹¿ä¿®æ”¹ä¸‹æ–¹å†…å®¹ =====================
+# Ô¶³Ì¼ÇÂ¼ÉèÖÃ
+$use_wandb = 0 # use_wandb | ÆôÓÃwandbÔ¶³Ì¼ÇÂ¼¹¦ÄÜ
+$wandb_api_key = "" # wandb_api_key | API,Í¨¹ıhttps://wandb.ai/authorize»ñÈ¡
+$log_tracker_name = "" # log_tracker_name | wandbÏîÄ¿Ãû³Æ,Áô¿ÕÔòÎª"network_train"
+
+# ============= DO NOT MODIFY CONTENTS BELOW | ÇëÎğĞŞ¸ÄÏÂ·½ÄÚÈİ =====================
 # Activate python venv
 .\venv\Scripts\activate
 
@@ -143,6 +148,21 @@ if ($min_snr_gamma -ne 0) {
 
 if($persistent_data_loader_workers) {
   [void]$ext_args.Add("--persistent_data_loader_workers")
+}
+
+if ($use_wandb -eq 1) {
+  [void]$ext_args.Add("--log_with=all")
+}
+else {
+  [void]$ext_args.Add("--log_with=tensorboard")
+}
+
+if ($wandb_api_key) {
+  [void]$ext_args.Add("--wandb_api_key=" + $wandb_api_key)
+}
+
+if ($log_tracker_name) {
+  [void]$ext_args.Add("--log_tracker_name=" + $log_tracker_name)
 }
 
 # run train
