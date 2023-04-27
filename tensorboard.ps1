@@ -1,3 +1,3 @@
 .\venv\Scripts\activate
 
-tensorboard --logdir=.\logs
+tensorboard --logdir=logs
