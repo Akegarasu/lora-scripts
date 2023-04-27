@@ -1,71 +1,71 @@
 # LoRA train script by @Akegarasu
 
-# Train data path | ÉèÖÃÑµÁ·ÓÃÄ£ÐÍ¡¢Í¼Æ¬
-$pretrained_model = "./sd-models/model.ckpt" # base model path | µ×Ä£Â·¾¶
-$is_v2_model = 0 # SD2.0 model | SD2.0Ä£ÐÍ 2.0Ä£ÐÍÏÂ clip_skip Ä¬ÈÏÎÞÐ§
-$parameterization = 0 # parameterization | ²ÎÊý»¯ ±¾²ÎÊýÐèÒªºÍ V2 ²ÎÊýÍ¬²½Ê¹ÓÃ ÊµÑéÐÔ¹¦ÄÜ
-$train_data_dir = "./train/aki" # train dataset path | ÑµÁ·Êý¾Ý¼¯Â·¾¶
-$reg_data_dir = "" # directory for regularization images | ÕýÔò»¯Êý¾Ý¼¯Â·¾¶£¬Ä¬ÈÏ²»Ê¹ÓÃÕýÔò»¯Í¼Ïñ¡£
+# Train data path | ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½Ä£ï¿½Í¡ï¿½Í¼Æ¬ï¿½Í¡ï¿½Í¼Æ¬
+$pretrained_model = "./sd-models/model.ckpt" # base model path | ï¿½ï¿½Ä£Â·ï¿½ï¿½ï¿½ï¿½
+$is_v2_model = 0 # SD2.0 model | SD2.0Ä£ï¿½ï¿½ï¿½ 2.Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ clip_skÄ¬ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½Ð§
+$parameterization = 0 # parameterization | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½Ê¹ï¿½ï¿½2Êµï¿½ï¿½ï¿½Ô¹ï¿½ï¿½ï¿½Í¬ï¿½ï¿½Ê¹ï¿½ï¿½ Êµï¿½ï¿½ï¿½Ô¹ï¿½ï¿½ï¿½
+$train_data_dir = "./train/aki" # train dataset path | Ñµï¿½ï¿½ï¿½ï¿½ï¿½Ý¼ï¿½Â·ï¿½ï¿½ï¿½Â·ï¿½ï¿½
+$reg_data_dir = "" # directory for regularization images | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¼ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½Ï²ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
 
-# Network settings | ÍøÂçÉèÖÃ
-$network_module = "networks.lora" # ÔÚÕâÀï½«»áÉèÖÃÑµÁ·µÄÍøÂçÖÖÀà£¬Ä¬ÈÏÎª networks.lora Ò²¾ÍÊÇ LoRA ÑµÁ·¡£Èç¹ûÄãÏëÑµÁ· LyCORIS£¨LoCon¡¢LoHa£© µÈ£¬ÔòÐÞ¸ÄÕâ¸öÖµÎª lycoris.kohya
-$network_weights = "" # pretrained weights for LoRA network | ÈôÐèÒª´ÓÒÑÓÐµÄ LoRA Ä£ÐÍÉÏ¼ÌÐøÑµÁ·£¬ÇëÌîÐ´ LoRA Ä£ÐÍÂ·¾¶¡£
-$network_dim = 32 # network dim | ³£ÓÃ 4~128£¬²»ÊÇÔ½´óÔ½ºÃ
-$network_alpha = 32 # network alpha | ³£ÓÃÓë network_dim ÏàÍ¬µÄÖµ»òÕß²ÉÓÃ½ÏÐ¡µÄÖµ£¬Èç network_dimµÄÒ»°ë ·ÀÖ¹ÏÂÒç¡£Ä¬ÈÏÖµÎª 1£¬Ê¹ÓÃ½ÏÐ¡µÄ alpha ÐèÒªÌáÉýÑ§Ï°ÂÊ¡£
+# Network settings | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$network_module = "networks.lora" # ï¿½ï¿½ï¿½ï¿½ï¿½ï½«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½à£¬Ä¬ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½à£¬Ä¬ï¿½ï¿½Îª netÒ²ï¿½ï¿½ï¿½ï¿½ks.lorÑµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½oRA Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½Lï¿½È£ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ÖµÎªoConï¿½ï¿½LoHaï¿½ï¿½ ï¿½È£ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½ï¿½ï¿½ÖµÎª lycoris.kohya
+$network_weights = "" # pretrained weights for LoRA network | ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Ðµï¿½ Ä£ï¿½ï¿½ï¿½Ï¼ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½Ñµï¿½ï¿½ï¿½Ä£ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½Ð´ LoRA Ä£ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½
+$network_dim = 32 # network dim | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 4~1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½Ô½ï¿½ï¿½ï¿½Ô½ï¿½ï¿½Ô½ï¿½ï¿½
+$network_alpha = 32 # network alpha | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ network_dï¿½ï¿½Í¬ï¿½ï¿½Öµï¿½ï¿½ï¿½ß²ï¿½ï¿½Ã½ï¿½Ð¡ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Ã½ï¿½Ð¡ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ò»ï¿½ï¿½wï¿½ï¿½Ö¹ï¿½ï¿½ï¿½ç¡£Ä¬ï¿½ï¿½ÖµÎªÒ»ï¿½ï¿½ï¿½Ê¹ï¿½Ã½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ç¡£Ä¬ï¿½ï¿½Öµï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ñ§Ï°ï¿½Ê¡ï¿½ï¿½Ð¡ï¿½ï¿½ alpha ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ñ§Ï°ï¿½Ê¡ï¿½
 
-# Train related params | ÑµÁ·Ïà¹Ø²ÎÊý
-$resolution = "512,512" # image resolution w,h. Í¼Æ¬·Ö±æÂÊ£¬¿í,¸ß¡£Ö§³Ö·ÇÕý·½ÐÎ£¬µ«±ØÐëÊÇ 64 ±¶Êý¡£
+# Train related params | Ñµï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$resolution = "512,512" # image resolution w,h. Í¼Æ¬ï¿½Ö±ï¿½ï¿½Ê£ï¿½ï¿½ï¿½ï¿½ï¿½ß¡ï¿½Ö§ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 64 ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 $batch_size = 1 # batch size
-$max_train_epoches = 10 # max train epoches | ×î´óÑµÁ· epoch
-$save_every_n_epochs = 2 # save every n epochs | Ã¿ N ¸ö epoch ±£´æÒ»´Î
+$max_train_epoches = 10 # max train epoches | ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ epoch
+$save_every_n_epochs = 2 # save every n epochs | Ã¿ N ï¿½ï¿½ï¿½ epochï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 
-$train_unet_only = 0 # train U-Net only | ½öÑµÁ· U-Net£¬¿ªÆôÕâ¸ö»áÎþÉüÐ§¹û´ó·ù¼õÉÙÏÔ´æÊ¹ÓÃ¡£6GÏÔ´æ¿ÉÒÔ¿ªÆô
-$train_text_encoder_only = 0 # train Text Encoder only | ½öÑµÁ· ÎÄ±¾±àÂëÆ÷
-$stop_text_encoder_training = 0 # stop text encoder training | ÔÚµÚN²½Ê±Í£Ö¹ÑµÁ·ÎÄ±¾±àÂëÆ÷
+$train_unet_only = 0 # train U-Net only | ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ U-Nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô´ï¿½Ê¹ï¿½Ã¡ï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½ï¿½Ô´ï¿½Ê¹ï¿½Ã¡ï¿½6Gï¿½Ô´ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½
+$train_text_encoder_only = 0 # train Text Encoder only | ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$stop_text_encoder_training = 0 # stop text encoder training | ï¿½Úµï¿½ï¿½ï¿½ï¿½Ê±Í£Ö¹Ñµï¿½ï¿½ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
-$noise_offset = 0 # noise offset | ÔÚÑµÁ·ÖÐÌí¼ÓÔëÉùÆ«ÒÆÀ´¸ÄÁ¼Éú³É·Ç³£°µ»òÕß·Ç³£ÁÁµÄÍ¼Ïñ£¬Èç¹ûÆôÓÃ£¬ÍÆ¼ö²ÎÊýÎª 0.1
-$keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | ÔÚËæ»ú´òÂÒ tokens Ê±£¬±£ÁôÇ° N ¸ö²»±ä¡£
-$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | Ù¤ÂíÉäÏßÊÂ¼þµÄ×îÐ¡ÐÅÔë±È£¨SNR£©Öµ  Ä¬ÈÏÎª 0
+$noise_offset = 0 # noise offset | ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É·Ç³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß·Ç³ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½Îª 0.1
+$keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ tokÊ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ä¡£ N ï¿½ï¿½ï¿½ï¿½ï¿½ä¡£
+$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | Ù¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½È£ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½Öµï¿½È£Ä¬ï¿½ï¿½ÎªRï¿½ï¿½Öµ  Ä¬ï¿½ï¿½Îª 0
 
-# Learning rate | Ñ§Ï°ÂÊ
+# Learning rate | Ñ§Ï°ï¿½ï¿½ï¿½
 $lr = "1e-4"
 $unet_lr = "1e-4"
 $text_encoder_lr = "1e-5"
 $lr_scheduler = "cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"
-$lr_warmup_steps = 0 # warmup steps | Ñ§Ï°ÂÊÔ¤ÈÈ²½Êý£¬lr_scheduler Îª constant »ò adafactor Ê±¸ÃÖµÐèÒªÉèÎª0¡£
-$lr_restart_cycles = 1 # cosine_with_restarts restart cycles | ÓàÏÒÍË»ðÖØÆô´ÎÊý£¬½öÔÚ lr_scheduler Îª cosine_with_restarts Ê±ÆðÐ§¡£
+$lr_warmup_steps = 0 # warmup steps | Ñ§Ï°ï¿½ï¿½Ô¤ï¿½È²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½lr_scheduÎªer Îª constï¿½ï¿½nt ï¿½ï¿½ adafaÊ±ï¿½ï¿½Öµï¿½ï¿½Òªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Îª0ï¿½ï¿½
+$lr_restart_cycles = 1 # cosine_with_restarts restart cycles | ï¿½ï¿½ï¿½ï¿½ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ lr_sÎªheduler Îª cosine_with_Ê±ï¿½ï¿½Ð§ï¿½ï¿½arts Ê±ï¿½ï¿½Ð§ï¿½ï¿½
 
-# Output settings | Êä³öÉèÖÃ
-$output_name = "aki" # output model name | Ä£ÐÍ±£´æÃû³Æ
-$save_model_as = "safetensors" # model save ext | Ä£ÐÍ±£´æ¸ñÊ½ ckpt, pt, safetensors
+# Output settings | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$output_name = "aki" # output model name | Ä£ï¿½Í±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$save_model_as = "safetensors" # model save ext | Ä£ï¿½Í±ï¿½ï¿½ï¿½ï¿½Ê½ï¿½Ê½ ckpt, pt, safetensors
 
-# Resume training state | »Ö¸´ÑµÁ·ÉèÖÃ  
-$save_state = 0 # save training state | ±£´æÑµÁ·×´Ì¬ Ãû³ÆÀàËÆÓÚ <output_name>-??????-state ?????? ±íÊ¾ epoch Êý
-$resume = "" # resume from state | ´ÓÄ³¸ö×´Ì¬ÎÄ¼þ¼ÐÖÐ»Ö¸´ÑµÁ· ÐèÅäºÏÉÏ·½²ÎÊýÍ¬Ê±Ê¹ÓÃ ÓÉÓÚ¹æ·¶ÎÄ¼þÏÞÖÆ epoch ÊýºÍÈ«¾Ö²½Êý²»»á±£´æ ¼´Ê¹»Ö¸´Ê±ËüÃÇÒ²´Ó 1 ¿ªÊ¼ Óë network_weights µÄ¾ßÌåÊµÏÖ²Ù×÷²¢²»Ò»ÖÂ
+# Resume training state | ï¿½Ö¸ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½  
+$save_state = 0 # save training state | ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½×´Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ <output_name>-??????-stateï¿½ï¿½Ê¾????? ï¿½ï¿½ï¿½Ê¾ epoch ï¿½ï¿½
+$resume = "" # resume from state | ï¿½ï¿½Ä³ï¿½ï¿½×´Ì¬ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Ð»Ö¸ï¿½Ñµï¿½ï¿½Ð»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï·ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±Ê¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¹æ·¶ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á±£ï¿½ï¿½eï¿½ï¿½Ê¹ï¿½Ö¸ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½È«ï¿½Ö²ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½á±£ï¿½ï¿½ ï¿½ï¿½Ê¹ï¿½Ö¸ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½Êµï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ network_weights ï¿½Ä¾ï¿½ï¿½ï¿½Êµï¿½Ö²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 
-# ÆäËûÉèÖÃ
-$min_bucket_reso = 256 # arb min resolution | arb ×îÐ¡·Ö±æÂÊ
-$max_bucket_reso = 1024 # arb max resolution | arb ×î´ó·Ö±æÂÊ
-$persistent_data_loader_workers = 0 # persistent dataloader workers | ÈÝÒ×±¬ÄÚ´æ£¬±£Áô¼ÓÔØÑµÁ·¼¯µÄworker£¬¼õÉÙÃ¿¸ö epoch Ö®¼äµÄÍ£¶Ù
-$clip_skip = 2 # clip skip | ÐþÑ§ Ò»°ãÓÃ 2
-$multi_gpu = 0 # multi gpu | ¶àÏÔ¿¨ÑµÁ· ¸Ã²ÎÊý½öÏÞÔÚÏÔ¿¨Êý >= 2 Ê¹ÓÃ
-$lowram = 0 # lowram mode | µÍÄÚ´æÄ£Ê½ ¸ÃÄ£Ê½ÏÂ»á½« U-net ÎÄ±¾±àÂëÆ÷ VAE ×ªÒÆµ½ GPU ÏÔ´æÖÐ ÆôÓÃ¸ÃÄ£Ê½¿ÉÄÜ»á¶ÔÏÔ´æÓÐÒ»¶¨Ó°Ïì
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$min_bucket_reso = 256 # arb min resolution | arb ï¿½ï¿½Ð¡ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$max_bucket_reso = 1024 # arb max resolution | arb ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½
+$persistent_data_loader_workers = 0 # persistent dataloader workers | ï¿½ï¿½ï¿½×±ï¿½ï¿½Ú´æ£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½kerï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ï¿½Í£ï¿½ï¿½ epoch Ö®ï¿½ï¿½ï¿½Í£ï¿½ï¿½
+$clip_skip = 2 # clip skip | ï¿½ï¿½Ñ§Ñ§Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 2
+$multi_gpu = 0 # multi gpu | ï¿½ï¿½ï¿½Ô¿ï¿½Ñµï¿½ï¿½Ñµï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½ >= 2 Ê¹ï¿½ï¿½
+$lowram = 0 # lowram mode | ï¿½ï¿½ï¿½Ú´ï¿½Ä£Ê½Ä£ï¿½ï¿½Ä£Ê½ï¿½Â»á½«ï¿½Â»á½« U-nï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½Æµï¿½VAE ×ªï¿½Ô´ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ã¸ï¿½Ä£Ê½ï¿½ï¿½ï¿½Ü»ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ó°ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ü»ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ó°ï¿½ï¿½
 
-# ÓÅ»¯Æ÷ÉèÖÃ
-$optimizer_type = "AdamW8bit" # Optimizer type | ÓÅ»¯Æ÷ÀàÐÍ Ä¬ÈÏÎª AdamW8bit£¬¿ÉÑ¡£ºAdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
+# ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$optimizer_type = "AdamW8bit" # Optimizer type | ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¬ï¿½ï¿½Îª Ä¬ï¿½ï¿½Îª Adamï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½tï¿½ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
 
-# LyCORIS ÑµÁ·ÉèÖÃ
-$algo = "lora" # LyCORIS network algo | LyCORIS ÍøÂçËã·¨ ¿ÉÑ¡ lora¡¢loha¡¢lokr¡¢ia3¡¢dylora¡£lora¼´Îªlocon
-$conv_dim = 4 # conv dim | ÀàËÆÓÚ network_dim£¬ÍÆ¼öÎª 4
-$conv_alpha = 4 # conv alpha | ÀàËÆÓÚ network_alpha£¬¿ÉÒÔ²ÉÓÃÓë conv_dim Ò»ÖÂ»òÕß¸üÐ¡µÄÖµ
-$dropout = "0"  # dropout | dropout ¸ÅÂÊ, 0 Îª²»Ê¹ÓÃ dropout, Ô½´óÔò dropout Ô½¶à£¬ÍÆ¼ö 0~0.5£¬ LoHa/LoKr/(IA)^3ÔÝÊ±²»Ö§³Ö
+# LyCORIS Ñµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$algo = "lora" # LyCORIS network algo | LyCORIS ï¿½ï¿½ï¿½ï¿½ï¿½ã·¨ï¿½ï¿½ï¿½Ñ¡ï¿½ï¿½Ñ¡ lï¿½ï¿½raï¿½ï¿½ï¿½ï¿½ohaï¿½ï¿½ï¿½lokï¿½ï¿½ï¿½ï¿½ia3ï¿½ï¿½ï¿½dyloï¿½ï¿½Îªï¿½ï¿½loraï¿½ï¿½Îªlocon
+$conv_dim = 4 # conv dim | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ network_ï¿½ï¿½ï¿½Æ¼ï¿½Îªï¿½ï¿½Æ¼ï¿½Îª 4
+$conv_alpha = 4 # conv alpha | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ network_alï¿½ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½ cÒ»ï¿½Â»ï¿½ï¿½ß¸ï¿½Ð¡ï¿½ï¿½ÖµÒ»ï¿½Â»ï¿½ï¿½ß¸ï¿½Ð¡ï¿½ï¿½Öµ
+$dropout = "0"  # dropout | dropout ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, Îªï¿½ï¿½Ê¹ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ dropoÔ½ï¿½ï¿½ï¿½ï¿½ Ô½ï¿½ï¿½ï¿½ï¿½ drÔ½ï¿½à£¬ï¿½Æ¼ï¿½ Ô½ï¿½à£¬ï¿½Æ¼ï¿½ï¿½ 0~0.5ï¿½ï¿½ LoHa/LoKï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½ï¿½)^3ï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½ï¿½
 
-# Ô¶³Ì¼ÇÂ¼ÉèÖÃ
-$use_wandb = 0 # use_wandb | ÆôÓÃwandbÔ¶³Ì¼ÇÂ¼¹¦ÄÜ
-$wandb_api_key = "" # wandb_api_key | API,Í¨¹ýhttps://wandb.ai/authorize»ñÈ¡
-$log_tracker_name = "" # log_tracker_name | wandbÏîÄ¿Ãû³Æ,Áô¿ÕÔòÎª"network_train"
+# Ô¶ï¿½Ì¼ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+$use_wandb = 0 # enable wandb logging | ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½wanÔ¶ï¿½Ì¼ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½
+$wandb_api_key = "" # wandb api key | APIï¼ŒÍ¨ï¿½ï¿½ï¿½https://wandb.ai/authorizï¿½ï¿½È¡ï¿½È¡
+$log_tracker_name = "" # wandb log tracker name | wandbï¿½ï¿½Ä¿ï¿½ï¼Œï¿½ï¿½,ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Îª"network_train"
 
-# ============= DO NOT MODIFY CONTENTS BELOW | ÇëÎðÐÞ¸ÄÏÂ·½ÄÚÈÝ =====================
+# ============= DO NOT MODIFY CONTENTS BELOW | ï¿½ï¿½ï¿½ï¿½ï¿½Þ¸ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½Â·ï¿½ï¿½ï¿½ï¿½ï¿½ =====================
 # Activate python venv
 .\venv\Scripts\activate
 
@@ -146,23 +146,22 @@ if ($min_snr_gamma -ne 0) {
   [void]$ext_args.Add("--min_snr_gamma=$min_snr_gamma")
 } 
 
-if($persistent_data_loader_workers) {
+if ($persistent_data_loader_workers) {
   [void]$ext_args.Add("--persistent_data_loader_workers")
 }
 
 if ($use_wandb -eq 1) {
   [void]$ext_args.Add("--log_with=all")
+  if ($wandb_api_key) {
+    [void]$ext_args.Add("--wandb_api_key=" + $wandb_api_key)
+  }
+  
+  if ($log_tracker_name) {
+    [void]$ext_args.Add("--log_tracker_name=" + $log_tracker_name)
+  }
 }
 else {
   [void]$ext_args.Add("--log_with=tensorboard")
-}
-
-if ($wandb_api_key) {
-  [void]$ext_args.Add("--wandb_api_key=" + $wandb_api_key)
-}
-
-if ($log_tracker_name) {
-  [void]$ext_args.Add("--log_tracker_name=" + $log_tracker_name)
 }
 
 # run train

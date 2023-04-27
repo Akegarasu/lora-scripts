@@ -30,5 +30,6 @@ cd ./sd-scripts
 
 pip install --upgrade -r requirements.txt
 pip install --upgrade lion-pytorch lycoris-lora dadaptation
+pip install --upgrade wandb
 
 echo "Install completed"
