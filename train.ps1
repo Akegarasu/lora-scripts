@@ -1,71 +1,71 @@
 # LoRA train script by @Akegarasu
 
-# Train data path | ����ѵ����ģ�͡�ͼƬ�͡�ͼƬ
-$pretrained_model = "./sd-models/model.ckpt" # base model path | ��ģ·����
-$is_v2_model = 0 # SD2.0 model | SD2.0ģ��� 2.ģ������� clip_skĬ����Ч����Ч
-$parameterization = 0 # parameterization | ���������������Ҫ����������ͬ��ʹ��2ʵ���Թ���ͬ��ʹ�� ʵ���Թ���
-$train_data_dir = "./train/aki" # train dataset path | ѵ�����ݼ�·���·��
-$reg_data_dir = "" # directory for regularization images | �������ݼ�·����Ĭ�ϲ�ʹ������ͼ�������ͼ��
+# Train data path | 设置训练用模型、图片
+$pretrained_model = "./sd-models/model.ckpt" # base model path | 底模路径
+$is_v2_model = 0 # SD2.0 model | SD2.0模型 2.0模型下 clip_skip 默认无效
+$parameterization = 0 # parameterization | 参数化 本参数需要和 V2 参数同步使用 实验性功能
+$train_data_dir = "./train/aki" # train dataset path | 训练数据集路径
+$reg_data_dir = "" # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
-# Network settings | ������������
-$network_module = "networks.lora" # �����ｫ������ѵ�����������࣬Ĭ��Ϊ������࣬Ĭ��Ϊ netҲ����ks.lorѵ�����������ѵ��oRA ѵ�������������ѵ����L�ȣ����޸����ֵΪoCon��LoHa�� �ȣ����޸����ֵΪ lycoris.kohya
-$network_weights = "" # pretrained weights for LoRA network | ����Ҫ�����е����е� ģ���ϼ���ѵ��������д��ѵ���ģ��·����д LoRA ģ��·����
-$network_dim = 32 # network dim | ������ 4~1������Խ��Խ���Խ��Խ��
-$network_alpha = 32 # network alpha | ��������� network_d��ͬ��ֵ���߲��ý�С��ֵ�����ý�С��ֵ���� ��һ��w��ֹ���硣Ĭ��ֵΪһ���ʹ�ý�С����硣Ĭ��ֵ��Ҫ����ѧϰ�ʡ��С�� alpha ��Ҫ����ѧϰ�ʡ�
+# Network settings | 网络设置
+$network_module = "networks.lora" # 在这里将会设置训练的网络种类，默认为 networks.lora 也就是 LoRA 训练。如果你想训练 LyCORIS（LoCon、LoHa） 等，则修改这个值为 lycoris.kohya
+$network_weights = "" # pretrained weights for LoRA network | 若需要从已有的 LoRA 模型上继续训练，请填写 LoRA 模型路径。
+$network_dim = 32 # network dim | 常用 4~128，不是越大越好
+$network_alpha = 32 # network alpha | 常用与 network_dim 相同的值或者采用较小的值，如 network_dim的一半 防止下溢。默认值为 1，使用较小的 alpha 需要提升学习率。
 
-# Train related params | ѵ����ز������
-$resolution = "512,512" # image resolution w,h. ͼƬ�ֱ��ʣ�����ߡ�֧�ַ������Σ�����������Σ������������ 64 ������
+# Train related params | 训练相关参数
+$resolution = "512,512" # image resolution w,h. 图片分辨率，宽,高。支持非正方形，但必须是 64 倍数。
 $batch_size = 1 # batch size
-$max_train_epoches = 10 # max train epoches | ���ѵ���� epoch
-$save_every_n_epochs = 2 # save every n epochs | ÿ N ��� epoch����һ���һ��
+$max_train_epoches = 10 # max train epoches | 最大训练 epoch
+$save_every_n_epochs = 2 # save every n epochs | 每 N 个 epoch 保存一次
 
-$train_unet_only = 0 # train U-Net only | ��ѵ���� U-N���������������Ч����������Դ�ʹ�á����Դ���Կ����Դ�ʹ�á�6G�Դ���Կ���
-$train_text_encoder_only = 0 # train Text Encoder only | ��ѵ����ı�������������
-$stop_text_encoder_training = 0 # stop text encoder training | �ڵ����ʱֹͣѵ���ı��������������
+$train_unet_only = 0 # train U-Net only | 仅训练 U-Net，开启这个会牺牲效果大幅减少显存使用。6G显存可以开启
+$train_text_encoder_only = 0 # train Text Encoder only | 仅训练 文本编码器
+$stop_text_encoder_training = 0 # stop text encoder training | 在第N步时停止训练文本编码器
 
-$noise_offset = 0 # noise offset | ��ѵ�����������ƫ�����������ɷǳ������߷ǳ�����ͼ��������ã��Ƽ�����Ϊ����ͼ��������ã��Ƽ�����Ϊ 0.1
-$keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | ������������� tokʱ������ǰ��������䡣 N �����䡣
-$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | ٤�������¼�����С����ȣ��С���ֵ�ȣĬ��ΪR��ֵ  Ĭ��Ϊ 0
+$noise_offset = 0 # noise offset | 在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用，推荐参数为 0.1
+$keep_tokens = 0 # keep heading N tokens when shuffling caption tokens | 在随机打乱 tokens 时，保留前 N 个不变。
+$min_snr_gamma = 0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | 伽马射线事件的最小信噪比（SNR）值  默认为 0
 
-# Learning rate | ѧϰ���
+# Learning rate | 学习率
 $lr = "1e-4"
 $unet_lr = "1e-4"
 $text_encoder_lr = "1e-5"
 $lr_scheduler = "cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup"
-$lr_warmup_steps = 0 # warmup steps | ѧϰ��Ԥ�Ȳ���������lr_scheduΪer Ϊ const��nt �� adafaʱ��ֵ��Ҫ��Ϊ�����Ҫ��Ϊ0��
-$lr_restart_cycles = 1 # cosine_with_restarts restart cycles | �����˻����������������������� lr_sΪheduler Ϊ cosine_with_ʱ��Ч��arts ʱ��Ч��
+$lr_warmup_steps = 0 # warmup steps | 学习率预热步数，lr_scheduler 为 constant 或 adafactor 时该值需要设为0。
+$lr_restart_cycles = 1 # cosine_with_restarts restart cycles | 余弦退火重启次数，仅在 lr_scheduler 为 cosine_with_restarts 时起效。
 
-# Output settings | ����������
-$output_name = "aki" # output model name | ģ�ͱ�����������
-$save_model_as = "safetensors" # model save ext | ģ�ͱ����ʽ�ʽ ckpt, pt, safetensors
+# Output settings | 输出设置
+$output_name = "aki" # output model name | 模型保存名称
+$save_model_as = "safetensors" # model save ext | 模型保存格式 ckpt, pt, safetensors
 
-# Resume training state | �ָ�ѵ����������  
-$save_state = 0 # save training state | ����ѵ��״̬������������������� <output_name>-??????-state��ʾ????? ���ʾ epoch ��
-$resume = "" # resume from state | ��ĳ��״̬�ļ����лָ�ѵ��л������Ϸ�����ͬʱʹ������ڹ淶�ļ�����ʹ�� �������ȫ�ֲ������ᱣ��e��ʹ�ָ�ʱ����Ҳ��ȫ�ֲ��ʼ�����ᱣ�� ��ʹ�ָ�ʱ�����ľ���ʵ�ֲ�������һ��� network_weights �ľ���ʵ�ֲ�������һ��
+# Resume training state | 恢复训练设置
+$save_state = 0 # save training state | 保存训练状态 名称类似于 <output_name>-??????-state ?????? 表示 epoch 数
+$resume = "" # resume from state | 从某个状态文件夹中恢复训练 需配合上方参数同时使用 由于规范文件限制 epoch 数和全局步数不会保存 即使恢复时它们也从 1 开始 与 network_weights 的具体实现操作并不一致
 
-# ������������
-$min_bucket_reso = 256 # arb min resolution | arb ��С�ֱ������
-$max_bucket_reso = 1024 # arb max resolution | arb ���ֱ�����
-$persistent_data_loader_workers = 0 # persistent dataloader workers | ���ױ��ڴ棬�������ѵ�������ѵ����������ÿ��ker����֮���ͣ�� epoch ֮���ͣ��
-$clip_skip = 2 # clip skip | ��ѧѧһ������� 2
-$multi_gpu = 0 # multi gpu | ���Կ�ѵ��ѵ�ò����������Կ���������ʹ���� >= 2 ʹ��
-$lowram = 0 # lowram mode | ���ڴ�ģʽģ��ģʽ�»Ὣ�»Ὣ U-n�ı������������ת�Ƶ�VAE ת�Դ��� ���ø�ģʽ���ܻ���Դ���һ��Ӱ��ʽ���ܻ���Դ���һ��Ӱ��
+# 其他设置
+$min_bucket_reso = 256 # arb min resolution | arb 最小分辨率
+$max_bucket_reso = 1024 # arb max resolution | arb 最大分辨率
+$persistent_data_loader_workers = 0 # persistent dataloader workers | 容易爆内存，保留加载训练集的worker，减少每个 epoch 之间的停顿
+$clip_skip = 2 # clip skip | 玄学 一般用 2
+$multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
+$lowram = 0 # lowram mode | 低内存模式 该模式下会将 U-net 文本编码器 VAE 转移到 GPU 显存中 启用该模式可能会对显存有一定影响
 
-# �Ż�����������
-$optimizer_type = "AdamW8bit" # Optimizer type | �Ż��������Ĭ��Ϊ Ĭ��Ϊ Adam����ѡ��t����ѡ��AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
+# 优化器设置
+$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
 
-# LyCORIS ѵ���������
-$algo = "lora" # LyCORIS network algo | LyCORIS �����㷨���ѡ��ѡ l��ra����oha���lok����ia3���dylo��Ϊ��lora��Ϊlocon
-$conv_dim = 4 # conv dim | ��������� network_���Ƽ�Ϊ��Ƽ�Ϊ 4
-$conv_alpha = 4 # conv alpha | ��������� network_al�����Բ�������Բ����� cһ�»��߸�С��ֵһ�»��߸�С��ֵ
-$dropout = "0"  # dropout | dropout ������, Ϊ��ʹ���ʹ�� dropoԽ���� Խ���� drԽ�࣬�Ƽ� Խ�࣬�Ƽ�� 0~0.5�� LoHa/LoK��ʱ��֧��)^3��ʱ��֧��
+# LyCORIS 训练设置
+$algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha、lokr、ia3、dylora。lora即为locon
+$conv_dim = 4 # conv dim | 类似于 network_dim，推荐为 4
+$conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
+$dropout = "0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dropout 越多，推荐 0~0.5， LoHa/LoKr/(IA)^3暂时不支持
 
-# Զ�̼�¼�������
-$use_wandb = 0 # enable wandb logging | ������wanԶ�̼�¼����¼����
-$wandb_api_key = "" # wandb api key | API，ͨ���https://wandb.ai/authoriz��ȡ�ȡ
-$log_tracker_name = "" # wandb log tracker name | wandb��Ŀ�，��,�����Ϊ����Ϊ"network_train"
+# 远程记录设置
+$use_wandb = 0 # enable wandb logging | 启用wandb远程记录功能
+$wandb_api_key = "" # wandb api key | API，通过https://wandb.ai/authorize获取
+$log_tracker_name = "" # wandb log tracker name | wandb项目名称,留空则为"network_train"
 
-# ============= DO NOT MODIFY CONTENTS BELOW | �����޸��·�����·����� =====================
+# ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 # Activate python venv
 .\venv\Scripts\activate
 
