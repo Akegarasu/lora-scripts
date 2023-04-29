@@ -14,6 +14,11 @@ from fastapi.staticfiles import StaticFiles
 
 import toml
 
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+if sys.platform == "win32":
+    # disable triton on windows
+    os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
+
 parser = argparse.ArgumentParser(description="GUI for training network")
 parser.add_argument("--host", type=str, default="127.0.0.1")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
@@ -51,7 +56,6 @@ def prepare_frontend():
             else:
                 print("Git not found, please install git first")
                 sys.exit(1)
-        # os.environ["GIT_CONFIG_GLOBAL"] = os.path.join(os.getcwd(), "assets", "gitconfig-cn")
         subprocess.run(["git", "submodule", "init"])
         subprocess.run(["git", "submodule", "update"])
 
@@ -82,7 +86,7 @@ def run_train(toml_path: str):
         "--config_file", toml_path,
     ]
     try:
-        result = subprocess.run(args, shell=True, env=os.environ)
+        result = subprocess.run(args, env=os.environ)
         if result.returncode != 0:
             print(f"Training failed / 训练失败")
         else:
@@ -126,9 +130,5 @@ app.mount("/", sf, name="static")
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
     print(f"Server started at http://{args.host}:{args.port}")
-    if sys.platform == "win32":
-        # disable triton on windows
-        os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
-
     webbrowser.open(f"http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="error")
