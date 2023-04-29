@@ -1,0 +1,5 @@
+[url "https://jihulab.com/affair3547/sd-scripts"]
+    insteadOf = https://github.com/kohya-ss/sd-scripts.git
+
+[url "https://jihulab.com/affair3547/lora-gui-dist"]
+    insteadOf = https://github.com/hanamizuki-ai/lora-gui-dist

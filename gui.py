@@ -14,8 +14,50 @@ from fastapi.staticfiles import StaticFiles
 
 import toml
 
-app = FastAPI()
+parser = argparse.ArgumentParser(description="GUI for training network")
+parser.add_argument("--host", type=str, default="127.0.0.1")
+parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
 
+def is_git_installed():
+    if sys.platform == "win32":
+        git_bin_name = "git.exe"
+    else:
+        git_bin_name = "git"
+
+    for path in os.environ["PATH"].split(os.pathsep):
+        git_path = os.path.join(path, git_bin_name)
+        if os.path.exists(git_path):
+            return True
+    return False
+
+def find_windows_git():
+    possible_paths = ["git\\bin\\git.exe", "git\\cmd\\git.exe", "Git\\mingw64\\libexec\\git-core\\git.exe"]
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+
+def prepare_frontend():
+    if not os.path.exists("./frontend/dist"):
+        print("Frontend not found, try clone...")
+        print("Checking git installation...")
+        if not is_git_installed():
+            if sys.platform == "win32":
+                git_path = find_windows_git()
+
+                if git_path is not None:
+                    print(f"Git not found, but found git in {git_path}, add it to PATH")
+                    os.environ["PATH"] += os.pathsep + os.path.dirname(git_path)
+                    return
+            else:
+                print("Git not found, please install git first")
+                sys.exit(1)
+        # os.environ["GIT_CONFIG_GLOBAL"] = os.path.join(os.getcwd(), "assets", "gitconfig-cn")
+        subprocess.run(["git", "submodule", "init"])
+        subprocess.run(["git", "submodule", "update"])
+
+prepare_frontend()
+
+app = FastAPI()
 lock = Lock()
 
 # fix mimetype error in some fucking systems
@@ -31,8 +73,6 @@ def _hooked_file_response(*args, **kwargs):
     return r
 sf.file_response = _hooked_file_response
 
-parser = argparse.ArgumentParser(description="GUI for training network")
-parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
 
 def run_train(toml_path: str):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
@@ -85,10 +125,10 @@ app.mount("/", sf, name="static")
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
-    print(f"Server started at http://127.0.0.1:{args.port}")
+    print(f"Server started at http://{args.host}:{args.port}")
     if sys.platform == "win32":
         # disable triton on windows
         os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
-    
-    webbrowser.open(f"http://127.0.0.1:{args.port}")
-    uvicorn.run(app, host="127.0.0.1", port=28000, log_level="error")
+
+    webbrowser.open(f"http://{args.host}:{args.port}")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="error")
