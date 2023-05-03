@@ -14,11 +14,6 @@ from fastapi.staticfiles import StaticFiles
 
 import toml
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-if sys.platform == "win32":
-    # disable triton on windows
-    os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
-
 parser = argparse.ArgumentParser(description="GUI for training network")
 parser.add_argument("--host", type=str, default="127.0.0.1")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
@@ -59,7 +54,13 @@ def prepare_frontend():
         subprocess.run(["git", "submodule", "init"])
         subprocess.run(["git", "submodule", "update"])
 
-prepare_frontend()
+def remove_warnings():
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    if sys.platform == "win32":
+        # disable triton on windows
+        os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
+    os.environ["BITSANDBYTES_NOWELCOME"] = "1"
+    os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
 
 app = FastAPI()
 lock = Lock()
@@ -128,6 +129,9 @@ async def index():
 app.mount("/", sf, name="static")
 
 if __name__ == "__main__":
+    remove_warnings()
+    prepare_frontend()
+    
     args, _ = parser.parse_known_args()
     print(f"Server started at http://{args.host}:{args.port}")
     webbrowser.open(f"http://{args.host}:{args.port}")
