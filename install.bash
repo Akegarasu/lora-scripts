@@ -12,7 +12,7 @@ while true; do
     case $version in
     [1]*)
         pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
-        pip install xformers==0.0.17
+        pip install xformers==0.0.19
         break
         ;;
     [2]*)
