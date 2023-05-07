@@ -62,6 +62,9 @@ def remove_warnings():
     os.environ["BITSANDBYTES_NOWELCOME"] = "1"
     os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
 
+remove_warnings()
+prepare_frontend()
+
 app = FastAPI()
 lock = Lock()
 
@@ -129,9 +132,6 @@ async def index():
 app.mount("/", sf, name="static")
 
 if __name__ == "__main__":
-    remove_warnings()
-    prepare_frontend()
-    
     args, _ = parser.parse_known_args()
     print(f"Server started at http://{args.host}:{args.port}")
     webbrowser.open(f"http://{args.host}:{args.port}")
