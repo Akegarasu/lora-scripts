@@ -18,7 +18,7 @@ if [[ $multi_gpu == 1 ]]; then launchArgs+=("--multi_gpu"); fi
 if [[ $utf8 == 1 ]]; then export PYTHONUTF8=1; fi
 
 # run train
-accelerate launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
+python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --config_file=$config_file \
   --sample_prompts=$sample_prompts \
   ${extArgs[@]}

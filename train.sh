@@ -108,7 +108,7 @@ if [[ $noise_offset != "0" ]]; then extArgs+=("--noise_offset $noise_offset"); f
 
 if [[ $min_snr_gamma -ne 0 ]]; then extArgs+=("--min_snr_gamma $min_snr_gamma"); fi
 
-if [[ $use_wandb == 1 ]]; then 
+if [[ $use_wandb == 1 ]]; then
   extArgs+=("--log_with=all")
 else
   extArgs+=("--log_with=tensorboard")
@@ -118,7 +118,7 @@ if [[ $wandb_api_key ]]; then extArgs+=("--wandb_api_key $wandb_api_key"); fi
 
 if [[ $log_tracker_name ]]; then extArgs+=("--log_tracker_name $log_tracker_name"); fi
 
-accelerate launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
+python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
   --pretrained_model_name_or_path=$pretrained_model \
   --train_data_dir=$train_data_dir \

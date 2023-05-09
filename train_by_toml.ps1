@@ -24,7 +24,7 @@ if ($utf8 -eq 1) {
 }
 
 # run train
-accelerate launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
+python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --config_file=$config_file `
   --sample_prompts=$sample_prompts `
   $ext_args

@@ -83,7 +83,7 @@ if ($lowram) {
 }
 
 if ($is_v2_model) {
-  [void]$ext_args.Add("--v2") 
+  [void]$ext_args.Add("--v2")
 }
 else {
   [void]$ext_args.Add("--clip_skip=$clip_skip")
@@ -144,7 +144,7 @@ if ($resume) {
 
 if ($min_snr_gamma -ne 0) {
   [void]$ext_args.Add("--min_snr_gamma=$min_snr_gamma")
-} 
+}
 
 if ($persistent_data_loader_workers) {
   [void]$ext_args.Add("--persistent_data_loader_workers")
@@ -155,7 +155,7 @@ if ($use_wandb -eq 1) {
   if ($wandb_api_key) {
     [void]$ext_args.Add("--wandb_api_key=" + $wandb_api_key)
   }
-  
+
   if ($log_tracker_name) {
     [void]$ext_args.Add("--log_tracker_name=" + $log_tracker_name)
   }
@@ -165,7 +165,7 @@ else {
 }
 
 # run train
-accelerate launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
+python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
   --enable_bucket `
   --pretrained_model_name_or_path=$pretrained_model `
   --train_data_dir=$train_data_dir `
