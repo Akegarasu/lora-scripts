@@ -1,3 +1,4 @@
-.\venv\Scripts\activate
+$Env:TF_CPP_MIN_LOG_LEVEL = "3"
 
-tensorboard --logdir=.\logs
+.\venv\Scripts\activate
+tensorboard --logdir=logs
