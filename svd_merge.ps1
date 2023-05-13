@@ -30,7 +30,7 @@ if ($new_conv_rank) {
   [void]$ext_args.Add("--new_conv_rank=" + $new_conv_rank)
 }
 
-# run resize
+# run svd_merge
 accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/networks/svd_merge_lora.py" `
 	--save_precision=$save_precision `
 	--precision=$precision `
@@ -39,5 +39,5 @@ accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/networks/svd_mer
 	--device=$device `
 	$ext_args 
 
-Write-Output "Merge finished"
+Write-Output "SVD Merge finished"
 Read-Host | Out-Null ;
