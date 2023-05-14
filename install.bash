@@ -1,10 +1,26 @@
 #!/usr/bin/bash
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+create_venv=true
 
-echo "Creating python venv..."
-python3 -m venv venv
-source "$script_dir/venv/bin/activate"
+while [ -n "$1" ]; do
+    case "$1" in
+        --disable-venv)
+            create_venv=false
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+if $create_venv; then
+    echo "Creating python venv..."
+    python3 -m venv venv
+    source "$script_dir/venv/bin/activate"
+    echo "active venv"
+fi
 
 echo "Installing torch & xformers..."
 
