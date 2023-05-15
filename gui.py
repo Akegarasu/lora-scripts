@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import webbrowser
@@ -14,21 +15,9 @@ from fastapi.staticfiles import StaticFiles
 
 import toml
 
-parser = argparse.ArgumentParser(description="GUI for training network")
+parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
-
-def is_git_installed():
-    if sys.platform == "win32":
-        git_bin_name = "git.exe"
-    else:
-        git_bin_name = "git"
-
-    for path in os.environ["PATH"].split(os.pathsep):
-        git_path = os.path.join(path, git_bin_name)
-        if os.path.exists(git_path):
-            return True
-    return False
 
 def find_windows_git():
     possible_paths = ["git\\bin\\git.exe", "git\\cmd\\git.exe", "Git\\mingw64\\libexec\\git-core\\git.exe"]
@@ -40,7 +29,7 @@ def prepare_frontend():
     if not os.path.exists("./frontend/dist"):
         print("Frontend not found, try clone...")
         print("Checking git installation...")
-        if not is_git_installed():
+        if not shutil.which("git"):
             if sys.platform == "win32":
                 git_path = find_windows_git()
 
@@ -85,7 +74,7 @@ sf.file_response = _hooked_file_response
 def run_train(toml_path: str):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
     args = [
-        "accelerate", "launch", "--num_cpu_threads_per_process", "8",
+        sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", "8",
         "./sd-scripts/train_network.py",
         "--config_file", toml_path,
     ]
@@ -100,6 +89,11 @@ def run_train(toml_path: str):
     finally:
         lock.release()
 
+@app.middleware("http")
+async def add_cache_control_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "max-age=0"
+    return response
 
 @app.post("/api/run")
 async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
@@ -117,12 +111,6 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
         f.write(toml.dumps(j))
     background_tasks.add_task(run_train, toml_file)
     return {"status": "success"}
-
-@app.middleware("http")
-async def add_cache_control_header(request, call_next):
-    response = await call_next(request)
-    response.headers["Cache-Control"] = "max-age=0"
-    return response
 
 @app.get("/")
 async def index():
