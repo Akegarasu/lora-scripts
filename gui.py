@@ -93,6 +93,9 @@ def run_train(toml_path: str):
 async def add_cache_control_header(request, call_next):
     response = await call_next(request)
     response.headers["Cache-Control"] = "max-age=0"
+    # https://developer.mozilla.org/zh-CN/docs/Web/HTTP/Headers/X-Content-Type-Options
+    # 修复window下minetype不正确的问题
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 
 @app.post("/api/run")
