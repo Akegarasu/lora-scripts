@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
+import starlette.responses as starlette_responses
 import toml
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
@@ -58,18 +58,16 @@ app = FastAPI()
 lock = Lock()
 
 # fix mimetype error in some fucking systems
-sf = StaticFiles(directory="frontend/dist")
-_o_fr = sf.file_response
-def _hooked_file_response(*args, **kwargs):
-    full_path = args[0]
-    r = _o_fr(*args, **kwargs)
-    if full_path.endswith(".js"):
-        r.media_type = "application/javascript"
-    elif full_path.endswith(".css"):
-        r.media_type = "text/css"
+_origin_guess_type = starlette_responses.guess_type
+def _hooked_guess_type(*args, **kwargs):
+    url = args[0]
+    r = _origin_guess_type(*args, **kwargs)
+    if url.endswith(".js"):
+        r = ("application/javascript", None)
+    elif url.endswith(".css"):
+        r = ("text/css", None)
     return r
-sf.file_response = _hooked_file_response
-
+starlette_responses.guess_type = _hooked_guess_type
 
 def run_train(toml_path: str):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
@@ -117,7 +115,7 @@ async def index():
     return FileResponse("./frontend/dist/index.html")
 
 
-app.mount("/", sf, name="static")
+app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
