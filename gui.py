@@ -51,6 +51,10 @@ def remove_warnings():
     os.environ["BITSANDBYTES_NOWELCOME"] = "1"
     os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
 
+def run_tensorboard():
+    print("Starting tensorboard...")
+    subprocess.Popen([sys.executable, "-m", "tensorboard.main", "--logdir", "logs", "--port", "6006"])
+
 remove_warnings()
 prepare_frontend()
 
@@ -119,6 +123,7 @@ app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
+    run_tensorboard()
     print(f"Server started at http://{args.host}:{args.port}")
     webbrowser.open(f"http://{args.host}:{args.port}")
     uvicorn.run(app, host=args.host, port=args.port, log_level="error")
