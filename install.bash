@@ -24,7 +24,7 @@ fi
 
 echo "Installing torch & xformers..."
 
-cuda_version_line="Cuda compilation tools, release 11.8, V11.8.89"
+cuda_version_line=$(nvcc --version | grep 'release')
 cuda_version=$(echo $cuda_version_line | sed -n -e 's/^.*release \([0-9]\+\.[0-9]\+\),.*$/\1/p')
 
 echo "Cuda Version:$cuda_version"
