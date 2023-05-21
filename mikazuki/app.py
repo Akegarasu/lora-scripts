@@ -97,8 +97,8 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
         exclude_tags=req.exclude_tags,
         sort_by_alphabetical_order=False,
         add_confident_as_weight=False,
-        replace_underscore=True,
-        replace_underscore_excludes="",
+        replace_underscore=req.replace_underscore,
+        replace_underscore_excludes=req.replace_underscore_excludes,
         escape_tag=True,
         unload_model_after_running=True
     )
