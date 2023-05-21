@@ -82,29 +82,27 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
 @app.post("/api/interrogate")
 async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: BackgroundTasks):
-    result = on_interrogate(
-        image=None,
-        batch_input_glob=req.path,
-        batch_input_recursive=False,
-        batch_output_dir="",
-        batch_output_filename_format="[name].[output_extension]",
-        batch_output_action_on_conflict=req.batch_output_action_on_conflict,
-        batch_remove_duplicated_tag=True,
-        batch_output_save_json=False,
-        interrogator=interrogator,
-        threshold=req.threshold,
-        additional_tags=req.additional_tags,
-        exclude_tags=req.exclude_tags,
-        sort_by_alphabetical_order=False,
-        add_confident_as_weight=False,
-        replace_underscore=req.replace_underscore,
-        replace_underscore_excludes=req.replace_underscore_excludes,
-        escape_tag=req.escape_tag,
-        unload_model_after_running=True
-    )
-    return {
-        "status": result
-    }
+    background_tasks.add_task(on_interrogate,
+                              image=None,
+                              batch_input_glob=req.path,
+                              batch_input_recursive=False,
+                              batch_output_dir="",
+                              batch_output_filename_format="[name].[output_extension]",
+                              batch_output_action_on_conflict=req.batch_output_action_on_conflict,
+                              batch_remove_duplicated_tag=True,
+                              batch_output_save_json=False,
+                              interrogator=interrogator,
+                              threshold=req.threshold,
+                              additional_tags=req.additional_tags,
+                              exclude_tags=req.exclude_tags,
+                              sort_by_alphabetical_order=False,
+                              add_confident_as_weight=False,
+                              replace_underscore=req.replace_underscore,
+                              replace_underscore_excludes=req.replace_underscore_excludes,
+                              escape_tag=req.escape_tag,
+                              unload_model_after_running=True
+                              )
+    return {"status": "success"}
 
 
 @app.get("/")
