@@ -137,6 +137,8 @@ class WaifuDiffusionInterrogator(Interrogator):
 
             run_pip(f'install {package}', 'onnxruntime')
 
+        # Load torch to load cuda libs built in torch for onnxruntime, do not delete this.
+        import torch
         from onnxruntime import InferenceSession
 
         # https://onnxruntime.ai/docs/execution-providers/
