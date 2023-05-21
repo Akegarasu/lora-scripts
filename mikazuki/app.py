@@ -88,7 +88,7 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
         batch_input_recursive=False,
         batch_output_dir="",
         batch_output_filename_format="[name].[output_extension]",
-        batch_output_action_on_conflict="ignore",
+        batch_output_action_on_conflict=req.batch_output_action_on_conflict,
         batch_remove_duplicated_tag=True,
         batch_output_save_json=False,
         interrogator=interrogator,
@@ -99,7 +99,7 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
         add_confident_as_weight=False,
         replace_underscore=req.replace_underscore,
         replace_underscore_excludes=req.replace_underscore_excludes,
-        escape_tag=True,
+        escape_tag=req.escape_tag,
         unload_model_after_running=True
     )
     return {
