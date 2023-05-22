@@ -257,7 +257,8 @@ def on_interrogate(
 
         # check the input directory path
         if not os.path.isdir(base_dir):
-            return ['', None, None, 'input path is not a directory']
+            print("input path is not a directory / 输入的路径不是文件夹，终止识别")
+            return 'input path is not a directory'
 
         # this line is moved here because some reason
         # PIL.Image.registered_extensions() returns only PNG if you call too early
@@ -357,7 +358,7 @@ def on_interrogate(
                     json.dumps([ratings, tags])
                 )
 
-        print('all done :)')
+        print('all done / 识别完成')
 
     if unload_model_after_running:
         interrogator.unload()
