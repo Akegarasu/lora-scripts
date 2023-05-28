@@ -48,8 +48,8 @@ class Interrogator:
 
             # filter tags
             if (
-                    c >= threshold
-                    and t not in exclude_tags
+                c >= threshold
+                and t not in exclude_tags
             )
         }
 
@@ -199,6 +199,18 @@ class WaifuDiffusionInterrogator(Interrogator):
         tags = dict(tags[4:].values)
 
         return ratings, tags
+
+
+available_interrogators = {
+    "wd14-convnextv2-v2": WaifuDiffusionInterrogator(
+        'wd14-convnextv2-v2', repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
+        revision='v2.0'
+    ),
+    "wd14-swinv2-v2": WaifuDiffusionInterrogator(
+        'wd14-swinv2-v2', repo_id='SmilingWolf/wd-v1-4-swinv2-tagger-v2',
+        revision='v2.0'
+    ),
+}
 
 
 def split_str(s: str, separator=',') -> List[str]:
@@ -364,3 +376,4 @@ def on_interrogate(
         interrogator.unload()
 
     return "Succeed"
+

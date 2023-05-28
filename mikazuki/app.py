@@ -13,11 +13,10 @@ from fastapi.staticfiles import StaticFiles
 import toml
 
 from mikazuki.models import TaggerInterrogateRequest
-from mikazuki.tagger.interrogator import WaifuDiffusionInterrogator, on_interrogate
+from mikazuki.tagger.interrogator import available_interrogators, on_interrogate
 
 app = FastAPI()
 lock = Lock()
-interrogator = WaifuDiffusionInterrogator('wd14-convnextv2-v2', repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2', revision='v2.0')
 
 # fix mimetype error in some fucking systems
 _origin_guess_type = starlette_responses.guess_type
@@ -82,6 +81,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
 @app.post("/api/interrogate")
 async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: BackgroundTasks):
+    interrogator = available_interrogators.get(req.interrogator_model, available_interrogators["wd14-convnextv2-v2"])
     background_tasks.add_task(on_interrogate,
                               image=None,
                               batch_input_glob=req.path,
