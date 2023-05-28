@@ -3,7 +3,9 @@ from pydantic import BaseModel, Field
 
 class TaggerInterrogateRequest(BaseModel):
     path: str
-    interrogator_model: str
+    interrogator_model: str = Field(
+        default="wd14-convnextv2-v2"
+    )
     threshold: float = Field(
         default=0.35,
         ge=0,
