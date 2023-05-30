@@ -48,8 +48,8 @@ class Interrogator:
 
             # filter tags
             if (
-                c >= threshold
-                and t not in exclude_tags
+                    c >= threshold
+                    and t not in exclude_tags
             )
         }
 
@@ -202,12 +202,16 @@ class WaifuDiffusionInterrogator(Interrogator):
 
 
 available_interrogators = {
-    "wd14-convnextv2-v2": WaifuDiffusionInterrogator(
+    'wd14-convnextv2-v2': WaifuDiffusionInterrogator(
         'wd14-convnextv2-v2', repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
         revision='v2.0'
     ),
-    "wd14-swinv2-v2": WaifuDiffusionInterrogator(
+    'wd14-swinv2-v2': WaifuDiffusionInterrogator(
         'wd14-swinv2-v2', repo_id='SmilingWolf/wd-v1-4-swinv2-tagger-v2',
+        revision='v2.0'
+    ),
+    'wd14-vit-v2': WaifuDiffusionInterrogator(
+        'wd14-vit-v2', repo_id='SmilingWolf/wd-v1-4-vit-tagger-v2',
         revision='v2.0'
     ),
 }
@@ -239,7 +243,6 @@ def on_interrogate(
 
         unload_model_after_running: bool
 ):
-
     postprocess_opts = (
         threshold,
         split_str(additional_tags),
@@ -269,7 +272,7 @@ def on_interrogate(
 
         # check the input directory path
         if not os.path.isdir(base_dir):
-            print("input path is not a directory / 输入的路径不是文件夹，终止识别")
+            print('input path is not a directory / 输入的路径不是文件夹，终止识别')
             return 'input path is not a directory'
 
         # this line is moved here because some reason
@@ -375,5 +378,4 @@ def on_interrogate(
     if unload_model_after_running:
         interrogator.unload()
 
-    return "Succeed"
-
+    return 'Succeed'
