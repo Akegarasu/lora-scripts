@@ -4,7 +4,7 @@ LoRA training scripts for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-s
 
 ✨NEW: Train GUI
 
-![image](https://user-images.githubusercontent.com/36563862/235594211-76b367d6-788f-4ef4-a258-6559759f371c.png)
+![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/0a2edcb8-023a-4fe6-8c92-2bad9ccab64c)
 
 Follow the installation guide below to install the GUI, then run `run_gui.ps1`(windows) or `run_gui.sh`(linux) to start the GUI. 
 
