@@ -13,6 +13,7 @@ from typing import List
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
+parser.add_argument("--tensorboard-host", type=str, default="127.0.0.1", help="Port to run the tensorboard")
 parser.add_argument("--tensorboard-port", type=int, default=6006, help="Port to run the tensorboard")
 parser.add_argument("--dev", action="store_true")
 
@@ -54,7 +55,7 @@ def remove_warnings():
 
 def run_tensorboard():
     print("Starting tensorboard...")
-    subprocess.Popen([sys.executable, "-m", "tensorboard.main", "--logdir", "logs", "--port", str(args.tensorboard_port)])
+    subprocess.Popen([sys.executable, "-m", "tensorboard.main", "--logdir", "logs", "--host", args.tensorboard_host, "--port", str(args.tensorboard_port)])
 
 
 def check_dirs(dirs: List):
