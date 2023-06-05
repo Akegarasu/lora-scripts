@@ -30,21 +30,21 @@ Set-Location .\sd-scripts
 Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 install.ps1 脚本)"
 $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq ""){
-    pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+    pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirror.baidu.com/pypi/simple
     Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
-    pip install -U -I --no-deps xformers==0.0.19 -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+    pip install -U -I --no-deps xformers==0.0.19 -i https://mirror.baidu.com/pypi/simple
     Check "xformers 安装失败。"
 }
 
-pip install --upgrade -r requirements.txt -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+pip install --upgrade -r requirements.txt -i https://mirror.baidu.com/pypi/simple
 Check "其他依赖安装失败。"
-pip install --upgrade lion-pytorch dadaptation -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+pip install --upgrade lion-pytorch dadaptation -i https://mirror.baidu.com/pypi/simple
 Check "Lion、dadaptation 优化器安装失败。"
-pip install --upgrade lycoris-lora -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+pip install --upgrade lycoris-lora -i https://mirror.baidu.com/pypi/simple
 Check "lycoris 安装失败。"
-pip install --upgrade fastapi uvicorn -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+pip install --upgrade fastapi uvicorn -i https://mirror.baidu.com/pypi/simple
 Check "UI 所需依赖安装失败。"
-pip install --upgrade wandb -i https://mirrors.bfsu.edu.cn/pypi/web/simple
+pip install --upgrade wandb -i https://mirror.baidu.com/pypi/simple
 Check "wandb 安装失败。"
 
 
