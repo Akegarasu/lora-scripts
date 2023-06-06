@@ -27,7 +27,7 @@ lr_warmup_steps = 0
 lr_restart_cycles = 1
 
 [training_arguments]
-batch_size = 1
+train_batch_size = 1
 noise_offset = 0.0
 keep_tokens = 0
 min_bucket_reso = 256

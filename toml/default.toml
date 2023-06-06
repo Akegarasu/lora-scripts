@@ -29,7 +29,7 @@ lr_restart_cycles = 1
 
 [training]
 resolution = "512,512"
-batch_size = 1
+train_batch_size = 1
 max_train_epochs = 10
 noise_offset = 0.0
 keep_tokens = 0
