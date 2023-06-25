@@ -2,7 +2,7 @@ $Env:HF_HOME = "huggingface"
 $Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
 $Env:PIP_NO_CACHE_DIR = 1
 function InstallFail {
-    Write-Output "°²×°Ê§°Ü¡£"
+    Write-Output "å®‰è£…å¤±è´¥ã€‚"
     Read-Host | Out-Null ;
     Exit
 }
@@ -18,40 +18,41 @@ function Check {
 }
 
 if (!(Test-Path -Path "venv")) {
-    Write-Output "ÕıÔÚ´´½¨ĞéÄâ»·¾³..."
+    Write-Output "æ­£åœ¨åˆ›å»ºè™šæ‹Ÿç¯å¢ƒ..."
     python -m venv venv
-    Check "´´½¨ĞéÄâ»·¾³Ê§°Ü£¬Çë¼ì²é python ÊÇ·ñ°²×°Íê±ÏÒÔ¼° python °æ±¾ÊÇ·ñÎª64Î»°æ±¾µÄpython 3.10¡¢»òpythonµÄÄ¿Â¼ÊÇ·ñÔÚ»·¾³±äÁ¿PATHÄÚ¡£"
+    Check "åˆ›å»ºè™šæ‹Ÿç¯å¢ƒå¤±è´¥ï¼Œè¯·æ£€æŸ¥ python æ˜¯å¦å®‰è£…å®Œæ¯•ä»¥åŠ python ç‰ˆæœ¬æ˜¯å¦ä¸º64ä½ç‰ˆæœ¬çš„python 3.10ã€æˆ–pythonçš„ç›®å½•æ˜¯å¦åœ¨ç¯å¢ƒå˜é‡PATHå†…ã€‚"
 }
 
 .\venv\Scripts\activate
-Check "¼¤»îĞéÄâ»·¾³Ê§°Ü¡£"
+Check "æ¿€æ´»è™šæ‹Ÿç¯å¢ƒå¤±è´¥ã€‚"
 
 Set-Location .\sd-scripts
-Write-Output "°²×°³ÌĞòËùĞèÒÀÀµ (ÒÑ½øĞĞ¹úÄÚ¼ÓËÙ£¬ÈôÔÚ¹úÍâ»òÎŞ·¨Ê¹ÓÃ¼ÓËÙÔ´Çë»»ÓÃ install.ps1 ½Å±¾)"
-$install_torch = Read-Host "ÊÇ·ñĞèÒª°²×° Torch+xformers? [y/n] (Ä¬ÈÏÎª y)"
+Write-Output "å®‰è£…ç¨‹åºæ‰€éœ€ä¾èµ– (å·²è¿›è¡Œå›½å†…åŠ é€Ÿï¼Œè‹¥åœ¨å›½å¤–æˆ–æ— æ³•ä½¿ç”¨åŠ é€Ÿæºè¯·æ¢ç”¨ install.ps1 è„šæœ¬)"
+$install_torch = Read-Host "æ˜¯å¦éœ€è¦å®‰è£… Torch+xformers? [y/n] (é»˜è®¤ä¸º y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq ""){
     pip install torch==2.0.0+cu118 torchvision==0.15.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html -i https://mirror.baidu.com/pypi/simple
-    Check "torch °²×°Ê§°Ü£¬ÇëÉ¾³ı venv ÎÄ¼ş¼ĞºóÖØĞÂÔËĞĞ¡£"
+    Check "torch å®‰è£…å¤±è´¥ï¼Œè¯·åˆ é™¤ venv æ–‡ä»¶å¤¹åé‡æ–°è¿è¡Œã€‚"
     pip install -U -I --no-deps xformers==0.0.19 -i https://mirror.baidu.com/pypi/simple
-    Check "xformers °²×°Ê§°Ü¡£"
+    Check "xformers å®‰è£…å¤±è´¥ã€‚"
 }
 
 pip install --upgrade -r requirements.txt -i https://mirror.baidu.com/pypi/simple
-Check "ÆäËûÒÀÀµ°²×°Ê§°Ü¡£"
-pip install --upgrade lion-pytorch dadaptation -i https://mirror.baidu.com/pypi/simple
-Check "Lion¡¢dadaptation ÓÅ»¯Æ÷°²×°Ê§°Ü¡£"
+Check "å…¶ä»–ä¾èµ–å®‰è£…å¤±è´¥ã€‚"
+pip install --upgrade lion-pytorch dadaptation prodigyopt -i https://mirror.baidu.com/pypi/simple
+Check "Lionã€dadaptation prodigy ä¼˜åŒ–å™¨å®‰è£…å¤±è´¥ã€‚"
 pip install --upgrade lycoris-lora -i https://mirror.baidu.com/pypi/simple
-Check "lycoris °²×°Ê§°Ü¡£"
+Check "lycoris å®‰è£…å¤±è´¥ã€‚"
 pip install --upgrade fastapi uvicorn -i https://mirror.baidu.com/pypi/simple
-Check "UI ËùĞèÒÀÀµ°²×°Ê§°Ü¡£"
+Check "UI æ‰€éœ€ä¾èµ–å®‰è£…å¤±è´¥ã€‚"
 pip install --upgrade wandb -i https://mirror.baidu.com/pypi/simple
-Check "wandb °²×°Ê§°Ü¡£"
+Check "wandb å®‰è£…å¤±è´¥ã€‚"
 
 
-Write-Output "°²×° bitsandbytes..."
+Write-Output "å®‰è£… bitsandbytes..."
+pip install --upgrade bitsandbytes==0.38.1
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
 
-Write-Output "°²×°Íê±Ï"
+Write-Output "å®‰è£…å®Œæ¯•"
 Read-Host | Out-Null ;
