@@ -19,4 +19,4 @@ toml/autosave/*
 
 tests/
 
-huggingface/hub/models--openai--clip-vit-large-patch14
+huggingface/hub/models*
