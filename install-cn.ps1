@@ -38,8 +38,8 @@ if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "")
 
 pip install --upgrade -r requirements.txt -i https://mirror.baidu.com/pypi/simple
 Check "其他依赖安装失败。"
-pip install --upgrade lion-pytorch dadaptation -i https://mirror.baidu.com/pypi/simple
-Check "Lion、dadaptation 优化器安装失败。"
+pip install --upgrade lion-pytorch dadaptation prodigyopt -i https://mirror.baidu.com/pypi/simple
+Check "Lion、dadaptation、prodigyopt 优化器安装失败。"
 pip install --upgrade lycoris-lora -i https://mirror.baidu.com/pypi/simple
 Check "lycoris 安装失败。"
 pip install --upgrade fastapi uvicorn -i https://mirror.baidu.com/pypi/simple
