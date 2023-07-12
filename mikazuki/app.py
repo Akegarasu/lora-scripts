@@ -93,7 +93,16 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
     if script_name not in avaliable_scripts:
         return {"status": "fail"}
     del j["script_name"]
-    cmd = script_name + ' ' + ' '.join(f'--{k} {v}' for k, v in j.items())
+    result = []
+    for k, v in j.items():
+        result.append(f"--{k}")
+        if not isinstance(v, bool):
+            value = str(v)
+            if " " in value:
+                value = f'"{v}"'
+            result.append(value)
+    script_args = " ".join(result)
+    cmd = f"{utils.python_bin} {script_name} {script_args}"
     background_tasks.add_task(utils.run, cmd)
     return {"status": "success"}
 
