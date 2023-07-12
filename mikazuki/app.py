@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import subprocess
 import sys
 from datetime import datetime
@@ -7,17 +8,22 @@ from threading import Lock
 
 import starlette.responses as starlette_responses
 from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+import mikazuki.utils as utils
 import toml
-
 from mikazuki.models import TaggerInterrogateRequest
-from mikazuki.tagger.interrogator import available_interrogators, on_interrogate
+from mikazuki.tagger.interrogator import (available_interrogators,
+                                          on_interrogate)
 
 app = FastAPI()
 lock = Lock()
-
+avaliable_scripts = [
+    "networks/extract_lora_from_models.py",
+    "networks/extract_lora_from_dylora.py"
+]
 # fix mimetype error in some fucking systems
 _origin_guess_type = starlette_responses.guess_type
 
@@ -79,6 +85,19 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     return {"status": "success"}
 
 
+@app.post("/api/run_script")
+async def run_script(request: Request, background_tasks: BackgroundTasks):
+    paras = await request.body()
+    j = json.loads(paras.decode("utf-8"))
+    script_name = j["script_name"]
+    if script_name not in avaliable_scripts:
+        return {"status": "fail"}
+    del j["script_name"]
+    cmd = script_name + ' ' + ' '.join(f'--{k} {v}' for k, v in j.items())
+    background_tasks.add_task(utils.run, cmd)
+    return {"status": "success"}
+
+
 @app.post("/api/interrogate")
 async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: BackgroundTasks):
     interrogator = available_interrogators.get(req.interrogator_model, available_interrogators["wd14-convnextv2-v2"])
@@ -111,3 +130,4 @@ async def index():
 
 
 app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
+
