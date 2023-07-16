@@ -5,6 +5,7 @@ import subprocess
 import sys
 from datetime import datetime
 from threading import Lock
+from typing import Optional
 
 import starlette.responses as starlette_responses
 from fastapi import BackgroundTasks, FastAPI, Request
@@ -41,10 +42,11 @@ def _hooked_guess_type(*args, **kwargs):
 starlette_responses.guess_type = _hooked_guess_type
 
 
-def run_train(toml_path: str):
+def run_train(toml_path: str,
+              cpu_threads: Optional[int] = 2):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
     args = [
-        sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", "8",
+        sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", str(cpu_threads),
         "./sd-scripts/train_network.py",
         "--config_file", toml_path,
     ]
@@ -73,15 +75,24 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
     if not acquired:
         print("Training is already running / 已有正在进行的训练")
-        return {"status": "fail", "detail": "Training is already running"}
+        return {"status": "fail", "detail": "已有正在进行的训练"}
 
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = os.path.join(os.getcwd(), f"toml", "autosave", f"{timestamp}.toml")
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
+
+    ok = utils.check_training_params(j)
+    if not ok:
+        lock.release()
+        return {"status": "fail", "detail": "训练目录校验失败，请确保填写的目录存在"}
+
+    utils.prepare_requirements()
+    suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
+
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
-    background_tasks.add_task(run_train, toml_file)
+    background_tasks.add_task(run_train, toml_file, suggest_cpu_threads)
     return {"status": "success"}
 
 
