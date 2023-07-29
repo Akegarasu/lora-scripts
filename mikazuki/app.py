@@ -3,6 +3,7 @@ import os
 import shlex
 import subprocess
 import sys
+from pathlib import Path
 from datetime import datetime
 from threading import Lock
 from typing import Optional
@@ -85,6 +86,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     ok = utils.check_training_params(j)
     if not ok:
         lock.release()
+        print("训练目录校验失败，请确保填写的目录存在")
         return {"status": "fail", "detail": "训练目录校验失败，请确保填写的目录存在"}
 
     utils.prepare_requirements()
@@ -113,7 +115,8 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
                 value = f'"{v}"'
             result.append(value)
     script_args = " ".join(result)
-    cmd = f"{utils.python_bin} {script_name} {script_args}"
+    script_path = Path(os.getcwd()) / "sd-scripts" / script_name
+    cmd = f"{utils.python_bin} {script_path} {script_args}"
     background_tasks.add_task(utils.run, cmd)
     return {"status": "success"}
 
