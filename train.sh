@@ -2,10 +2,11 @@
 # LoRA train script by @Akegarasu
 
 # Train data path | 设置训练用模型、图片
-pretrained_model="./sd-models/model.ckpt" # base model path | 底模路径
+pretrained_model="./sd-models/model.safetensors" # base model path | 底模路径
 is_v2_model=0                             # SD2.0 model | SD2.0模型 2.0模型下 clip_skip 默认无效
 parameterization=0                        # parameterization | 参数化 本参数需要和 V2 参数同步使用 实验性功能
-train_data_dir="./train/aki"              # train dataset path | 训练数据集路径
+# train_data_dir="./train/chuchun"              # train dataset path | 训练数据集路径
+train_data_dir="./train/meiman-1"              # train dataset path | 训练数据集路径
 reg_data_dir=""                           # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
 # Network settings | 网络设置
@@ -29,8 +30,9 @@ keep_tokens=0   # keep heading N tokens when shuffling caption tokens | 在随�
 min_snr_gamma=0 # minimum signal-to-noise ratio (SNR) value for gamma-ray | 伽马射线事件的最小信噪比（SNR）值  默认为 0
 
 # Learning rate | 学习率
-lr="1e-4"
-unet_lr="1e-4"
+# lr="1e-4"
+lr="1e-5"
+unet_lr="1e-5"
 text_encoder_lr="1e-5"
 lr_scheduler="cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup", "adafactor"
 lr_warmup_steps=0                   # warmup steps | 学习率预热步数，lr_scheduler 为 constant 或 adafactor 时该值需要设为0。
