@@ -52,13 +52,13 @@ $multi_gpu = 0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 �
 $lowram = 0 # lowram mode | 低内存模式 该模式下会将 U-net 文本编码器 VAE 转移到 GPU 显存中 启用该模式可能会对显存有一定影响
 
 # 优化器设置
-$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
+$optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion Lion8bit (需自行安装 bitsandbytes >= 0.38) SGDNesterov SGDNesterov8bit DAdaptation AdaFactor prodigy (需自行安装 prodigyopt)
 
 # LyCORIS 训练设置
 $algo = "lora" # LyCORIS network algo | LyCORIS 网络算法 可选 lora、loha、lokr、ia3、dylora。lora即为locon
 $conv_dim = 4 # conv dim | 类似于 network_dim，推荐为 4
 $conv_alpha = 4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
-$dropout = "0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dropout 越多，推荐 0~0.5， LoHa/LoKr/(IA)^3暂时不支持
+$dropout = "0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dropout 越多，推荐 0~0.5， LoHa/LoKr/(IA)^3 暂时不支持
 
 # 远程记录设置
 $use_wandb = 0 # enable wandb logging | 启用wandb远程记录功能
