@@ -46,7 +46,11 @@ def run(command,
         errdesc: Optional[str] = None,
         custom_env: Optional[list] = None,
         live: Optional[bool] = True,
-        shell: Optional[bool] = False):
+        shell: Optional[bool] = None):
+
+    if shell is None:
+        shell = False if sys.platform == "win32" else True
+
     if desc is not None:
         print(desc)
 
