@@ -92,11 +92,11 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
     utils.prepare_requirements()
     suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
-    trainer_file = "./sd-scripts/sdxl_train_network.py"
+    trainer_file = "./sd-scripts/train_network.py"
 
     if "model_train_type" in j:
         if j.get("model_train_type") == "sdxl-lora":
-            trainer_file = "./sd-scripts/train_network.py"
+            trainer_file = "./sd-scripts/sdxl_train_network.py"
         del j["model_train_type"]
 
     with open(toml_file, "w") as f:
