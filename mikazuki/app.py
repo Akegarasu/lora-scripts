@@ -44,11 +44,12 @@ starlette_responses.guess_type = _hooked_guess_type
 
 
 def run_train(toml_path: str,
+              trainer_file: str = "./sd-scripts/train_network.py",
               cpu_threads: Optional[int] = 2):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
     args = [
         sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", str(cpu_threads),
-        "./sd-scripts/train_network.py",
+        trainer_file,
         "--config_file", toml_path,
     ]
     try:
@@ -91,10 +92,11 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
     utils.prepare_requirements()
     suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
-
+    trainer_file = "./sd-scripts/sdxl_train_network.py" if j["model_train_type"] == "sdxl-lora" else "./sd-scripts/train_network.py"
+    del j["model_train_type"]
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
-    background_tasks.add_task(run_train, toml_file, suggest_cpu_threads)
+    background_tasks.add_task(run_train, toml_file, trainer_file, suggest_cpu_threads)
     return {"status": "success"}
 
 
@@ -153,4 +155,3 @@ async def index():
 
 
 app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
-
