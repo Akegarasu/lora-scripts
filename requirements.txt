@@ -1,3 +1,5 @@
+accelerate==0.19.0
+transformers==4.30.2
 fastapi==0.95.1
 uvicorn==0.22.0
 lion-pytorch==0.1.2
@@ -5,5 +7,12 @@ lycoris-lora==1.8.3
 prodigyopt==1.0
 dadaptation==3.1
 wandb==0.15.8
+toml==0.10.2
+tensorboard==2.10.1
+safetensors==0.3.1
+voluptuous==0.13.1
+invisible-watermark==0.2.0
+huggingface-hub==0.15.1
+open-clip-torch==2.20.0
 --index-url https://jihulab.com/api/v4/projects/140618/packages/pypi/simple
 bitsandbytes==0.41.1

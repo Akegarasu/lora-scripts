@@ -90,7 +90,6 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     #     print("训练目录校验失败，请确保填写的目录存在")
     #     return {"status": "fail", "detail": "训练目录校验失败，请确保填写的目录存在"}
 
-    utils.prepare_requirements()
     suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
     trainer_file = "./sd-scripts/train_network.py"
 

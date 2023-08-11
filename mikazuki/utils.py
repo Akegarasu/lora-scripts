@@ -25,15 +25,6 @@ def check_training_params(data):
     return True
 
 
-def prepare_requirements():
-    requirements = [
-        "dadaptation", "prodigyopt"
-    ]
-    for r in requirements:
-        if not is_installed(r):
-            run_pip(f"install {r}", r)
-
-
 def get_total_images(path):
     image_files = glob.glob(path + '/**/*.jpg', recursive=True)
     image_files += glob.glob(path + '/**/*.jpeg', recursive=True)
@@ -85,4 +76,3 @@ stderr: {result.stderr.decode(encoding="utf8", errors="ignore") if len(result.st
 
 def run_pip(command, desc=None, live=False):
     return run(f'"{python_bin}" -m pip {command}', desc=f"Installing {desc}", errdesc=f"Couldn't install {desc}", live=live)
-
