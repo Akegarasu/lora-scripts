@@ -84,11 +84,11 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
 
-    ok = utils.check_training_params(j)
-    if not ok:
-        lock.release()
-        print("训练目录校验失败，请确保填写的目录存在")
-        return {"status": "fail", "detail": "训练目录校验失败，请确保填写的目录存在"}
+    # ok = utils.check_training_params(j)
+    # if not ok:
+    #     lock.release()
+    #     print("训练目录校验失败，请确保填写的目录存在")
+    #     return {"status": "fail", "detail": "训练目录校验失败，请确保填写的目录存在"}
 
     utils.prepare_requirements()
     suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
