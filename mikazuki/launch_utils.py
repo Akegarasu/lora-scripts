@@ -1,18 +1,22 @@
+import locale
 import os
 import re
-import sys
 import shutil
 import subprocess
-import pkg_resources
-import locale
+import sys
 from typing import List
-from mikazuki.utils import run_pip
 
+import pkg_resources
+
+from mikazuki.utils import run_pip
+from mikazuki.log import log
 
 def smart_pip_mirror():
     if locale.getdefaultlocale()[0] == "zh_CN":
+        log.info("detected locale zh_CN, use pip mirrors")
         os.environ.setdefault("PIP_FIND_LINKS", "https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html")
         os.environ.setdefault("PIP_INDEX_URL", "https://mirror.baidu.com/pypi/simple")
+
 
 def find_windows_git():
     possible_paths = ["git\\bin\\git.exe", "git\\cmd\\git.exe", "Git\\mingw64\\libexec\\git-core\\git.exe"]
@@ -23,18 +27,18 @@ def find_windows_git():
 
 def prepare_frontend():
     if not os.path.exists("./frontend/dist"):
-        print("Frontend not found, try clone...")
-        print("Checking git installation...")
+        log.info("frontend not found, try clone...")
+        log.info("checking git installation...")
         if not shutil.which("git"):
             if sys.platform == "win32":
                 git_path = find_windows_git()
 
                 if git_path is not None:
-                    print(f"Git not found, but found git in {git_path}, add it to PATH")
+                    log.info(f"Git not found, but found git in {git_path}, add it to PATH")
                     os.environ["PATH"] += os.pathsep + os.path.dirname(git_path)
                     return
             else:
-                print("Git not found, please install git first")
+                log.error("git not found, please install git first")
                 sys.exit(1)
         subprocess.run(["git", "submodule", "init"])
         subprocess.run(["git", "submodule", "update"])
@@ -47,6 +51,7 @@ def remove_warnings():
         os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
     os.environ["BITSANDBYTES_NOWELCOME"] = "1"
     os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
+    os.environ["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
 
 
 def check_dirs(dirs: List):
@@ -102,15 +107,15 @@ def is_installed(package, friendly: str = None):
                         ok = version == pkg_version
 
                     if not ok:
-                        print(f'Package wrong version: {pkg_name} {version} required {pkg_version}')
+                        log.info(f'Package wrong version: {pkg_name} {version} required {pkg_version}')
                         return False
             else:
-                print(f'Package version not found: {pkg_name}')
+                log.warning(f'Package version not found: {pkg_name}')
                 return False
 
         return True
     except ModuleNotFoundError:
-        print(f'Package not installed: {pkgs}')
+        log.warning(f'Package not installed: {pkgs}')
         return False
 
 
