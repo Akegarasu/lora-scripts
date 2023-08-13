@@ -37,16 +37,14 @@ if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "")
     Check "xformers 安装失败。"
 }
 
+Write-Output "安装 bitsandbytes..."
+pip install bitsandbytes==0.41.1 --index-url https://jihulab.com/api/v4/projects/140618/packages/pypi/simple
+
 pip install --upgrade -r requirements.txt
 Check "sd-scripts 依赖安装失败。"
 
-Write-Output "安装 bitsandbytes..."
-cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
-cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
-cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
-
 Set-Location ..
-pip install --upgrade -r requirements.txt
+pip install --upgrade -r requirements_win.txt
 Check "训练界面依赖安装失败。"
 
 Write-Output "安装完毕"

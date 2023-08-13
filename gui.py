@@ -34,7 +34,8 @@ if __name__ == "__main__":
     prepare_frontend()
     check_dirs(["toml/autosave", "logs"])
     if not args.skip_prepare_environment:
-        validate_requirements("requirements.txt")
+        requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
+        validate_requirements(requirements_file)
         setup_windows_bitsandbytes()
 
     run_tensorboard()

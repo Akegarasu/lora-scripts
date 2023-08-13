@@ -8,6 +8,7 @@ output/*
 !output/.keep
 
 py310
+python
 git
 
 train/*

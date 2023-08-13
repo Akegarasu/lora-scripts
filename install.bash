@@ -48,8 +48,9 @@ echo "Installing deps..."
 cd "$script_dir/sd-scripts" || exit
 
 pip install --upgrade -r requirements.txt
-pip install --upgrade lion-pytorch lycoris-lora dadaptation prodigyopt fastapi uvicorn wandb
 
 cd "$script_dir" || exit
+
+pip install --upgrade -r requirements.txt
 
 echo "Install completed"

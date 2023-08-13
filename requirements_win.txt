@@ -20,4 +20,5 @@ voluptuous==0.13.1
 invisible-watermark==0.2.0
 huggingface-hub==0.15.1
 open-clip-torch==2.20.0
+--index-url https://jihulab.com/api/v4/projects/140618/packages/pypi/simple
 bitsandbytes==0.41.1
