@@ -7,7 +7,7 @@ import uvicorn
 
 from mikazuki.launch_utils import (check_dirs, prepare_frontend,
                                    remove_warnings, smart_pip_mirror,
-                                   validate_requirements)
+                                   validate_requirements, setup_windows_bitsandbytes)
 from mikazuki.log import log, setup_logging
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
@@ -35,6 +35,7 @@ if __name__ == "__main__":
     check_dirs(["toml/autosave", "logs"])
     if not args.skip_prepare_environment:
         validate_requirements("requirements.txt")
+        setup_windows_bitsandbytes()
 
     run_tensorboard()
 

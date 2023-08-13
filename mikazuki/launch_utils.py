@@ -4,12 +4,14 @@ import re
 import shutil
 import subprocess
 import sys
+import sysconfig
 from typing import List
 
 import pkg_resources
 
 from mikazuki.utils import run_pip
 from mikazuki.log import log
+
 
 def smart_pip_mirror():
     if locale.getdefaultlocale()[0] == "zh_CN":
@@ -126,11 +128,36 @@ def validate_requirements(requirements_file: str):
             for line in f.readlines()
             if line.strip() != ''
             and not line.startswith("#")
-            and not line.startswith("-")
+            and not (line.startswith("-") and not line.startswith("--index-url "))
             and line is not None
             and "# skip_verify" not in line
         ]
 
+        index_url = ""
         for line in lines:
+            if line.startswith("--index-url "):
+                index_url = line.replace("--index-url ", "")
+                continue
+
             if not is_installed(line):
-                run_pip(f"install {line}", line, live=True)
+                if index_url != "":
+                    run_pip(f"install {line} --index-url {index_url}", line, live=True)
+                else:
+                    run_pip(f"install {line}", line, live=True)
+
+
+def setup_windows_bitsandbytes():
+    if sys.platform != "win32":
+        return
+
+    bnb_windows_index = os.environ.get("BNB_WINDOWS_INDEX", "https://jihulab.com/api/v4/projects/140618/packages/pypi/simple")
+    bnb_package = "bitsandbytes==0.41.1"
+    bnb_path = os.path.join(sysconfig.get_paths()["purelib"], "bitsandbytes")
+
+    installed_bnb = is_installed(bnb_package)
+    bnb_cuda_setup = len([f for f in os.listdir(bnb_path) if re.findall(r"libbitsandbytes_cuda.+?\.dll", f)]) != 0
+
+    if not installed_bnb or not bnb_cuda_setup:
+        log.error("detected wrong install of bitsandbytes, reinstall it")
+        run_pip(f"uninstall bitsandbytes -y", "bitsandbytes", live=True)
+        run_pip(f"install {bnb_package} --index-url {bnb_windows_index}", bnb_package, live=True)
