@@ -62,7 +62,7 @@ $dropout = "0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dr
 
 # 远程记录设置
 $use_wandb = 0 # enable wandb logging | 启用wandb远程记录功能
-$wandb_api_key = "" # wandb api key | API，通过https://wandb.ai/authorize获取
+$wandb_api_key = "" # wandb api key | API，通过 https://wandb.ai/authorize 获取
 $log_tracker_name = "" # wandb log tracker name | wandb项目名称,留空则为"network_train"
 
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
