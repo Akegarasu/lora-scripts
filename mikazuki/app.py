@@ -44,6 +44,7 @@ starlette_responses.guess_type = _hooked_guess_type
 
 def run_train(toml_path: str,
               trainer_file: str = "./sd-scripts/train_network.py",
+              multi_gpu: bool = False,
               cpu_threads: Optional[int] = 2):
     print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
     args = [
@@ -51,6 +52,8 @@ def run_train(toml_path: str,
         trainer_file,
         "--config_file", toml_path,
     ]
+    if multi_gpu:
+        args.insert(3, "--multi_gpu")
     try:
         result = subprocess.run(args, env=os.environ)
         if result.returncode != 0:
@@ -92,14 +95,14 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
     trainer_file = "./sd-scripts/train_network.py"
 
-    if "model_train_type" in j:
-        if j.get("model_train_type") == "sdxl-lora":
-            trainer_file = "./sd-scripts/sdxl_train_network.py"
-        del j["model_train_type"]
+    if j.pop("model_train_type", "sd-lora") == "sdxl-lora":
+        trainer_file = "./sd-scripts/sdxl_train_network.py"
+
+    multi_gpu = j.pop("multi_gpu", False)
 
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
-    background_tasks.add_task(run_train, toml_file, trainer_file, suggest_cpu_threads)
+    background_tasks.add_task(run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
     return {"status": "success"}
 
 

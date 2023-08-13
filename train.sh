@@ -49,6 +49,8 @@ min_bucket_reso=256              # arb min resolution | arb 最小分辨率
 max_bucket_reso=1024             # arb max resolution | arb 最大分辨率
 persistent_data_loader_workers=0 # persistent dataloader workers | 容易爆内存，保留加载训练集的worker，减少每个 epoch 之间的停顿
 clip_skip=2                      # clip skip | 玄学 一般用 2
+multi_gpu=0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
+lowram=0 # lowram mode | 低内存模式 该模式下会将 U-net 文本编码器 VAE 转移到 GPU 显存中 启用该模式可能会对显存有一定影响
 
 # 优化器设置
 optimizer_type="AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion SGDNesterov SGDNesterov8bit DAdaptation AdaFactor
@@ -117,6 +119,8 @@ fi
 if [[ $wandb_api_key ]]; then extArgs+=("--wandb_api_key $wandb_api_key"); fi
 
 if [[ $log_tracker_name ]]; then extArgs+=("--log_tracker_name $log_tracker_name"); fi
+
+if [[ $lowram ]]; then extArgs+=("--lowram"); fi
 
 python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
   --enable_bucket \
