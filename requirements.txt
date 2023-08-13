@@ -1,5 +1,11 @@
+rich
 accelerate==0.19.0
 transformers==4.30.2
+diffusers[torch]==0.18.2
+ftfy==6.1.1
+opencv-python==4.7.0.68
+einops==0.6.0
+pytorch-lightning==1.9.0
 fastapi==0.95.1
 uvicorn==0.22.0
 lion-pytorch==0.1.2
