@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 import mikazuki.utils as utils
 import toml
+from mikazuki.log import log
 from mikazuki.models import TaggerInterrogateRequest
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
@@ -46,7 +47,7 @@ def run_train(toml_path: str,
               trainer_file: str = "./sd-scripts/train_network.py",
               multi_gpu: bool = False,
               cpu_threads: Optional[int] = 2):
-    print(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
+    log.info(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
     args = [
         sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", str(cpu_threads),
         trainer_file,
@@ -57,11 +58,11 @@ def run_train(toml_path: str,
     try:
         result = subprocess.run(args, env=os.environ)
         if result.returncode != 0:
-            print(f"Training failed / 训练失败")
+            log.error(f"Training failed / 训练失败")
         else:
-            print(f"Training finished / 训练完成")
+            log.info(f"Training finished / 训练完成")
     except Exception as e:
-        print(f"An error occurred when training / 创建训练进程时出现致命错误: {e}")
+        log.error(f"An error occurred when training / 创建训练进程时出现致命错误: {e}")
     finally:
         lock.release()
 
@@ -78,7 +79,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     acquired = lock.acquire(blocking=False)
 
     if not acquired:
-        print("Training is already running / 已有正在进行的训练")
+        log.error("Training is already running / 已有正在进行的训练")
         return {"status": "fail", "detail": "已有正在进行的训练"}
 
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")

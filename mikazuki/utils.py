@@ -1,8 +1,8 @@
-import os
-import sys
 import glob
-import subprocess
 import importlib.util
+import os
+import subprocess
+import sys
 from typing import Optional
 
 python_bin = sys.executable

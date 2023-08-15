@@ -9,8 +9,8 @@ from typing import List
 
 import pkg_resources
 
-from mikazuki.utils import run_pip
 from mikazuki.log import log
+from mikazuki.utils import run_pip
 
 
 def smart_pip_mirror():
