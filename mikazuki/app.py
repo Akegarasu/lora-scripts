@@ -10,11 +10,12 @@ from typing import Optional
 import starlette.responses as starlette_responses
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 import mikazuki.utils as utils
 import toml
+from mikazuki.tasks import tm
 from mikazuki.log import log
 from mikazuki.models import TaggerInterrogateRequest
 from mikazuki.tagger.interrogator import (available_interrogators,
@@ -71,6 +72,7 @@ def run_train(toml_path: str,
 async def add_cache_control_header(request, call_next):
     response = await call_next(request)
     response.headers["Cache-Control"] = "max-age=0"
+    # response.headers["Access-Control-Allow-Origin"] = "*"
     return response
 
 
@@ -101,8 +103,23 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
     multi_gpu = j.pop("multi_gpu", False)
 
+    def is_promopt_like(s):
+        for p in ["--n", "--s", "--l", "--d"]:
+            if p in s:
+                return True
+        return False
+
+    sample_promopts = j.get("sample_promopts", None)
+    if sample_promopts is not None and not os.path.exists(sample_promopts) and is_promopt_like(sample_promopts):
+        sample_promopts_file = os.path.join(os.getcwd(), f"toml", "autosave", f"{timestamp}-promopt.txt")
+        with open(sample_promopts_file, encoding="utf-8") as f:
+            f.write(sample_promopts)
+        j["sample_promopts"] = sample_promopts_file
+        log.info(f"Writted promopts to file {sample_promopts_file}")
+
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
+
     background_tasks.add_task(run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
     return {"status": "success"}
 
@@ -155,6 +172,15 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
                               )
     return {"status": "success"}
 
+# @app.get("/api/schema/{name}")
+# async def get_schema(name: str):
+#     with open(os.path.join(os.getcwd(), "mikazuki", "schema", name), encoding="utf-8") as f:
+#         content = f.read()
+#         return Response(content=content, media_type="text/plain")
+
+@app.get("/api/tasks")
+async def get_tasks():
+    return tm.dump()
 
 @app.get("/")
 async def index():
