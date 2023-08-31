@@ -112,7 +112,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     sample_prompts = j.get("sample_prompts", None)
     if sample_prompts is not None and not os.path.exists(sample_prompts) and is_promopt_like(sample_prompts):
         sample_prompts_file = os.path.join(os.getcwd(), f"toml", "autosave", f"{timestamp}-promopt.txt")
-        with open(sample_prompts_file, encoding="utf-8") as f:
+        with open(sample_prompts_file, "w", encoding="utf-8") as f:
             f.write(sample_prompts)
         j["sample_prompts"] = sample_prompts_file
         log.info(f"Writted promopts to file {sample_prompts_file}")
