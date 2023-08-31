@@ -2,18 +2,10 @@ import logging
 
 
 log = logging.getLogger('sd-trainer')
+log.setLevel(logging.DEBUG)
 
-
-def setup_logging():
-    log.setLevel(
-        logging.DEBUG
-    )
-    try:
-        import rich
-
-    except ModuleNotFoundError:
-        return
-
+try:
+    import rich
     from rich.console import Console
     from rich.logging import RichHandler
     from rich.pretty import install as pretty_install
@@ -55,3 +47,7 @@ def setup_logging():
     while log.hasHandlers() and len(log.handlers) > 0:
         log.removeHandler(log.handlers[0])
     log.addHandler(rh)
+
+except ModuleNotFoundError:
+    pass
+

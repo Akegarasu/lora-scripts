@@ -2,18 +2,20 @@ import argparse
 import subprocess
 import sys
 import webbrowser
-
+import platform
 import uvicorn
 
+from mikazuki.utils import check_run
 from mikazuki.launch_utils import (check_dirs, prepare_frontend,
                                    remove_warnings, smart_pip_mirror,
                                    validate_requirements, setup_windows_bitsandbytes)
-from mikazuki.log import log, setup_logging
+from mikazuki.log import log
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
 parser.add_argument("--skip-prepare-environment", action="store_true")
+parser.add_argument("--disable-tensorboard", action="store_true")
 parser.add_argument("--tensorboard-host", type=str, default="127.0.0.1", help="Port to run the tensorboard")
 parser.add_argument("--tensorboard-port", type=int, default=6006, help="Port to run the tensorboard")
 parser.add_argument("--dev", action="store_true")
@@ -27,18 +29,22 @@ def run_tensorboard():
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
+    log.info(f'{platform.system()} Python {platform.python_version()} {sys.executable}')
 
     remove_warnings()
-    setup_logging()
     smart_pip_mirror()
-    prepare_frontend()
-    check_dirs(["config/autosave", "logs"])
+
     if not args.skip_prepare_environment:
+        prepare_frontend()
+        check_dirs(["config/autosave", "logs"])
+        if not check_run("mikazuki/scripts/torch_check.py"):
+            sys.exit(1)
         requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
         validate_requirements(requirements_file)
         setup_windows_bitsandbytes()
 
-    run_tensorboard()
+    if not args.disable_tensorboard:
+        run_tensorboard()
 
     log.info(f"Server started at http://{args.host}:{args.port}")
     if not args.dev:

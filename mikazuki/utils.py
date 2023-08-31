@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 from typing import Optional
+from mikazuki.log import log
 
 python_bin = sys.executable
 
@@ -80,3 +81,8 @@ stderr: {result.stderr.decode(encoding="utf8", errors="ignore") if len(result.st
 
 def run_pip(command, desc=None, live=False):
     return run(f'"{python_bin}" -m pip {command}', desc=f"Installing {desc}", errdesc=f"Couldn't install {desc}", live=live)
+
+def check_run(file: str) -> bool:
+    result = subprocess.run([python_bin, file], capture_output=True, shell=False)
+    log.info(result.stdout.decode("utf-8").strip())
+    return result.returncode == 0
