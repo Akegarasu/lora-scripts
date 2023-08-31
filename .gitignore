@@ -15,6 +15,7 @@ train/*
 logs/*
 sd-models/*
 toml/autosave/*
+config/autosave/*
 !sd-models/put stable diffusion model here.txt
 !logs/.keep
 

@@ -32,7 +32,7 @@ if __name__ == "__main__":
     setup_logging()
     smart_pip_mirror()
     prepare_frontend()
-    check_dirs(["toml/autosave", "logs"])
+    check_dirs(["config/autosave", "logs"])
     if not args.skip_prepare_environment:
         requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
         validate_requirements(requirements_file)

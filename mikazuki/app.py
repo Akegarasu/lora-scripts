@@ -85,7 +85,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
         return {"status": "fail", "detail": "已有正在进行的训练"}
 
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    toml_file = os.path.join(os.getcwd(), f"toml", "autosave", f"{timestamp}.toml")
+    toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
 
@@ -111,7 +111,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
 
     sample_prompts = j.get("sample_prompts", None)
     if sample_prompts is not None and not os.path.exists(sample_prompts) and is_promopt_like(sample_prompts):
-        sample_prompts_file = os.path.join(os.getcwd(), f"toml", "autosave", f"{timestamp}-promopt.txt")
+        sample_prompts_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}-promopt.txt")
         with open(sample_prompts_file, "w", encoding="utf-8") as f:
             f.write(sample_prompts)
         j["sample_prompts"] = sample_prompts_file
