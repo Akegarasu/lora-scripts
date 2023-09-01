@@ -89,13 +89,8 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
 
-    # ok = utils.check_training_params(j)
-    # if not ok:
-    #     lock.release()
-    #     print("训练目录校验失败，请确保填写的目录存在")
-    #     return {"status": "fail", "detail": "训练目录校验失败，请确保填写的目录存在"}
-
-    suggest_cpu_threads = 8 if utils.get_total_images(j["train_data_dir"]) > 100 else 2
+    utils.validate_data_dir(j["train_data_dir"])
+    suggest_cpu_threads = 8 if len(utils.get_total_images(j["train_data_dir"])) > 100 else 2
     trainer_file = "./sd-scripts/train_network.py"
 
     if j.pop("model_train_type", "sd-lora") == "sdxl-lora":
@@ -116,6 +111,8 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
             f.write(sample_prompts)
         j["sample_prompts"] = sample_prompts_file
         log.info(f"Writted promopts to file {sample_prompts_file}")
+
+
 
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))

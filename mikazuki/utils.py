@@ -3,10 +3,46 @@ import importlib.util
 import os
 import subprocess
 import sys
+import re
+import shutil
 from typing import Optional
 from mikazuki.log import log
 
 python_bin = sys.executable
+
+
+def validate_data_dir(path):
+    if not os.path.exists(path):
+        log.error(f"Data dir {path} not exists, check your params")
+        return False
+
+    dir_content = os.listdir(path)
+
+    if len(dir_content) == 0:
+        log.error(f"Data dir {path} is empty, check your params")
+
+    subdirs = [f for f in dir_content if os.path.isdir(os.path.join(path, f))]
+
+    if len(subdirs) == 0:
+        log.warn(f"No subdir found in data dir")
+
+    ok_dir = [d for d in subdirs if re.findall(r"^\d+_.+", d)]
+
+    if len(ok_dir) == 0:
+        log.warning(f"No leagal dataset found. Try find avaliable images")
+        imgs = get_total_images(path, False)
+        log.info(f"{len(imgs)} images found")
+        if len(imgs) > 0:
+            dataset_path = os.path.join(path, "1_zkz")
+            os.makedirs(dataset_path)
+            for i in imgs:
+                shutil.move(i, dataset_path)
+            log.info(f"Auto dataset created {dataset_path}")
+        else:
+            log.error("No image found in data dir")
+            return False
+
+    return True
 
 
 def check_training_params(data):
@@ -26,11 +62,16 @@ def check_training_params(data):
     return True
 
 
-def get_total_images(path):
-    image_files = glob.glob(path + '/**/*.jpg', recursive=True)
-    image_files += glob.glob(path + '/**/*.jpeg', recursive=True)
-    image_files += glob.glob(path + '/**/*.png', recursive=True)
-    return len(image_files)
+def get_total_images(path, recursive=True):
+    if recursive:
+        image_files = glob.glob(path + '/**/*.jpg', recursive=True)
+        image_files += glob.glob(path + '/**/*.jpeg', recursive=True)
+        image_files += glob.glob(path + '/**/*.png', recursive=True)
+    else:
+        image_files = glob.glob(path + '/*.jpg')
+        image_files += glob.glob(path + '/*.jpeg')
+        image_files += glob.glob(path + '/*.png')
+    return image_files
 
 
 def is_installed(package):
@@ -81,6 +122,7 @@ stderr: {result.stderr.decode(encoding="utf8", errors="ignore") if len(result.st
 
 def run_pip(command, desc=None, live=False):
     return run(f'"{python_bin}" -m pip {command}', desc=f"Installing {desc}", errdesc=f"Couldn't install {desc}", live=live)
+
 
 def check_run(file: str) -> bool:
     result = subprocess.run([python_bin, file], capture_output=True, shell=False)
