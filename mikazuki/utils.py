@@ -33,7 +33,8 @@ def validate_data_dir(path):
         imgs = get_total_images(path, False)
         log.info(f"{len(imgs)} images found")
         if len(imgs) > 0:
-            dataset_path = os.path.join(path, "1_zkz")
+            num_repeat = suggest_num_repeat(len(imgs))
+            dataset_path = os.path.join(path, f"{num_repeat}_zkz")
             os.makedirs(dataset_path)
             for i in imgs:
                 shutil.move(i, dataset_path)
@@ -43,6 +44,17 @@ def validate_data_dir(path):
             return False
 
     return True
+
+
+def suggest_num_repeat(img_count):
+    if img_count < 10:
+        return 7
+    elif 10 < img_count <= 50:
+        return 5
+    elif 50 < img_count <= 100:
+        return 3
+
+    return 1
 
 
 def check_training_params(data):
