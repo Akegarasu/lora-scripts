@@ -89,7 +89,12 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
 
-    utils.validate_data_dir(j["train_data_dir"])
+    if not utils.validate_data_dir(j["train_data_dir"]):
+        return {
+            "status": "fail",
+            "detail": "训练数据集路径不存在或没有图片，请检查目录。"
+        }
+
     suggest_cpu_threads = 8 if len(utils.get_total_images(j["train_data_dir"])) > 100 else 2
     trainer_file = "./sd-scripts/train_network.py"
 
@@ -111,8 +116,6 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
             f.write(sample_prompts)
         j["sample_prompts"] = sample_prompts_file
         log.info(f"Writted promopts to file {sample_prompts_file}")
-
-
 
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
@@ -175,9 +178,11 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
 #         content = f.read()
 #         return Response(content=content, media_type="text/plain")
 
+
 @app.get("/api/tasks")
 async def get_tasks():
     return tm.dump()
+
 
 @app.get("/")
 async def index():
