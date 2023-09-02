@@ -47,7 +47,7 @@ def validate_data_dir(path):
 
 
 def suggest_num_repeat(img_count):
-    if img_count < 10:
+    if img_count <= 10:
         return 7
     elif 10 < img_count <= 50:
         return 5
