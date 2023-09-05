@@ -14,6 +14,7 @@ pip install -U -I --no-deps xformers==0.0.19
 pip install --upgrade -r requirements.txt
 
 Write-Output "Installing bitsandbytes for windows..."
+mkdir ..\venv\Lib\site-packages\bitsandbytes\ && mkdir ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\
 cp .\bitsandbytes_windows\*.dll ..\venv\Lib\site-packages\bitsandbytes\
 cp .\bitsandbytes_windows\cextension.py ..\venv\Lib\site-packages\bitsandbytes\cextension.py
 cp .\bitsandbytes_windows\main.py ..\venv\Lib\site-packages\bitsandbytes\cuda_setup\main.py
