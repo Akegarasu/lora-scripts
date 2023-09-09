@@ -90,6 +90,7 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     j = json.loads(toml_data.decode("utf-8"))
 
     if not utils.validate_data_dir(j["train_data_dir"]):
+        lock.release()
         return {
             "status": "fail",
             "detail": "训练数据集路径不存在或没有图片，请检查目录。"
