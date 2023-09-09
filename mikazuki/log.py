@@ -5,12 +5,10 @@ log = logging.getLogger('sd-trainer')
 log.setLevel(logging.DEBUG)
 
 try:
-    import rich
     from rich.console import Console
     from rich.logging import RichHandler
     from rich.pretty import install as pretty_install
     from rich.theme import Theme
-    from rich.traceback import install as traceback_install
 
     console = Console(
         log_time=True,
@@ -24,14 +22,6 @@ try:
         ),
     )
     pretty_install(console=console)
-    traceback_install(
-        console=console,
-        extra_lines=1,
-        width=console.width,
-        word_wrap=False,
-        indent_guides=False,
-        suppress=[],
-    )
     rh = RichHandler(
         show_time=True,
         omit_repeated_times=False,
