@@ -1,10 +1,9 @@
 import json
 import os
-import subprocess
+import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
-from threading import Lock
 from typing import Optional
 
 import starlette.responses as starlette_responses
@@ -22,11 +21,12 @@ from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
 
 app = FastAPI()
-lock = Lock()
+
 avaliable_scripts = [
     "networks/extract_lora_from_models.py",
     "networks/extract_lora_from_dylora.py"
 ]
+
 # fix mimetype error in some fucking systems
 _origin_guess_type = starlette_responses.guess_type
 
@@ -56,16 +56,20 @@ def run_train(toml_path: str,
     ]
     if multi_gpu:
         args.insert(3, "--multi_gpu")
+
+    customize_env = os.environ.copy()
+    customize_env["ACCELERATE_DISABLE_RICH"] = "1"
     try:
-        result = subprocess.run(args, env=os.environ)
+        task = tm.create_task(args, customize_env)
+        if not task:
+            return
+        result = task.communicate()
         if result.returncode != 0:
             log.error(f"Training failed / 训练失败")
         else:
             log.info(f"Training finished / 训练完成")
     except Exception as e:
         log.error(f"An error occurred when training / 创建训练进程时出现致命错误: {e}")
-    finally:
-        lock.release()
 
 
 @app.middleware("http")
@@ -77,20 +81,13 @@ async def add_cache_control_header(request, call_next):
 
 
 @app.post("/api/run")
-async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
-    acquired = lock.acquire(blocking=False)
-
-    if not acquired:
-        log.error("Training is already running / 已有正在进行的训练")
-        return {"status": "fail", "detail": "已有正在进行的训练"}
-
+async def create_toml_file(request: Request):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
 
     if not utils.validate_data_dir(j["train_data_dir"]):
-        lock.release()
         return {
             "status": "fail",
             "detail": "训练数据集路径不存在或没有图片，请检查目录。"
@@ -121,7 +118,9 @@ async def create_toml_file(request: Request, background_tasks: BackgroundTasks):
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
 
-    background_tasks.add_task(run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
+    coro = asyncio.to_thread(run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
+    asyncio.create_task(coro)
+
     return {"status": "success"}
 
 
