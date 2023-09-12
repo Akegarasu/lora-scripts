@@ -3,7 +3,6 @@ import subprocess
 import sys
 import webbrowser
 import platform
-import uvicorn
 
 from mikazuki.utils import check_run
 from mikazuki.launch_utils import (check_dirs, prepare_frontend,
@@ -46,6 +45,7 @@ if __name__ == "__main__":
     if not args.disable_tensorboard:
         run_tensorboard()
 
+    import uvicorn
     log.info(f"Server started at http://{args.host}:{args.port}")
     if not args.dev and sys.platform == "win32":
         webbrowser.open(f"http://{args.host}:{args.port}")
