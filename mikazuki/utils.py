@@ -31,13 +31,17 @@ def validate_data_dir(path):
     if len(ok_dir) == 0:
         log.warning(f"No leagal dataset found. Try find avaliable images")
         imgs = get_total_images(path, False)
-        log.info(f"{len(imgs)} images found")
+        captions = glob.glob(path + '/*.txt')
+        log.info(f"{len(imgs)} images found, {len(captions)} captions found")
         if len(imgs) > 0:
             num_repeat = suggest_num_repeat(len(imgs))
             dataset_path = os.path.join(path, f"{num_repeat}_zkz")
             os.makedirs(dataset_path)
             for i in imgs:
                 shutil.move(i, dataset_path)
+            if len(captions) > 0:
+                for c in captions:
+                    shutil.move(c, dataset_path)
             log.info(f"Auto dataset created {dataset_path}")
         else:
             log.error("No image found in data dir")

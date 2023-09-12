@@ -24,6 +24,7 @@ prodigyopt==1.0
 dadaptation==3.1
 wandb==0.15.8
 pandas
+scipy
 # bitsandbytes
 --index-url https://jihulab.com/api/v4/projects/140618/packages/pypi/simple
 bitsandbytes==0.41.1
