@@ -47,6 +47,6 @@ if __name__ == "__main__":
         run_tensorboard()
 
     log.info(f"Server started at http://{args.host}:{args.port}")
-    if not args.dev:
+    if not args.dev and sys.platform == "win32":
         webbrowser.open(f"http://{args.host}:{args.port}")
     uvicorn.run("mikazuki.app:app", host=args.host, port=args.port, log_level="error")
