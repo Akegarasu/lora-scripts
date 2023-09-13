@@ -32,7 +32,7 @@ echo "Cuda Version:$cuda_version"
 
 if (( cuda_major_version >= 12 )) || (( cuda_major_version == 11 && cuda_minor_version >= 8 )); then
     echo "install torch 2.0.1+cu118"
-    pip install torch==2.0.1+cu118 torchvision==0.15.1+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+    pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
     pip install xformers==0.0.21
 elif (( cuda_major_version == 11 && cuda_minor_version == 6 )); then
     echo "install torch 1.12.1+cu116"
