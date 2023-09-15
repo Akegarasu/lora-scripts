@@ -13,6 +13,7 @@ from mikazuki.log import log
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
 parser.add_argument("--port", type=int, default=28000, help="Port to run the server on")
+parser.add_argument("--listen", action="store_true")
 parser.add_argument("--skip-prepare-environment", action="store_true")
 parser.add_argument("--disable-tensorboard", action="store_true")
 parser.add_argument("--tensorboard-host", type=str, default="127.0.0.1", help="Port to run the tensorboard")
@@ -45,6 +46,10 @@ if __name__ == "__main__":
     if not args.disable_tensorboard:
         run_tensorboard()
 
+    if args.listen:
+        args.host = "0.0.0.0"
+        args.tensorboard_host = "0.0.0.0"
+        
     import uvicorn
     log.info(f"Server started at http://{args.host}:{args.port}")
     if not args.dev and sys.platform == "win32":
