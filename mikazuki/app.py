@@ -183,6 +183,11 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
 async def get_tasks():
     return tm.dump()
 
+@app.get("/api/tasks/terminate/{task_id}")
+async def terminate_task(task_id: str):
+    tm.terminate_task(task_id)
+    return {"status": "success"}
+
 
 @app.get("/")
 async def index():

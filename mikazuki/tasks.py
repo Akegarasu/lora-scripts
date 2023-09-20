@@ -75,7 +75,8 @@ class Task:
         except Exception as e:
             log.error(f"Error when killing process: {e}")
             return
-        self.status = TaskStatus.TERMINATED
+        finally:
+            self.status = TaskStatus.TERMINATED
 
 
 class TaskManager:
