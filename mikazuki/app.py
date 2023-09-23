@@ -45,7 +45,7 @@ def _hooked_guess_type(*args, **kwargs):
 starlette_responses.guess_type = _hooked_guess_type
 
 # cors middleware
-if os.environ["ENABLE_APP_CORS"]:
+if os.environ.get("ENABLE_APP_CORS") == "1":
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:8004"],
@@ -53,7 +53,6 @@ if os.environ["ENABLE_APP_CORS"]:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
 
 
 @app.middleware("http")
@@ -166,9 +165,30 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
 #         return Response(content=content, media_type="text/plain")
 
 
+@app.get("/api/pick_file")
+async def pick_file(picker_type: str):
+    if picker_type == "folder":
+        coro = asyncio.to_thread(utils.open_directory_selector, os.getcwd())
+    elif picker_type == "modelfile":
+        file_types = [("checkpoints", "*.safetensors;*.ckpt;*.pt"), ("all files", "*.*")]
+        coro = asyncio.to_thread(utils.open_file_selector, os.getcwd(), "Select file", file_types)
+
+    result = await coro
+    if result == "":
+        return {
+            "status": "fail"
+        }
+
+    return {
+        "status": "success",
+        "path": result
+    }
+
+
 @app.get("/api/tasks")
 async def get_tasks():
     return tm.dump()
+
 
 @app.get("/api/tasks/terminate/{task_id}")
 async def terminate_task(task_id: str):
