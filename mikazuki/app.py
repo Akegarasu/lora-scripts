@@ -1,24 +1,25 @@
+import asyncio
 import json
 import os
-import asyncio
 import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 import starlette.responses as starlette_responses
+import toml
 from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 import mikazuki.utils as utils
-import toml
-from mikazuki.tasks import tm
+import mikazuki.process as process
 from mikazuki.log import log
 from mikazuki.models import TaggerInterrogateRequest
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
+from mikazuki.tasks import tm
 
 app = FastAPI()
 
@@ -43,33 +44,16 @@ def _hooked_guess_type(*args, **kwargs):
 
 starlette_responses.guess_type = _hooked_guess_type
 
+# cors middleware
+if os.environ["ENABLE_APP_CORS"]:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:8004"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-def run_train(toml_path: str,
-              trainer_file: str = "./sd-scripts/train_network.py",
-              multi_gpu: bool = False,
-              cpu_threads: Optional[int] = 2):
-    log.info(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
-    args = [
-        sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", str(cpu_threads),
-        trainer_file,
-        "--config_file", toml_path,
-    ]
-    if multi_gpu:
-        args.insert(3, "--multi_gpu")
-
-    customize_env = os.environ.copy()
-    customize_env["ACCELERATE_DISABLE_RICH"] = "1"
-    try:
-        task = tm.create_task(args, customize_env)
-        if not task:
-            return
-        result = task.communicate()
-        if result.returncode != 0:
-            log.error(f"Training failed / 训练失败")
-        else:
-            log.info(f"Training finished / 训练完成")
-    except Exception as e:
-        log.error(f"An error occurred when training / 创建训练进程时出现致命错误: {e}")
 
 
 @app.middleware("http")
@@ -96,8 +80,11 @@ async def create_toml_file(request: Request):
     suggest_cpu_threads = 8 if len(utils.get_total_images(j["train_data_dir"])) > 100 else 2
     trainer_file = "./sd-scripts/train_network.py"
 
-    if j.pop("model_train_type", "sd-lora") == "sdxl-lora":
+    model_train_type = j.pop("model_train_type", "sd-lora")
+    if model_train_type == "sdxl-lora":
         trainer_file = "./sd-scripts/sdxl_train_network.py"
+    elif model_train_type == "sd-dreambooth":
+        trainer_file = "./sd-scripts/train_db.py"
 
     multi_gpu = j.pop("multi_gpu", False)
 
@@ -118,7 +105,7 @@ async def create_toml_file(request: Request):
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
 
-    coro = asyncio.to_thread(run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
+    coro = asyncio.to_thread(process.run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
     asyncio.create_task(coro)
 
     return {"status": "success"}
