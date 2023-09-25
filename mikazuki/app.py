@@ -99,7 +99,7 @@ async def create_toml_file(request: Request):
         with open(sample_prompts_file, "w", encoding="utf-8") as f:
             f.write(sample_prompts)
         j["sample_prompts"] = sample_prompts_file
-        log.info(f"Writted promopts to file {sample_prompts_file}")
+        log.info(f"Wrote promopts to file {sample_prompts_file}")
 
     with open(toml_file, "w") as f:
         f.write(toml.dumps(j))
