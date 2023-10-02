@@ -1,10 +1,10 @@
 # LoRA train script by @Akegarasu
 
-$multi_gpu = 0		 # multi gpu | ¶àÏÔ¿¨ÑµÁ· ¸Ã²ÎÊý½öÏÞÔÚÏÔ¿¨Êý >= 2 Ê¹ÓÃ
 $config_file = "./config/default.toml"		 # config_file | Ê¹ÓÃtomlÎÄ¼þÖ¸¶¨ÑµÁ·²ÎÊý
 $sample_prompts = "./config/sample_prompts.txt"		 # sample_prompts | ²ÉÑùpromptsÎÄ¼þ,Áô¿ÕÔò²»ÆôÓÃ²ÉÑù¹¦ÄÜ
-$utf8 = 1		 # utf8 | Ê¹ÓÃutf-8±àÂë¶ÁÈ¡toml£»ÒÔutf-8±àÂë±àÐ´µÄ¡¢º¬ÖÐÎÄµÄtoml±ØÐë¿ªÆô
 
+$sdxl = 0        # for sdxl model | SDXL ÑµÁ·
+$multi_gpu = 0		 # multi gpu | ¶àÏÔ¿¨ÑµÁ· ¸Ã²ÎÊý½öÏÞÔÚÏÔ¿¨Êý >= 2 Ê¹ÓÃ
 
 # ============= DO NOT MODIFY CONTENTS BELOW | ÇëÎðÐÞ¸ÄÏÂ·½ÄÚÈÝ =====================
 
@@ -12,6 +12,7 @@ $utf8 = 1		 # utf8 | Ê¹ÓÃutf-8±àÂë¶ÁÈ¡toml£»ÒÔutf-8±àÂë±àÐ´µÄ¡¢º¬ÖÐÎÄµÄtoml±ØÐë¿
 .\venv\Scripts\activate
 
 $Env:HF_HOME = "huggingface"
+$Env:PYTHONUTF8 = 1
 
 $ext_args = [System.Collections.ArrayList]::new()
 $launch_args = [System.Collections.ArrayList]::new()
@@ -19,15 +20,16 @@ $launch_args = [System.Collections.ArrayList]::new()
 if ($multi_gpu) {
   [void]$launch_args.Add("--multi_gpu")
 }
-if ($utf8 -eq 1) {
-  $Env:PYTHONUTF8 = 1
+if ($sdxl) {
+  [void]$launch_args.Add("--sdxl")
 }
 
 # run train
-python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
+$script_name = if ($sdxl) { "sdxl_train_network.py" } else { "train_network.py" }
+python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/$script_name" `
   --config_file=$config_file `
   --sample_prompts=$sample_prompts `
   $ext_args
 
 Write-Output "Train finished"
-Read-Host | Out-Null ;
+Read-Host | Out-Null
