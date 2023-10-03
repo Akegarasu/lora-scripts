@@ -84,6 +84,8 @@ async def create_toml_file(request: Request):
         trainer_file = "./sd-scripts/sdxl_train_network.py"
     elif model_train_type == "sd-dreambooth":
         trainer_file = "./sd-scripts/train_db.py"
+    elif model_train_type == "sdxl-finetune":
+        trainer_file = "./sd-scripts/sdxl_train.py"
 
     multi_gpu = j.pop("multi_gpu", False)
 
