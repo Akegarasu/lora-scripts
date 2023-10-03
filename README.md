@@ -1,8 +1,12 @@
-# LoRA-scripts
+# SD-Trainer
 
-LoRA training scripts for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
+LoRA-scripts (a.k.a SD-Trainer)
 
-✨NEW: Train GUI
+LoRA & Dreambooth training GUI & scripts preset & one key training environment for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
+
+[中文README](https://github.com/Akegarasu/lora-scripts/blob/main/README-zh.md)
+
+## ✨NEW: Train GUI
 
 ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/0a2edcb8-023a-4fe6-8c92-2bad9ccab64c)
 
