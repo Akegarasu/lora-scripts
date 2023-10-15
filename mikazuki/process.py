@@ -14,7 +14,9 @@ def run_train(toml_path: str,
               cpu_threads: Optional[int] = 2):
     log.info(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")
     args = [
-        sys.executable, "-m", "accelerate.commands.launch", "--num_cpu_threads_per_process", str(cpu_threads),
+        sys.executable, "-m", "accelerate.commands.launch", # use -m to avoid python script executable error
+        "--num_cpu_threads_per_process", str(cpu_threads), # cpu threads
+        "--quiet", # silence accelerate error message
         trainer_file,
         "--config_file", toml_path,
     ]
@@ -23,6 +25,7 @@ def run_train(toml_path: str,
 
     customize_env = os.environ.copy()
     customize_env["ACCELERATE_DISABLE_RICH"] = "1"
+    customize_env["PYTHONUNBUFFERED"] = "1"
     try:
         task = tm.create_task(args, customize_env)
         if not task:
