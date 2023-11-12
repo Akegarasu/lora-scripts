@@ -1,6 +1,7 @@
 import argparse
 import subprocess
 import sys
+import os
 import webbrowser
 import platform
 
@@ -49,7 +50,10 @@ if __name__ == "__main__":
     if args.listen:
         args.host = "0.0.0.0"
         args.tensorboard_host = "0.0.0.0"
-        
+
+    os.environ["MIKAZUKI_TENSORBOARD_HOST"] = args.tensorboard_host
+    os.environ["MIKAZUKI_TENSORBOARD_PORT"] = str(args.tensorboard_port)
+
     import uvicorn
     log.info(f"Server started at http://{args.host}:{args.port}")
     if not args.dev and sys.platform == "win32":

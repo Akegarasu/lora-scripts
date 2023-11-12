@@ -1,10 +1,8 @@
 import asyncio
 import json
 import os
-import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import starlette.responses as starlette_responses
 import toml
@@ -12,16 +10,19 @@ from fastapi import BackgroundTasks, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.requests import Request
 
-import mikazuki.utils as utils
 import mikazuki.process as process
+import mikazuki.utils as utils
 from mikazuki.log import log
 from mikazuki.models import TaggerInterrogateRequest
+from mikazuki.proxy import router as proxy_router
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
 from mikazuki.tasks import tm
 
 app = FastAPI()
+app.include_router(proxy_router, prefix="/proxy")
 
 avaliable_scripts = [
     "networks/extract_lora_from_models.py",
