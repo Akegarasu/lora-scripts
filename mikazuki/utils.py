@@ -14,6 +14,13 @@ from mikazuki.log import log
 python_bin = sys.executable
 
 
+def is_promopt_like(s):
+    for p in ["--n", "--s", "--l", "--d"]:
+        if p in s:
+            return True
+    return False
+
+
 def validate_data_dir(path):
     if not os.path.exists(path):
         log.error(f"Data dir {path} not exists, check your params")
@@ -148,10 +155,12 @@ def check_run(file: str) -> bool:
     log.info(result.stdout.decode("utf-8").strip())
     return result.returncode == 0
 
+
 def tk_window():
     window = tkinter.Tk()
     window.wm_attributes('-topmost', 1)
     window.withdraw()
+
 
 def open_file_selector(
         initialdir,

@@ -45,11 +45,16 @@ def _hooked_guess_type(*args, **kwargs):
 
 starlette_responses.guess_type = _hooked_guess_type
 
-# cors middleware
-if os.environ.get("ENABLE_APP_CORS") == "1":
+
+cors_config = os.environ.get("MIKAZUKI_APP_CORS", "")
+if cors_config != "":
+    if cors_config == "1":
+        cors_config = ["http://localhost:8004"]
+    else:
+        cors_config = cors_config.split(";")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:8004"],
+        allow_origins=cors_config,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -71,12 +76,7 @@ async def create_toml_file(request: Request):
     toml_data = await request.body()
     j = json.loads(toml_data.decode("utf-8"))
 
-    if not utils.validate_data_dir(j["train_data_dir"]):
-        return {
-            "status": "fail",
-            "detail": "训练数据集路径不存在或没有图片，请检查目录。"
-        }
-
+    multi_gpu = j.pop("multi_gpu", False)
     suggest_cpu_threads = 8 if len(utils.get_total_images(j["train_data_dir"])) > 100 else 2
     trainer_file = "./sd-scripts/train_network.py"
 
@@ -88,16 +88,15 @@ async def create_toml_file(request: Request):
     elif model_train_type == "sdxl-finetune":
         trainer_file = "./sd-scripts/sdxl_train.py"
 
-    multi_gpu = j.pop("multi_gpu", False)
-
-    def is_promopt_like(s):
-        for p in ["--n", "--s", "--l", "--d"]:
-            if p in s:
-                return True
-        return False
+    if model_train_type != "sdxl-finetune":
+        if not utils.validate_data_dir(j["train_data_dir"]):
+            return {
+                "status": "fail",
+                "detail": "训练数据集路径不存在或没有图片，请检查目录。"
+            }
 
     sample_prompts = j.get("sample_prompts", None)
-    if sample_prompts is not None and not os.path.exists(sample_prompts) and is_promopt_like(sample_prompts):
+    if sample_prompts is not None and not os.path.exists(sample_prompts) and utils.is_promopt_like(sample_prompts):
         sample_prompts_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}-promopt.txt")
         with open(sample_prompts_file, "w", encoding="utf-8") as f:
             f.write(sample_prompts)
