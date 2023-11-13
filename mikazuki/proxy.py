@@ -8,7 +8,8 @@ from fastapi import APIRouter
 
 router = APIRouter()
 
-def reverse_proxy_maker(url_type: str):
+
+def reverse_proxy_maker(url_type: str, full_path: bool = False):
     if url_type == "tensorboard":
         host = os.environ.get("MIKAZUKI_TENSORBOARD_HOST", "127.0.0.1")
         port = os.environ.get("MIKAZUKI_TENSORBOARD_PORT", "6006")
@@ -17,11 +18,18 @@ def reverse_proxy_maker(url_type: str):
         client = httpx.AsyncClient(base_url="http://127.0.0.1:28001/")
 
     async def _reverse_proxy(request: Request):
-        url = httpx.URL(path=request.path_params.get("path", ""),
-                        query=request.url.query.encode("utf-8"))
-        rp_req = client.build_request(request.method, url,
-                                    headers=request.headers.raw,
-                                    content=request.stream())
+        if full_path:
+            url = httpx.URL(path=request.url.path, query=request.url.query.encode("utf-8"))
+        else:
+            url = httpx.URL(
+                path=request.path_params.get("path", ""),
+                query=request.url.query.encode("utf-8")
+            )
+        rp_req = client.build_request(
+            request.method, url,
+            headers=request.headers.raw,
+            content=request.stream()
+        )
         rp_resp = await client.send(rp_req, stream=True)
         return StreamingResponse(
             rp_resp.aiter_raw(),
@@ -33,5 +41,6 @@ def reverse_proxy_maker(url_type: str):
     return _reverse_proxy
 
 
-router.add_route("/tensorboard/{path:path}", reverse_proxy_maker("tensorboard"), ["GET", "POST"])
-router.add_route("/tageditor/{path:path}", reverse_proxy_maker("tageditor"), ["GET", "POST"])
+router.add_route("/proxy/tensorboard/{path:path}", reverse_proxy_maker("tensorboard"), ["GET", "POST"])
+router.add_route("/font-roboto/{path:path}", reverse_proxy_maker("tensorboard", full_path=True), ["GET", "POST"])
+router.add_route("/proxy/tageditor/{path:path}", reverse_proxy_maker("tageditor"), ["GET", "POST"])

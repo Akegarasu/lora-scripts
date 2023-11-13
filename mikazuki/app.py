@@ -22,7 +22,7 @@ from mikazuki.tagger.interrogator import (available_interrogators,
 from mikazuki.tasks import tm
 
 app = FastAPI()
-app.include_router(proxy_router, prefix="/proxy")
+app.include_router(proxy_router)
 
 avaliable_scripts = [
     "networks/extract_lora_from_models.py",
