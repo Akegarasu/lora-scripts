@@ -1,10 +1,11 @@
 import os
+
 import httpx
-from fastapi import Request
+from fastapi import APIRouter, Request
+from httpx import ConnectError
 from starlette.background import BackgroundTask
 from starlette.requests import Request
-from starlette.responses import StreamingResponse
-from fastapi import APIRouter
+from starlette.responses import PlainTextResponse, StreamingResponse
 
 router = APIRouter()
 
@@ -30,7 +31,13 @@ def reverse_proxy_maker(url_type: str, full_path: bool = False):
             headers=request.headers.raw,
             content=request.stream()
         )
-        rp_resp = await client.send(rp_req, stream=True)
+        try:
+            rp_resp = await client.send(rp_req, stream=True)
+        except ConnectError:
+            return PlainTextResponse(
+                content="Tensorboard not started yet or tensorboard started fail.\nTensorboard 尚未启动或启动失败。",
+                status_code=502
+            )
         return StreamingResponse(
             rp_resp.aiter_raw(),
             status_code=rp_resp.status_code,
