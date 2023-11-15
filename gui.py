@@ -28,6 +28,11 @@ def run_tensorboard():
                      "--host", args.tensorboard_host, "--port", str(args.tensorboard_port)])
 
 
+def run_tag_editor():
+    log.info("Starting tageditor...")
+    subprocess.Popen([sys.executable, "mikazuki/dataset-tag-editor/scripts/launch.py", "--port", "28001", "--root-path", "/proxy/tageditor"])
+
+
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
     log.info(f'{platform.system()} Python {platform.python_version()} {sys.executable}')
@@ -43,6 +48,9 @@ if __name__ == "__main__":
         requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
         validate_requirements(requirements_file)
         setup_windows_bitsandbytes()
+
+    if not args.disable_tageditor:
+        run_tag_editor()
 
     if not args.disable_tensorboard:
         run_tensorboard()
