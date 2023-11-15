@@ -1,7 +1,10 @@
+import asyncio
 import os
 
 import httpx
-from fastapi import APIRouter, Request
+import starlette
+import websockets
+from fastapi import APIRouter, Request, WebSocket
 from httpx import ConnectError
 from starlette.background import BackgroundTask
 from starlette.requests import Request
@@ -35,7 +38,7 @@ def reverse_proxy_maker(url_type: str, full_path: bool = False):
             rp_resp = await client.send(rp_req, stream=True)
         except ConnectError:
             return PlainTextResponse(
-                content="Tensorboard not started yet or tensorboard started fail.\nTensorboard 尚未启动或启动失败。",
+                content="The requested service not started yet or tensorboard started fail.\n请求的服务尚未启动或启动失败。",
                 status_code=502
             )
         return StreamingResponse(
@@ -47,6 +50,35 @@ def reverse_proxy_maker(url_type: str, full_path: bool = False):
 
     return _reverse_proxy
 
+
+async def proxy_ws_forward(ws_a: WebSocket, ws_b: websockets.WebSocketClientProtocol):
+    while True:
+        try:
+            data = await ws_a.receive_text()
+        except starlette.websockets.WebSocketDisconnect as e:
+            break
+        # print("websocket A received:", data)
+        await ws_b.send(data)
+
+
+async def proxy_ws_reverse(ws_a: WebSocket, ws_b: websockets.WebSocketClientProtocol):
+    while True:
+        try:
+            data = await ws_b.recv()
+        except websockets.exceptions.ConnectionClosedOK as e:
+            break
+        await ws_a.send_text(data)
+
+
+@router.websocket("/proxy/tageditor/queue/join")
+async def websocket_a(ws_a: WebSocket):
+    # for temp use
+    ws_b_uri = "ws://127.0.0.1:28001/queue/join"
+    await ws_a.accept()
+    async with websockets.connect(ws_b_uri) as ws_b_client:
+        fwd_task = asyncio.create_task(proxy_ws_forward(ws_a, ws_b_client))
+        rev_task = asyncio.create_task(proxy_ws_reverse(ws_a, ws_b_client))
+        await asyncio.gather(fwd_task, rev_task)
 
 router.add_route("/proxy/tensorboard/{path:path}", reverse_proxy_maker("tensorboard"), ["GET", "POST"])
 router.add_route("/font-roboto/{path:path}", reverse_proxy_maker("tensorboard", full_path=True), ["GET", "POST"])

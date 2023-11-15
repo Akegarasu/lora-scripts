@@ -4,3 +4,6 @@
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/hanamizuki-ai/lora-gui-dist
+[submodule "mikazuki/dataset-tag-editor"]
+	path = mikazuki/dataset-tag-editor
+	url = https://github.com/Akegarasu/dataset-tag-editor
