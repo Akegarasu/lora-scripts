@@ -1,15 +1,16 @@
 import argparse
+import locale
+import os
+import platform
 import subprocess
 import sys
-import os
 import webbrowser
-import platform
 
-from mikazuki.utils import check_run
 from mikazuki.launch_utils import (check_dirs, prepare_frontend,
-                                   remove_warnings, smart_pip_mirror,
-                                   validate_requirements, setup_windows_bitsandbytes)
+                                   remove_warnings, setup_windows_bitsandbytes,
+                                   smart_pip_mirror, validate_requirements)
 from mikazuki.log import log
+from mikazuki.utils import check_run
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
@@ -31,7 +32,16 @@ def run_tensorboard():
 
 def run_tag_editor():
     log.info("Starting tageditor...")
-    subprocess.Popen([sys.executable, "mikazuki/dataset-tag-editor/scripts/launch.py", "--port", "28001", "--root-path", "/proxy/tageditor"])
+    cmd = [
+        sys.executable,
+        "mikazuki/dataset-tag-editor/scripts/launch.py",
+        "--port", "28001",
+        "--shadow-gradio-output",
+        "--root-path", "/proxy/tageditor"
+    ]
+    if locale.getdefaultlocale()[0] == "zh_CN":
+        cmd.extend(["--localization", "zh-Hans"])
+    subprocess.Popen(cmd)
 
 
 if __name__ == "__main__":
