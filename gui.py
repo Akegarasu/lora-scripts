@@ -6,7 +6,7 @@ import subprocess
 import sys
 import webbrowser
 
-from mikazuki.launch_utils import (check_dirs, prepare_frontend,
+from mikazuki.launch_utils import (check_dirs, prepare_submodules,
                                    remove_warnings, setup_windows_bitsandbytes,
                                    smart_pip_mirror, validate_requirements)
 from mikazuki.log import log
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     smart_pip_mirror()
 
     if not args.skip_prepare_environment:
-        prepare_frontend()
+        prepare_submodules()
         check_dirs(["config/autosave", "logs"])
         if not check_run("mikazuki/scripts/torch_check.py"):
             sys.exit(1)

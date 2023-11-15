@@ -27,9 +27,9 @@ def find_windows_git():
             return path
 
 
-def prepare_frontend():
-    if not os.path.exists("./frontend/dist"):
-        log.info("frontend not found, try clone...")
+def prepare_submodules():
+    if not os.path.exists("./frontend/dist") or not os.path.exists("./mikazuki/dataset-tag-editor"):
+        log.info("submodule not found, try clone...")
         log.info("checking git installation...")
         if not shutil.which("git"):
             if sys.platform == "win32":
