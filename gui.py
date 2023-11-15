@@ -17,6 +17,7 @@ parser.add_argument("--port", type=int, default=28000, help="Port to run the ser
 parser.add_argument("--listen", action="store_true")
 parser.add_argument("--skip-prepare-environment", action="store_true")
 parser.add_argument("--disable-tensorboard", action="store_true")
+parser.add_argument("--disable-tageditor", action="store_true")
 parser.add_argument("--tensorboard-host", type=str, default="127.0.0.1", help="Port to run the tensorboard")
 parser.add_argument("--tensorboard-port", type=int, default=6006, help="Port to run the tensorboard")
 parser.add_argument("--dev", action="store_true")
