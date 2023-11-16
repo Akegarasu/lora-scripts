@@ -11,7 +11,7 @@ WORKDIR /app
 RUN git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 WORKDIR /app/lora-scripts
-RUN pip config set global.index-url https://mirror.baidu.com/pypi/simple && pip install xformers==0.0.21 --no-deps && pip install -r requirements.txt
+RUN pip install xformers==0.0.21 --no-deps && pip install -r requirements.txt
 
 WORKDIR /app/lora-scripts/sd-scripts
 RUN pip install -r requirements.txt
