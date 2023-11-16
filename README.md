@@ -24,9 +24,9 @@ _✨ Enjoy Stable Diffusion Train！ ✨_
 </p>
 
 <p align="center">
-  <a href="https://github.com/Akegarasu/blive-queue/releases">Download</a>
+  <a href="https://github.com/Akegarasu/lora-scripts/releases">Download</a>
   ·
-  <a href="https://github.com/Akegarasu/blive-queue/blob/main/README.md">Documents</a>
+  <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README.md">Documents</a>
   ·
   <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README-zh.md">中文README</a>
 </p>
