@@ -32,7 +32,7 @@ def reverse_proxy_maker(url_type: str, full_path: bool = False):
         rp_req = client.build_request(
             request.method, url,
             headers=request.headers.raw,
-            content=request.stream()
+            content=request.stream() if request.method == "POST" else None
         )
         try:
             rp_resp = await client.send(rp_req, stream=True)
