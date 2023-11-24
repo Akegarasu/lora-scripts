@@ -51,6 +51,8 @@ if __name__ == "__main__":
     remove_warnings()
     smart_pip_mirror()
 
+    os.environ.setdefault("PATH", "")
+
     if not args.skip_prepare_environment:
         prepare_submodules()
         check_dirs(["config/autosave", "logs"])
@@ -60,15 +62,15 @@ if __name__ == "__main__":
         validate_requirements(requirements_file)
         setup_windows_bitsandbytes()
 
+    if args.listen:
+        args.host = "0.0.0.0"
+        args.tensorboard_host = "0.0.0.0"
+
     if not args.disable_tageditor:
         run_tag_editor()
 
     if not args.disable_tensorboard:
         run_tensorboard()
-
-    if args.listen:
-        args.host = "0.0.0.0"
-        args.tensorboard_host = "0.0.0.0"
 
     os.environ["MIKAZUKI_TENSORBOARD_HOST"] = args.tensorboard_host
     os.environ["MIKAZUKI_TENSORBOARD_PORT"] = str(args.tensorboard_port)
