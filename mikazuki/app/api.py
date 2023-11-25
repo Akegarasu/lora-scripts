@@ -4,73 +4,27 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-
 import toml
-from fastapi import BackgroundTasks, FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi import APIRouter, BackgroundTasks, Request
 from starlette.requests import Request
-import starlette.responses as starlette_responses
 
 import mikazuki.process as process
 import mikazuki.utils as utils
 from mikazuki.log import log
 from mikazuki.models import TaggerInterrogateRequest
-from mikazuki.proxy import router as proxy_router
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
 from mikazuki.tasks import tm
 
-app = FastAPI()
-app.include_router(proxy_router)
+router = APIRouter()
 
 avaliable_scripts = [
     "networks/extract_lora_from_models.py",
     "networks/extract_lora_from_dylora.py"
 ]
 
-# fix mimetype error in some fucking systems
-_origin_guess_type = starlette_responses.guess_type
 
-
-def _hooked_guess_type(*args, **kwargs):
-    url = args[0]
-    r = _origin_guess_type(*args, **kwargs)
-    if url.endswith(".js"):
-        r = ("application/javascript", None)
-    elif url.endswith(".css"):
-        r = ("text/css", None)
-    return r
-
-
-starlette_responses.guess_type = _hooked_guess_type
-
-
-cors_config = os.environ.get("MIKAZUKI_APP_CORS", "")
-if cors_config != "":
-    if cors_config == "1":
-        cors_config = ["http://localhost:8004"]
-    else:
-        cors_config = cors_config.split(";")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_config,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-
-
-@app.middleware("http")
-async def add_cache_control_header(request, call_next):
-    response = await call_next(request)
-    response.headers["Cache-Control"] = "max-age=0"
-    # response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
-
-
-@app.post("/api/run")
+@router.post("/run")
 async def create_toml_file(request: Request):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
@@ -113,7 +67,7 @@ async def create_toml_file(request: Request):
     return {"status": "success"}
 
 
-@app.post("/api/run_script")
+@router.post("/run_script")
 async def run_script(request: Request, background_tasks: BackgroundTasks):
     paras = await request.body()
     j = json.loads(paras.decode("utf-8"))
@@ -136,7 +90,7 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
     return {"status": "success"}
 
 
-@app.post("/api/interrogate")
+@router.post("/interrogate")
 async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: BackgroundTasks):
     interrogator = available_interrogators.get(req.interrogator_model, available_interrogators["wd14-convnextv2-v2"])
     background_tasks.add_task(on_interrogate,
@@ -161,14 +115,14 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
                               )
     return {"status": "success"}
 
-# @app.get("/api/schema/{name}")
+# @router.get("/api/schema/{name}")
 # async def get_schema(name: str):
 #     with open(os.path.join(os.getcwd(), "mikazuki", "schema", name), encoding="utf-8") as f:
 #         content = f.read()
 #         return Response(content=content, media_type="text/plain")
 
 
-@app.get("/api/pick_file")
+@router.get("/pick_file")
 async def pick_file(picker_type: str):
     if picker_type == "folder":
         coro = asyncio.to_thread(utils.open_directory_selector, os.getcwd())
@@ -188,20 +142,12 @@ async def pick_file(picker_type: str):
     }
 
 
-@app.get("/api/tasks")
+@router.get("/tasks")
 async def get_tasks():
     return tm.dump()
 
 
-@app.get("/api/tasks/terminate/{task_id}")
+@router.get("/tasks/terminate/{task_id}")
 async def terminate_task(task_id: str):
     tm.terminate_task(task_id)
     return {"status": "success"}
-
-
-@app.get("/")
-async def index():
-    return FileResponse("./frontend/dist/index.html")
-
-
-app.mount("/", StaticFiles(directory="frontend/dist"), name="static")
