@@ -1,6 +1,6 @@
 import os
+import mimetypes
 
-import starlette.responses as starlette_responses
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -9,25 +9,11 @@ from fastapi.staticfiles import StaticFiles
 from mikazuki.app.api import router as api_router
 from mikazuki.app.proxy import router as proxy_router
 
+mimetypes.add_type("application/javascript", ".js")
+mimetypes.add_type("text/css", ".css")
+
 app = FastAPI()
 app.include_router(proxy_router)
-
-
-# fix mimetype error in some fucking systems
-_origin_guess_type = starlette_responses.guess_type
-
-
-def _hooked_guess_type(*args, **kwargs):
-    url = args[0]
-    r = _origin_guess_type(*args, **kwargs)
-    if url.endswith(".js"):
-        r = ("application/javascript", None)
-    elif url.endswith(".css"):
-        r = ("text/css", None)
-    return r
-
-
-starlette_responses.guess_type = _hooked_guess_type
 
 
 cors_config = os.environ.get("MIKAZUKI_APP_CORS", "")
