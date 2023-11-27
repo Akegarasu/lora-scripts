@@ -20,7 +20,7 @@ scipy
 requests
 pillow
 numpy
-gradio==3.32.0
+gradio==3.41.2
 fastapi==0.95.1
 uvicorn==0.22.0
 lion-pytorch==0.1.2
