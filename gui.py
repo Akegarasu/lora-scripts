@@ -10,7 +10,7 @@ from mikazuki.launch_utils import (check_dirs, prepare_submodules,
                                    remove_warnings, setup_windows_bitsandbytes,
                                    smart_pip_mirror, validate_requirements)
 from mikazuki.log import log
-from mikazuki.utils import check_run
+from mikazuki.utils import check_run, base_dir_path
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
@@ -34,7 +34,7 @@ def run_tag_editor():
     log.info("Starting tageditor...")
     cmd = [
         sys.executable,
-        "mikazuki/dataset-tag-editor/scripts/launch.py",
+        base_dir_path() / "mikazuki/dataset-tag-editor/scripts/launch.py",
         "--port", "28001",
         "--shadow-gradio-output",
         "--root-path", "/proxy/tageditor"
@@ -46,6 +46,8 @@ def run_tag_editor():
 
 if __name__ == "__main__":
     args, _ = parser.parse_known_args()
+    log.info("Starting SD-Trainer Mikazuki GUI...")
+    log.info(f"Base directory: {base_dir_path()}, Working directory: {os.getcwd()}")
     log.info(f'{platform.system()} Python {platform.python_version()} {sys.executable}')
 
     remove_warnings()

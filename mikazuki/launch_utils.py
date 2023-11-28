@@ -10,7 +10,7 @@ from typing import List
 import pkg_resources
 
 from mikazuki.log import log
-from mikazuki.utils import run_pip
+from mikazuki.utils import run_pip, base_dir_path
 
 
 def smart_pip_mirror():
@@ -28,7 +28,10 @@ def find_windows_git():
 
 
 def prepare_submodules():
-    if not os.path.exists("./frontend/dist") or not os.path.exists("./mikazuki/dataset-tag-editor"):
+    frontend_path = base_dir_path() / "frontend" / "dist"
+    tag_editor_path = base_dir_path() / "mikazuki" / "dataset-tag-editor" / "scripts"
+
+    if not os.path.exists(frontend_path) or not os.path.exists(tag_editor_path):
         log.info("submodule not found, try clone...")
         log.info("checking git installation...")
         if not shutil.which("git"):

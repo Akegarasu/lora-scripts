@@ -9,9 +9,9 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from starlette.requests import Request
 
 import mikazuki.process as process
-import mikazuki.utils as utils
+from mikazuki.app.models import TaggerInterrogateRequest
+from mikazuki.app.tk_window import open_directory_selector, open_file_selector
 from mikazuki.log import log
-from mikazuki.models import TaggerInterrogateRequest
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
 from mikazuki.tasks import tm
@@ -125,10 +125,10 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
 @router.get("/pick_file")
 async def pick_file(picker_type: str):
     if picker_type == "folder":
-        coro = asyncio.to_thread(utils.open_directory_selector, os.getcwd())
+        coro = asyncio.to_thread(open_directory_selector, os.getcwd())
     elif picker_type == "modelfile":
         file_types = [("checkpoints", "*.safetensors;*.ckpt;*.pt"), ("all files", "*.*")]
-        coro = asyncio.to_thread(utils.open_file_selector, os.getcwd(), "Select file", file_types)
+        coro = asyncio.to_thread(open_file_selector, os.getcwd(), "Select file", file_types)
 
     result = await coro
     if result == "":

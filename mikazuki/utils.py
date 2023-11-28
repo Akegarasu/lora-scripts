@@ -1,15 +1,14 @@
 import glob
 import importlib.util
 import os
-import subprocess
-import sys
 import re
 import shutil
-import tkinter
-from tkinter.filedialog import askopenfilename, askdirectory
+import subprocess
+import sys
+from pathlib import Path
 from typing import Optional
-from mikazuki.log import log
 
+from mikazuki.log import log
 
 python_bin = sys.executable
 
@@ -156,33 +155,5 @@ def check_run(file: str) -> bool:
     return result.returncode == 0
 
 
-def tk_window():
-    window = tkinter.Tk()
-    window.wm_attributes('-topmost', 1)
-    window.withdraw()
-
-
-def open_file_selector(
-        initialdir,
-        title,
-        filetypes) -> str:
-    try:
-        tk_window()
-        filename = askopenfilename(
-            initialdir=initialdir, title=title,
-            filetypes=filetypes
-        )
-        return filename
-    except:
-        return ""
-
-
-def open_directory_selector(initialdir) -> str:
-    try:
-        tk_window()
-        directory = askdirectory(
-            initialdir=initialdir
-        )
-        return directory
-    except:
-        return ""
+def base_dir_path():
+    return Path(__file__).parents[1].absolute()
