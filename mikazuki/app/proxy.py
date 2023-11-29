@@ -17,9 +17,11 @@ def reverse_proxy_maker(url_type: str, full_path: bool = False):
     if url_type == "tensorboard":
         host = os.environ.get("MIKAZUKI_TENSORBOARD_HOST", "127.0.0.1")
         port = os.environ.get("MIKAZUKI_TENSORBOARD_PORT", "6006")
-        client = httpx.AsyncClient(base_url=f"http://{host}:{port}/")
     elif url_type == "tageditor":
-        client = httpx.AsyncClient(base_url="http://127.0.0.1:28001/")
+        host = os.environ.get("MIKAZUKI_TAGEDITOR_HOST", "127.0.0.1")
+        port = os.environ.get("MIKAZUKI_TAGEDITOR_PORT", "28001")
+
+    client = httpx.AsyncClient(base_url=f"http://{host}:{port}/", proxies={}, trust_env=False, timeout=360)
 
     async def _reverse_proxy(request: Request):
         if full_path:
@@ -38,7 +40,7 @@ def reverse_proxy_maker(url_type: str, full_path: bool = False):
             rp_resp = await client.send(rp_req, stream=True)
         except ConnectError:
             return PlainTextResponse(
-                content="The requested service not started yet or tensorboard started fail.\n请求的服务尚未启动或启动失败。",
+                content="The requested service not started yet or service started fail. This may cost a while when you first time startup\n请求的服务尚未启动或启动失败。若是第一次启动，可能需要等待一段时间后再刷新网页。",
                 status_code=502
             )
         return StreamingResponse(
