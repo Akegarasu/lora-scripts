@@ -9,6 +9,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from starlette.requests import Request
 
 import mikazuki.process as process
+from mikazuki.app import utils
 from mikazuki.app.models import TaggerInterrogateRequest
 from mikazuki.app.tk_window import open_directory_selector, open_file_selector
 from mikazuki.log import log
