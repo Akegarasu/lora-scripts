@@ -6,11 +6,8 @@ import subprocess
 import sys
 import webbrowser
 
-from mikazuki.launch_utils import (check_dirs, prepare_submodules,
-                                   remove_warnings, setup_windows_bitsandbytes,
-                                   smart_pip_mirror, validate_requirements)
+from mikazuki.launch_utils import prepare_environment, base_dir_path
 from mikazuki.log import log
-from mikazuki.utils import check_run, base_dir_path
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
 parser.add_argument("--host", type=str, default="127.0.0.1")
@@ -21,6 +18,7 @@ parser.add_argument("--disable-tensorboard", action="store_true")
 parser.add_argument("--disable-tageditor", action="store_true")
 parser.add_argument("--tensorboard-host", type=str, default="127.0.0.1", help="Port to run the tensorboard")
 parser.add_argument("--tensorboard-port", type=int, default=6006, help="Port to run the tensorboard")
+parser.add_argument("--localization", type=str)
 parser.add_argument("--dev", action="store_true")
 
 
@@ -39,30 +37,20 @@ def run_tag_editor():
         "--shadow-gradio-output",
         "--root-path", "/proxy/tageditor"
     ]
-    if locale.getdefaultlocale()[0] == "zh_CN":
+    if args.localization:
+        cmd.extend(["--localization", args.localization])
+    elif locale.getdefaultlocale()[0].startswith("zh"):
         cmd.extend(["--localization", "zh-Hans"])
     subprocess.Popen(cmd)
 
 
-if __name__ == "__main__":
-    args, _ = parser.parse_known_args()
+def launch():
     log.info("Starting SD-Trainer Mikazuki GUI...")
     log.info(f"Base directory: {base_dir_path()}, Working directory: {os.getcwd()}")
     log.info(f'{platform.system()} Python {platform.python_version()} {sys.executable}')
 
-    remove_warnings()
-    smart_pip_mirror()
-
-    os.environ.setdefault("PATH", "")
-
     if not args.skip_prepare_environment:
-        prepare_submodules()
-        check_dirs(["config/autosave", "logs"])
-        if not check_run("mikazuki/scripts/torch_check.py"):
-            sys.exit(1)
-        requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
-        validate_requirements(requirements_file)
-        setup_windows_bitsandbytes()
+        prepare_environment()
 
     if args.listen:
         args.host = "0.0.0.0"
@@ -82,3 +70,8 @@ if __name__ == "__main__":
     if not args.dev and sys.platform == "win32":
         webbrowser.open(f"http://{args.host}:{args.port}")
     uvicorn.run("mikazuki.app:app", host=args.host, port=args.port, log_level="error")
+
+
+if __name__ == "__main__":
+    args, _ = parser.parse_known_args()
+    launch()

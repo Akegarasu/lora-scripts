@@ -128,7 +128,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         # only one of these packages should be installed at a time in any one environment
         # https://onnxruntime.ai/docs/get-started/with-python.html#install-onnx-runtime
         # TODO: remove old package when the environment changes?
-        from mikazuki.utils import is_installed, run_pip
+        from mikazuki.launch_utils import is_installed, run_pip
         if not is_installed('onnxruntime'):
             package = os.environ.get(
                 'ONNXRUNTIME_PACKAGE',

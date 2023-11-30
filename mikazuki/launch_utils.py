@@ -6,18 +6,18 @@ import subprocess
 import sys
 import sysconfig
 from typing import List
+from pathlib import Path
+from typing import Optional
 
 import pkg_resources
 
 from mikazuki.log import log
-from mikazuki.utils import run_pip, base_dir_path
+
+python_bin = sys.executable
 
 
-def smart_pip_mirror():
-    if locale.getdefaultlocale()[0] == "zh_CN":
-        log.info("detected locale zh_CN, use pip mirrors")
-        os.environ.setdefault("PIP_FIND_LINKS", "https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html")
-        os.environ.setdefault("PIP_INDEX_URL", "https://mirror.baidu.com/pypi/simple")
+def base_dir_path():
+    return Path(__file__).parents[1].absolute()
 
 
 def find_windows_git():
@@ -49,20 +49,47 @@ def prepare_submodules():
         subprocess.run(["git", "submodule", "update"])
 
 
-def remove_warnings():
-    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-    if sys.platform == "win32":
-        # disable triton on windows
-        os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
-    os.environ["BITSANDBYTES_NOWELCOME"] = "1"
-    os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
-    os.environ["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
-
-
 def check_dirs(dirs: List):
     for d in dirs:
         if not os.path.exists(d):
             os.makedirs(d)
+
+
+def run(command,
+        desc: Optional[str] = None,
+        errdesc: Optional[str] = None,
+        custom_env: Optional[list] = None,
+        live: Optional[bool] = True,
+        shell: Optional[bool] = None):
+
+    if shell is None:
+        shell = False if sys.platform == "win32" else True
+
+    if desc is not None:
+        print(desc)
+
+    if live:
+        result = subprocess.run(command, shell=shell, env=os.environ if custom_env is None else custom_env)
+        if result.returncode != 0:
+            raise RuntimeError(f"""{errdesc or 'Error running command'}.
+Command: {command}
+Error code: {result.returncode}""")
+
+        return ""
+
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            shell=shell, env=os.environ if custom_env is None else custom_env)
+
+    if result.returncode != 0:
+        message = f"""{errdesc or 'Error running command'}.
+Command: {command}
+Error code: {result.returncode}
+stdout: {result.stdout.decode(encoding="utf8", errors="ignore") if len(result.stdout) > 0 else '<empty>'}
+stderr: {result.stderr.decode(encoding="utf8", errors="ignore") if len(result.stderr) > 0 else '<empty>'}
+"""
+        raise RuntimeError(message)
+
+    return result.stdout.decode(encoding="utf8", errors="ignore")
 
 
 def is_installed(package, friendly: str = None):
@@ -164,3 +191,43 @@ def setup_windows_bitsandbytes():
         log.error("detected wrong install of bitsandbytes, reinstall it")
         run_pip(f"uninstall bitsandbytes -y", "bitsandbytes", live=True)
         run_pip(f"install {bnb_package} --index-url {bnb_windows_index}", bnb_package, live=True)
+
+
+def run_pip(command, desc=None, live=False):
+    return run(f'"{python_bin}" -m pip {command}', desc=f"Installing {desc}", errdesc=f"Couldn't install {desc}", live=live)
+
+
+def check_run(file: str) -> bool:
+    result = subprocess.run([python_bin, file], capture_output=True, shell=False)
+    log.info(result.stdout.decode("utf-8").strip())
+    return result.returncode == 0
+
+
+def prepare_environment():
+    if sys.platform == "win32":
+        # disable triton on windows
+        os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
+
+    os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+    os.environ["BITSANDBYTES_NOWELCOME"] = "1"
+    os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
+    os.environ["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+
+    if locale.getdefaultlocale()[0] == "zh_CN":
+        log.info("detected locale zh_CN, use pip mirrors")
+        os.environ.setdefault("PIP_FIND_LINKS", "https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html")
+        os.environ.setdefault("PIP_INDEX_URL", "https://mirror.baidu.com/pypi/simple")
+
+    if not os.environ.get("PATH"):
+        os.environ["PATH"] = os.path.dirname(sys.executable)
+
+    prepare_submodules()
+
+    check_dirs(["config/autosave", "logs"])
+
+    if not check_run("mikazuki/scripts/torch_check.py"):
+        sys.exit(1)
+
+    requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
+    validate_requirements(requirements_file)
+    setup_windows_bitsandbytes()
