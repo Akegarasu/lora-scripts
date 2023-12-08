@@ -14,6 +14,7 @@ class TaggerInterrogateRequest(BaseModel):
     additional_tags: str = ""
     exclude_tags: str = ""
     escape_tag: bool = True
+    batch_input_recursive: bool = False
     batch_output_action_on_conflict: str = "ignore"
     replace_underscore: bool = True
     replace_underscore_excludes: str = Field(

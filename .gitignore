@@ -10,6 +10,7 @@ output/*
 py310
 python
 git
+wd14_tagger_model
 
 train/*
 logs/*
