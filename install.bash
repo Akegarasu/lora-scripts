@@ -30,7 +30,7 @@ cuda_minor_version=$(echo "$cuda_version" | awk -F'.' '{print $2}')
 
 echo "Cuda Version:$cuda_version"
 
-if (( cuda_major_version >= 12 )) then
+if (( cuda_major_version >= 12 )); then
     echo "install torch 2.1.0+cu121"
     pip install torch==2.1.2+cu121 torchvision==0.16.2+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
     pip install --no-deps xformers===0.0.23.post1
