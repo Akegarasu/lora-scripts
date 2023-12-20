@@ -9,13 +9,15 @@ from fastapi import APIRouter, BackgroundTasks, Request
 from starlette.requests import Request
 
 import mikazuki.process as process
-from mikazuki.app import utils
+from mikazuki import launch_utils
 from mikazuki.app.models import TaggerInterrogateRequest
-from mikazuki.app.tk_window import open_directory_selector, open_file_selector
 from mikazuki.log import log
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
 from mikazuki.tasks import tm
+from mikazuki.utils import train_utils
+from mikazuki.utils.tk_window import (open_directory_selector,
+                                      open_file_selector)
 
 router = APIRouter()
 
@@ -24,43 +26,43 @@ avaliable_scripts = [
     "networks/extract_lora_from_dylora.py"
 ]
 
+trainer_mapping = {
+    "sd-lora": "./sd-scripts/train_network.py",
+    "sdxl-lora": "./sd-scripts/sdxl_train_network.py",
+    "sd-dreambooth": "./sd-scripts/train_db.py",
+    "sdxl-finetune": "./sd-scripts/sdxl_train.py",
+}
+
 
 @router.post("/run")
 async def create_toml_file(request: Request):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
-    toml_data = await request.body()
-    j = json.loads(toml_data.decode("utf-8"))
+    json_data = await request.body()
+    config = json.loads(json_data.decode("utf-8"))
 
-    multi_gpu = j.pop("multi_gpu", False)
-    suggest_cpu_threads = 8 if len(utils.get_total_images(j["train_data_dir"])) > 100 else 2
-    trainer_file = "./sd-scripts/train_network.py"
-
-    model_train_type = j.pop("model_train_type", "sd-lora")
-    if model_train_type == "sdxl-lora":
-        trainer_file = "./sd-scripts/sdxl_train_network.py"
-    elif model_train_type == "sd-dreambooth":
-        trainer_file = "./sd-scripts/train_db.py"
-    elif model_train_type == "sdxl-finetune":
-        trainer_file = "./sd-scripts/sdxl_train.py"
+    multi_gpu = config.pop("multi_gpu", False)
+    suggest_cpu_threads = 8 if len(train_utils.get_total_images(config["train_data_dir"])) > 200 else 2
+    model_train_type = config.pop("model_train_type", "sd-lora")
+    trainer_file = trainer_mapping[model_train_type]
 
     if model_train_type != "sdxl-finetune":
-        if not utils.validate_data_dir(j["train_data_dir"]):
+        if not train_utils.validate_data_dir(config["train_data_dir"]):
             return {
                 "status": "fail",
                 "detail": "训练数据集路径不存在或没有图片，请检查目录。"
             }
 
-    sample_prompts = j.get("sample_prompts", None)
-    if sample_prompts is not None and not os.path.exists(sample_prompts) and utils.is_promopt_like(sample_prompts):
+    sample_prompts = config.get("sample_prompts", None)
+    if sample_prompts is not None and not os.path.exists(sample_prompts) and train_utils.is_promopt_like(sample_prompts):
         sample_prompts_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}-promopt.txt")
         with open(sample_prompts_file, "w", encoding="utf-8") as f:
             f.write(sample_prompts)
-        j["sample_prompts"] = sample_prompts_file
+        config["sample_prompts"] = sample_prompts_file
         log.info(f"Wrote promopts to file {sample_prompts_file}")
 
     with open(toml_file, "w") as f:
-        f.write(toml.dumps(j))
+        f.write(toml.dumps(config))
 
     coro = asyncio.to_thread(process.run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
     asyncio.create_task(coro)
@@ -86,8 +88,8 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
             result.append(value)
     script_args = " ".join(result)
     script_path = Path(os.getcwd()) / "sd-scripts" / script_name
-    cmd = f"{utils.python_bin} {script_path} {script_args}"
-    background_tasks.add_task(utils.run, cmd)
+    cmd = f"{launch_utils.python_bin} {script_path} {script_args}"
+    background_tasks.add_task(launch_utils.run, cmd)
     return {"status": "success"}
 
 

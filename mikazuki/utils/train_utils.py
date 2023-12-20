@@ -16,6 +16,17 @@ def is_promopt_like(s):
     return False
 
 
+def validate_model(model_name: str):
+    if os.path.exists(model_name):
+        return True
+
+    # huggerface model repo
+    if model_name.count("/") <= 1:
+        return True
+
+    return False
+
+
 def validate_data_dir(path):
     if not os.path.exists(path):
         log.error(f"Data dir {path} not exists, check your params")
