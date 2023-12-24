@@ -52,6 +52,9 @@ def launch():
     if not args.skip_prepare_environment:
         prepare_environment()
 
+    os.environ["MIKAZUKI_TENSORBOARD_HOST"] = args.tensorboard_host
+    os.environ["MIKAZUKI_TENSORBOARD_PORT"] = str(args.tensorboard_port)
+
     if args.listen:
         args.host = "0.0.0.0"
         args.tensorboard_host = "0.0.0.0"
@@ -61,9 +64,6 @@ def launch():
 
     if not args.disable_tensorboard:
         run_tensorboard()
-
-    os.environ["MIKAZUKI_TENSORBOARD_HOST"] = args.tensorboard_host
-    os.environ["MIKAZUKI_TENSORBOARD_PORT"] = str(args.tensorboard_port)
 
     import uvicorn
     log.info(f"Server started at http://{args.host}:{args.port}")
