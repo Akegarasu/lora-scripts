@@ -16,6 +16,7 @@ from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
 from mikazuki.tasks import tm
 from mikazuki.utils import train_utils
+from mikazuki.utils.devices import printable_devices
 from mikazuki.utils.tk_window import (open_directory_selector,
                                       open_file_selector)
 
@@ -41,7 +42,7 @@ async def create_toml_file(request: Request):
     json_data = await request.body()
     config = json.loads(json_data.decode("utf-8"))
 
-    multi_gpu = config.pop("multi_gpu", False)
+    gpu_ids = config.pop("graphic_card", ["0"])
     suggest_cpu_threads = 8 if len(train_utils.get_total_images(config["train_data_dir"])) > 200 else 2
     model_train_type = config.pop("model_train_type", "sd-lora")
     trainer_file = trainer_mapping[model_train_type]
@@ -52,6 +53,13 @@ async def create_toml_file(request: Request):
                 "status": "fail",
                 "detail": "训练数据集路径不存在或没有图片，请检查目录。"
             }
+
+    validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"])
+    if not validated:
+        return {
+            "status": "fail",
+            "detail": message
+        }
 
     sample_prompts = config.get("sample_prompts", None)
     if sample_prompts is not None and not os.path.exists(sample_prompts) and train_utils.is_promopt_like(sample_prompts):
@@ -64,7 +72,7 @@ async def create_toml_file(request: Request):
     with open(toml_file, "w") as f:
         f.write(toml.dumps(config))
 
-    coro = asyncio.to_thread(process.run_train, toml_file, trainer_file, multi_gpu, suggest_cpu_threads)
+    coro = asyncio.to_thread(process.run_train, toml_file, trainer_file, gpu_ids, suggest_cpu_threads)
     asyncio.create_task(coro)
 
     return {"status": "success"}
@@ -155,3 +163,16 @@ async def get_tasks():
 async def terminate_task(task_id: str):
     tm.terminate_task(task_id)
     return {"status": "success"}
+
+
+@router.get("/graphic_cards")
+async def list_avaliable_cards():
+    if not printable_devices:
+        return {
+            "status": "pending"
+        }
+
+    return {
+        "status": "success",
+        "cards": printable_devices
+    }

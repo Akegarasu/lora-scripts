@@ -52,6 +52,8 @@ def launch():
     if not args.skip_prepare_environment:
         prepare_environment()
 
+    os.environ["MIKAZUKI_HOST"] = args.host
+    os.environ["MIKAZUKI_PORT"] = str(args.port)
     os.environ["MIKAZUKI_TENSORBOARD_HOST"] = args.tensorboard_host
     os.environ["MIKAZUKI_TENSORBOARD_PORT"] = str(args.tensorboard_port)
 
@@ -67,8 +69,6 @@ def launch():
 
     import uvicorn
     log.info(f"Server started at http://{args.host}:{args.port}")
-    if not args.dev and sys.platform == "win32":
-        webbrowser.open(f"http://{args.host}:{args.port}")
     uvicorn.run("mikazuki.app:app", host=args.host, port=args.port, log_level="error")
 
 

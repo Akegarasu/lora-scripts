@@ -1,18 +1,36 @@
-import os
+import asyncio
 import mimetypes
+import os
+import webbrowser
+import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from mikazuki.utils.devices import check_torch_gpu
 from mikazuki.app.api import router as api_router
 from mikazuki.app.proxy import router as proxy_router
 
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
 
-app = FastAPI()
+
+async def app_startup():
+    await asyncio.to_thread(check_torch_gpu)
+    if sys.platform == "win32":
+        webbrowser.open(f'http://{os.environ["MIKAZUKI_HOST"]}:{os.environ["MIKAZUKI_PORT"]}')
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await app_startup()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(proxy_router)
 
 

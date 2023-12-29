@@ -225,8 +225,8 @@ def prepare_environment():
 
     check_dirs(["config/autosave", "logs"])
 
-    if not check_run("mikazuki/scripts/torch_check.py"):
-        sys.exit(1)
+    # if not check_run("mikazuki/scripts/torch_check.py"):
+    #     sys.exit(1)
 
     requirements_file = "requirements_win.txt" if sys.platform == "win32" else "requirements.txt"
     validate_requirements(requirements_file)

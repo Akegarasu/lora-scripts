@@ -18,13 +18,13 @@ def is_promopt_like(s):
 
 def validate_model(model_name: str):
     if os.path.exists(model_name):
-        return True
+        return True, "ok"
 
     # huggerface model repo
     if model_name.count("/") <= 1:
-        return True
+        return True, "ok"
 
-    return False
+    return False, "model not found"
 
 
 def validate_data_dir(path):
