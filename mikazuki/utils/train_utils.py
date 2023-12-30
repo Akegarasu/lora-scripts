@@ -18,6 +18,18 @@ def is_promopt_like(s):
 
 def validate_model(model_name: str):
     if os.path.exists(model_name):
+        try:
+            with open(model_name, "rb") as f:
+                content = f.read(1024 * 200)
+                if b"model.diffusion_model" in content or b"cond_stage_model.transformer.text_model" in content:
+                    return True, "ok"
+
+                if b"lora_unet" in content or b"lora_te" in content:
+                    return False, "pretrained model is not a Stable Diffusion checkpoint / 校验失败：底模不是 Stable Diffusion 模型"
+        except Exception as e:
+            log.warn(f"model file {model_name} can't open: {e}")
+            return True, ""
+
         return True, "ok"
 
     # huggerface model repo
