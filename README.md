@@ -35,13 +35,24 @@ LoRA-scripts (a.k.a SD-Trainer)
 
 LoRA & Dreambooth training GUI & scripts preset & one key training environment for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
 
-## ✨NEW: Train GUI
+## ✨NEW: Train WebUI
 
-![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/0a2edcb8-023a-4fe6-8c92-2bad9ccab64c)
+The **REAL** Stable Diffusion Training Studio. Everything in one WebUI.
 
 Follow the installation guide below to install the GUI, then run `run_gui.ps1`(windows) or `run_gui.sh`(linux) to start the GUI.
 
-## Usage
+![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/d3fcf5ad-fb8f-4e1d-81f9-c903376c19c6)
+
+| Tensorboard | WD 1.4 Tagger | Tag Editor |
+| ------------ | ------------ | ------------ |
+| ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/b2ac5c36-3edf-43a6-9719-cb00b757fc76) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/9504fad1-7d77-46a7-a68f-91fbbdbc7407) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/4597917b-caa8-4e90-b950-8b01738996f2) |
+
+
+# Usage
+
+### Required Dependencies
+
+Python 3.10 and Git
 
 ### Clone repo with submodules
 
@@ -49,9 +60,30 @@ Follow the installation guide below to install the GUI, then run `run_gui.ps1`(w
 git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 ```
 
-### Required Dependencies
+## ✨ SD-Trainer GUI
 
-Python 3.10.8 and Git
+### Windows
+
+#### Installation
+
+Run `install.ps1` will automaticilly create a venv for you and install necessary deps. 
+If you are in China mainland, please use `install-cn.ps1`
+
+#### Train
+
+run `run_gui.ps1`, then program will open [http://127.0.0.1:28000](http://127.0.0.1:28000) automanticlly
+
+### Linux
+
+#### Installation
+
+Run `install.bash` will create a venv and install necessary deps. 
+
+#### Train
+
+run `bash run_gui.bash`, then program will open [http://127.0.0.1:28000](http://127.0.0.1:28000) automanticlly
+
+## Legacy training through run script manually
 
 ### Windows
 
@@ -82,5 +114,3 @@ Edit `train.sh`, and run it.
 #### TensorBoard
 
 Run `tensorboard.ps1` will start TensorBoard at http://localhost:6006/
-
-![](./assets/tensorboard-example.png)
