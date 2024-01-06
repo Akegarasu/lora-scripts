@@ -1,11 +1,11 @@
 #!/bin/bash
 # LoRA train script by @Akegarasu
 
-config_file="./config/default.toml"          # config_file | 使用toml文件指定训练参数
-sample_prompts="./config/sample_prompts.txt" # sample_prompts | 采样prompts文件,留空则不启用采样功能
+config_file="./config/default.toml"          # config file | 使用 toml 文件指定训练参数
+sample_prompts="./config/sample_prompts.txt" # prompt file for sample | 采样 prompts 文件, 留空则不启用采样功能
 
-sdxl=0                                     # sdxl option | 添加SDXL选项，默认禁用
-multi_gpu=0                                # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
+sdxl=0      # train sdxl LoRA | 训练 SDXL LoRA
+multi_gpu=0 # multi gpu | 多显卡训练 该参数仅限在显卡数 >= 2 使用
 
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 
@@ -16,7 +16,10 @@ export PYTHONUTF8=1
 extArgs=()
 launchArgs=()
 
-if [[ $multi_gpu == 1 ]]; then launchArgs+=("--multi_gpu"); fi
+if [[ $multi_gpu == 1 ]]; then
+  launchArgs+=("--multi_gpu")
+  launchArgs+=("--num_processes=2")
+fi
 if [[ $sdxl == 1 ]]; then launchArgs+=("--sdxl"); fi
 
 # run train

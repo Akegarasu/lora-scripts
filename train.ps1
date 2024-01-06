@@ -35,7 +35,7 @@ $lr_scheduler = "cosine_with_restarts" # "linear", "cosine", "cosine_with_restar
 $lr_warmup_steps = 0 # warmup steps | 学习率预热步数，lr_scheduler 为 constant 或 adafactor 时该值需要设为0。
 $lr_restart_cycles = 1 # cosine_with_restarts restart cycles | 余弦退火重启次数，仅在 lr_scheduler 为 cosine_with_restarts 时起效。
 
-# 优化器设置
+# Optimizer settings | 优化器设置
 $optimizer_type = "AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion Lion8bit SGDNesterov SGDNesterov8bit DAdaptation AdaFactor prodigy
 
 # Output settings | 输出设置
@@ -76,6 +76,7 @@ $launch_args = [System.Collections.ArrayList]::new()
 
 if ($multi_gpu) {
   [void]$launch_args.Add("--multi_gpu")
+  [void]$launch_args.Add("--num_processes=2")
 }
 
 if ($lowram) {

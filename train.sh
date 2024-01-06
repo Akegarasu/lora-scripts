@@ -29,14 +29,14 @@ keep_tokens=0    # keep heading N tokens when shuffling caption tokens | 在随�
 min_snr_gamma=0  # minimum signal-to-noise ratio (SNR) value for gamma-ray | 伽马射线事件的最小信噪比（SNR）值  默认为 0
 
 # Learning rate | 学习率
-lr="1e-4" # learning rate | 学习率，在分别设置下方 U-Net 和 文本编码器 的学习率时，该参数失效
-unet_lr="1e-4" # U-Net learning rate | U-Net 学习率
-text_encoder_lr="1e-5" # Text Encoder learning rate | 文本编码器 学习率
+lr="1e-4"                           # learning rate | 学习率，在分别设置下方 U-Net 和 文本编码器 的学习率时，该参数失效
+unet_lr="1e-4"                      # U-Net learning rate | U-Net 学习率
+text_encoder_lr="1e-5"              # Text Encoder learning rate | 文本编码器 学习率
 lr_scheduler="cosine_with_restarts" # "linear", "cosine", "cosine_with_restarts", "polynomial", "constant", "constant_with_warmup", "adafactor"
 lr_warmup_steps=0                   # warmup steps | 学习率预热步数，lr_scheduler 为 constant 或 adafactor 时该值需要设为0。
 lr_restart_cycles=1                 # cosine_with_restarts restart cycles | 余弦退火重启次数，仅在 lr_scheduler 为 cosine_with_restarts 时起效。
 
-# 优化器设置
+# Optimizer settings | 优化器设置
 optimizer_type="AdamW8bit" # Optimizer type | 优化器类型 默认为 AdamW8bit，可选：AdamW AdamW8bit Lion Lion8bit SGDNesterov SGDNesterov8bit DAdaptation AdaFactor prodigy
 
 # Output settings | 输出设置
@@ -72,7 +72,11 @@ export TF_CPP_MIN_LOG_LEVEL=3
 
 extArgs=()
 launchArgs=()
-if [[ $multi_gpu == 1 ]]; then launchArgs+=("--multi_gpu"); fi
+
+if [[ $multi_gpu == 1 ]]; then
+  launchArgs+=("--multi_gpu")
+  launchArgs+=("--num_processes=2")
+fi
 
 if [[ $is_v2_model == 1 ]]; then
   extArgs+=("--v2")
