@@ -23,11 +23,11 @@ def run_train(toml_path: str,
 
     if len(gpu_ids) > 1:
         args[3:3] = ["--multi_gpu", "--num_processes", "2"]
+        customize_env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
 
     customize_env = os.environ.copy()
     customize_env["ACCELERATE_DISABLE_RICH"] = "1"
     customize_env["PYTHONUNBUFFERED"] = "1"
-    customize_env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
 
     try:
         task = tm.create_task(args, customize_env)

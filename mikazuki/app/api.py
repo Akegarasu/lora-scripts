@@ -40,9 +40,11 @@ async def create_toml_file(request: Request):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
     json_data = await request.body()
-    config = json.loads(json_data.decode("utf-8"))
+    config: dict = json.loads(json_data.decode("utf-8"))
 
-    gpu_ids = config.pop("gpu_ids", ["0"])
+    if not (gpu_ids := config.pop("gpu_ids", ["0"])):
+        gpu_ids = ["0"]
+
     suggest_cpu_threads = 8 if len(train_utils.get_total_images(config["train_data_dir"])) > 200 else 2
     model_train_type = config.pop("model_train_type", "sd-lora")
     trainer_file = trainer_mapping[model_train_type]
