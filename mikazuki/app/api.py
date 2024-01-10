@@ -10,7 +10,8 @@ from starlette.requests import Request
 
 import mikazuki.process as process
 from mikazuki import launch_utils
-from mikazuki.app.models import TaggerInterrogateRequest
+from mikazuki.app.models import (APIResponse, APIResponseFail,
+                                 APIResponseSuccess, TaggerInterrogateRequest)
 from mikazuki.log import log
 from mikazuki.tagger.interrogator import (available_interrogators,
                                           on_interrogate)
@@ -51,17 +52,11 @@ async def create_toml_file(request: Request):
 
     if model_train_type != "sdxl-finetune":
         if not train_utils.validate_data_dir(config["train_data_dir"]):
-            return {
-                "status": "fail",
-                "detail": "训练数据集路径不存在或没有图片，请检查目录。"
-            }
+            return APIResponseFail(message="训练数据集路径不存在或没有图片，请检查目录。")
 
     validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"])
     if not validated:
-        return {
-            "status": "fail",
-            "detail": message
-        }
+        return APIResponseFail(message=message)
 
     sample_prompts = config.get("sample_prompts", None)
     if sample_prompts is not None and not os.path.exists(sample_prompts) and train_utils.is_promopt_like(sample_prompts):
@@ -74,10 +69,9 @@ async def create_toml_file(request: Request):
     with open(toml_file, "w") as f:
         f.write(toml.dumps(config))
 
-    coro = asyncio.to_thread(process.run_train, toml_file, trainer_file, gpu_ids, suggest_cpu_threads)
-    asyncio.create_task(coro)
+    result = process.run_train(toml_file, trainer_file, gpu_ids, suggest_cpu_threads)
 
-    return {"status": "success"}
+    return result
 
 
 @router.post("/run_script")
@@ -86,7 +80,7 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
     j = json.loads(paras.decode("utf-8"))
     script_name = j["script_name"]
     if script_name not in avaliable_scripts:
-        return {"status": "fail"}
+        return APIResponseFail(message="Script not found")
     del j["script_name"]
     result = []
     for k, v in j.items():
@@ -100,7 +94,7 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
     script_path = Path(os.getcwd()) / "sd-scripts" / script_name
     cmd = f"{launch_utils.python_bin} {script_path} {script_args}"
     background_tasks.add_task(launch_utils.run, cmd)
-    return {"status": "success"}
+    return APIResponseSuccess()
 
 
 @router.post("/interrogate")
@@ -127,7 +121,7 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
         escape_tag=req.escape_tag,
         unload_model_after_running=True
     )
-    return {"status": "success"}
+    return APIResponseSuccess()
 
 # @router.get("/api/schema/{name}")
 # async def get_schema(name: str):
@@ -146,35 +140,31 @@ async def pick_file(picker_type: str):
 
     result = await coro
     if result == "":
-        return {
-            "status": "fail"
-        }
+        return APIResponseFail(message="用户取消选择")
 
-    return {
-        "status": "success",
+    return APIResponseSuccess(data={
         "path": result
-    }
+    })
 
 
-@router.get("/tasks")
-async def get_tasks():
-    return tm.dump()
+@router.get("/tasks", response_model_exclude_none=True)
+async def get_tasks() -> APIResponse:
+    return APIResponseSuccess(data={
+        "tasks": tm.dump()
+    })
 
 
-@router.get("/tasks/terminate/{task_id}")
+@router.get("/tasks/terminate/{task_id}", response_model_exclude_none=True)
 async def terminate_task(task_id: str):
     tm.terminate_task(task_id)
-    return {"status": "success"}
+    return APIResponseSuccess()
 
 
 @router.get("/graphic_cards")
-async def list_avaliable_cards():
+async def list_avaliable_cards() -> APIResponse:
     if not printable_devices:
-        return {
-            "status": "pending"
-        }
+        return APIResponse(status="pending")
 
-    return {
-        "status": "success",
+    return APIResponseSuccess(data={
         "cards": printable_devices
-    }
+    })

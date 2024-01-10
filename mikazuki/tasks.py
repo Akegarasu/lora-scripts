@@ -93,7 +93,7 @@ class TaskManager:
         task_id = str(uuid.uuid4())
         task = Task(task_id=task_id, command=command, environ=environ)
         self.tasks[task_id] = task
-        task.execute()
+        # task.execute() # breaking change
         log.info(f"Task {task_id} created")
         return task
 

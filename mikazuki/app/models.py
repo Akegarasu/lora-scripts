@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from typing import List, Optional, Union, Dict, Any
 
 
 class TaggerInterrogateRequest(BaseModel):
@@ -20,3 +21,17 @@ class TaggerInterrogateRequest(BaseModel):
     replace_underscore_excludes: str = Field(
         default="0_0, (o)_(o), +_+, +_-, ._., <o>_<o>, <|>_<|>, =_=, >_<, 3_3, 6_9, >_o, @_@, ^_^, o_o, u_u, x_x, |_|, ||_||"
     )
+
+
+class APIResponse(BaseModel):
+    status: str
+    message: Optional[str]
+    data: Optional[Dict]
+
+
+class APIResponseSuccess(APIResponse):
+    status: str = "success"
+
+
+class APIResponseFail(APIResponse):
+    status: str = "fail"
