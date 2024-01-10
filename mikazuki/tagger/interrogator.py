@@ -48,8 +48,8 @@ class Interrogator:
 
             # filter tags
             if (
-                    c >= threshold
-                    and t not in exclude_tags
+                c >= threshold
+                and t not in exclude_tags
             )
         }
 
@@ -212,6 +212,11 @@ available_interrogators = {
     ),
     'wd14-vit-v2': WaifuDiffusionInterrogator(
         'wd14-vit-v2', repo_id='SmilingWolf/wd-v1-4-vit-tagger-v2',
+        revision='v2.0'
+    ),
+    'wd14-moat-v2': WaifuDiffusionInterrogator(
+        'wd-v1-4-moat-tagger-v2',
+        repo_id='SmilingWolf/wd-v1-4-moat-tagger-v2',
         revision='v2.0'
     ),
 }
