@@ -110,16 +110,14 @@ class TaskManager:
             task: Task = self.tasks[task_id]
             task.wait()
 
-    def dump(self):
-        return {
-            "tasks": [
-                {
-                    "id": task.task_id,
-                    "status": task.status.name,
-                }
-                for task in self.tasks.values()
-            ]
-        }
+    def dump(self) -> List[Dict]:
+        return [
+            {
+                "id": task.task_id,
+                "status": task.status.name,
+            }
+            for task in self.tasks.values()
+        ]
 
 
 tm = TaskManager()
