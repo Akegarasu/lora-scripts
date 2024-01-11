@@ -22,13 +22,13 @@ def run_train(toml_path: str,
         "--config_file", toml_path,
     ]
 
-    if len(gpu_ids) > 1:
-        args[3:3] = ["--multi_gpu", "--num_processes", "2"]
-        customize_env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
-
     customize_env = os.environ.copy()
     customize_env["ACCELERATE_DISABLE_RICH"] = "1"
     customize_env["PYTHONUNBUFFERED"] = "1"
+
+    if len(gpu_ids) > 1:
+        args[3:3] = ["--multi_gpu", "--num_processes", "2"]
+        customize_env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
 
     if not (task := tm.create_task(args, customize_env)):
         return APIResponse(status="error", message="Failed to create task / 无法创建训练任务")
