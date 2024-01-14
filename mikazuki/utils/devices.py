@@ -9,9 +9,9 @@ def check_torch_gpu():
         import torch
         log.info(f'Torch {torch.__version__}')
         if torch.cuda.is_available():
-            if torch.version.cuda:
-                log.info(
-                    f'Torch backend: nVidia CUDA {torch.version.cuda} cuDNN {torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else "N/A"}')
+                if torch.version.cuda:
+                    log.info(
+                        f'Torch backend: nVidia CUDA {torch.version.cuda} cuDNN {torch.backends.cudnn.version() if torch.backends.cudnn.is_available() else "N/A"}')
 
                 devices = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
 
