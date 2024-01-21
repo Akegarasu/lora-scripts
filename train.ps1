@@ -2,8 +2,9 @@
 
 # Train data path | 设置训练用模型、图片
 $pretrained_model = "./sd-models/model.ckpt" # base model path | 底模路径
-$is_v2_model = 0 # SD2.0 model | SD2.0模型 2.0模型下 clip_skip 默认无效
-$parameterization = 0 # parameterization | 参数化 本参数需要和 V2 参数同步使用 实验性功能
+$model_type = "sd1.5" # sd1.5 sd2.0 sdxl model | 可选 sd1.5 sd2.0 sdxl。SD2.0模型 2.0模型下 clip_skip 默认无效
+$parameterization = 0 # parameterization | 参数化 本参数需要在 model_type 为 sd2.0 时才可启用
+
 $train_data_dir = "./train/aki" # train dataset path | 训练数据集路径
 $reg_data_dir = "" # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
@@ -74,6 +75,16 @@ $Env:XFORMERS_FORCE_DISABLE_TRITON = "1"
 $ext_args = [System.Collections.ArrayList]::new()
 $launch_args = [System.Collections.ArrayList]::new()
 
+$trainer_file = "./sd-scripts/train_network.py"
+
+if ($model_type -eq "sd1.5") {
+  [void]$ext_args.Add("--clip_skip=$clip_skip")
+} elseif ($model_type -eq "sd2.0") {
+  [void]$ext_args.Add("--v2")
+} elseif ($model_type -eq "sdxl") {
+  $trainer_file = "./sd-scripts/sdxl_train_network.py"
+}
+
 if ($multi_gpu) {
   [void]$launch_args.Add("--multi_gpu")
   [void]$launch_args.Add("--num_processes=2")
@@ -81,13 +92,6 @@ if ($multi_gpu) {
 
 if ($lowram) {
   [void]$ext_args.Add("--lowram")
-}
-
-if ($is_v2_model) {
-  [void]$ext_args.Add("--v2")
-}
-else {
-  [void]$ext_args.Add("--clip_skip=$clip_skip")
 }
 
 if ($parameterization) {
@@ -166,7 +170,7 @@ else {
 }
 
 # run train
-python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" `
+python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=4 $trainer_file `
   --enable_bucket `
   --pretrained_model_name_or_path=$pretrained_model `
   --train_data_dir=$train_data_dir `

@@ -3,10 +3,11 @@
 
 # Train data path | 设置训练用模型、图片
 pretrained_model="./sd-models/model.ckpt" # base model path | 底模路径
-is_v2_model=0                             # SD2.0 model | SD2.0模型 2.0模型下 clip_skip 默认无效
-parameterization=0                        # parameterization | 参数化 本参数需要和 V2 参数同步使用 实验性功能
-train_data_dir="./train/aki"              # train dataset path | 训练数据集路径
-reg_data_dir=""                           # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
+model_type="sd1.5"                        # option: sd1.5 sd2.0 sdxl | 可选 sd1.5 sd2.0 sdxl。SD2.0模型 2.0模型下 clip_skip 默认无效
+parameterization=0                        # parameterization | 参数化 本参数需要在 model_type 为 sd2.0 时才可启用
+
+train_data_dir="./train/aki" # train dataset path | 训练数据集路径
+reg_data_dir=""              # directory for regularization images | 正则化数据集路径，默认不使用正则化图像。
 
 # Network settings | 网络设置
 network_module="networks.lora" # 在这里将会设置训练的网络种类，默认为 networks.lora 也就是 LoRA 训练。如果你想训练 LyCORIS（LoCon、LoHa） 等，则修改这个值为 lycoris.kohya
@@ -61,7 +62,7 @@ conv_dim=4   # conv dim | 类似于 network_dim，推荐为 4
 conv_alpha=4 # conv alpha | 类似于 network_alpha，可以采用与 conv_dim 一致或者更小的值
 dropout="0"  # dropout | dropout 概率, 0 为不使用 dropout, 越大则 dropout 越多，推荐 0~0.5， LoHa/LoKr/(IA)^3暂时不支持
 
-# 远程记录设置
+# Remote logging | 远程记录设置
 use_wandb=0         # use_wandb | 启用wandb远程记录功能
 wandb_api_key=""    # wandb_api_key | API,通过 https://wandb.ai/authorize 获取
 log_tracker_name="" # log_tracker_name | wandb项目名称,留空则为"network_train"
@@ -73,16 +74,22 @@ export TF_CPP_MIN_LOG_LEVEL=3
 extArgs=()
 launchArgs=()
 
+trainer_file="./sd-scripts/train_network.py"
+
+if [ $model_type == "sd1.5" ]; then
+  ext_args+=("--clip_skip=$clip_skip")
+elif [ $model_type == "sd2.0" ]; then
+  ext_args+=("--v2")
+elif [ $model_type == "sdxl" ]; then
+  trainer_file="./sd-scripts/sdxl_train_network.py"
+fi
+
 if [[ $multi_gpu == 1 ]]; then
   launchArgs+=("--multi_gpu")
   launchArgs+=("--num_processes=2")
 fi
 
-if [[ $is_v2_model == 1 ]]; then
-  extArgs+=("--v2")
-else
-  extArgs+=("--clip_skip $clip_skip")
-fi
+if [[ $lowram ]]; then extArgs+=("--lowram"); fi
 
 if [[ $parameterization == 1 ]]; then extArgs+=("--v_parameterization"); fi
 
@@ -116,17 +123,13 @@ if [[ $min_snr_gamma -ne 0 ]]; then extArgs+=("--min_snr_gamma $min_snr_gamma");
 
 if [[ $use_wandb == 1 ]]; then
   extArgs+=("--log_with=all")
+  if [[ $wandb_api_key ]]; then extArgs+=("--wandb_api_key $wandb_api_key"); fi
+  if [[ $log_tracker_name ]]; then extArgs+=("--log_tracker_name $log_tracker_name"); fi
 else
   extArgs+=("--log_with=tensorboard")
 fi
 
-if [[ $wandb_api_key ]]; then extArgs+=("--wandb_api_key $wandb_api_key"); fi
-
-if [[ $log_tracker_name ]]; then extArgs+=("--log_tracker_name $log_tracker_name"); fi
-
-if [[ $lowram ]]; then extArgs+=("--lowram"); fi
-
-python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=8 "./sd-scripts/train_network.py" \
+python -m accelerate.commands.launch ${launchArgs[@]} --num_cpu_threads_per_process=4 $trainer_file \
   --enable_bucket \
   --pretrained_model_name_or_path=$pretrained_model \
   --train_data_dir=$train_data_dir \
