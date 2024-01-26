@@ -10,6 +10,8 @@ from starlette.background import BackgroundTask
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, StreamingResponse
 
+from mikazuki.log import log
+
 router = APIRouter()
 
 
@@ -57,19 +59,20 @@ async def proxy_ws_forward(ws_a: WebSocket, ws_b: websockets.WebSocketClientProt
     while True:
         try:
             data = await ws_a.receive_text()
-        except starlette.websockets.WebSocketDisconnect as e:
+            await ws_b.send(data)
+        except Exception as e:
+            log.error(f"Error when proxy data client -> backend: {e}")
             break
-        # print("websocket A received:", data)
-        await ws_b.send(data)
 
 
 async def proxy_ws_reverse(ws_a: WebSocket, ws_b: websockets.WebSocketClientProtocol):
     while True:
         try:
             data = await ws_b.recv()
-        except websockets.exceptions.ConnectionClosedOK as e:
+            await ws_a.send_text(data)
+        except Exception as e:
+            log.error(f"Error when proxy data backend -> client: {e}")
             break
-        await ws_a.send_text(data)
 
 
 @router.websocket("/proxy/tageditor/queue/join")
