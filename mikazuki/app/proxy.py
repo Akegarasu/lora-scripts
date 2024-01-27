@@ -60,6 +60,8 @@ async def proxy_ws_forward(ws_a: WebSocket, ws_b: websockets.WebSocketClientProt
         try:
             data = await ws_a.receive_text()
             await ws_b.send(data)
+        except starlette.websockets.WebSocketDisconnect as e:
+            break
         except Exception as e:
             log.error(f"Error when proxy data client -> backend: {e}")
             break
@@ -70,6 +72,8 @@ async def proxy_ws_reverse(ws_a: WebSocket, ws_b: websockets.WebSocketClientProt
         try:
             data = await ws_b.recv()
             await ws_a.send_text(data)
+        except websockets.exceptions.ConnectionClosedOK as e:
+            break
         except Exception as e:
             log.error(f"Error when proxy data backend -> client: {e}")
             break
