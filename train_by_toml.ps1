@@ -21,9 +21,6 @@ if ($multi_gpu) {
   [void]$launch_args.Add("--multi_gpu")
   [void]$launch_args.Add("--num_processes=2")
 }
-if ($sdxl) {
-  [void]$launch_args.Add("--sdxl")
-}
 
 # run train
 $script_name = if ($sdxl) { "sdxl_train_network.py" } else { "train_network.py" }

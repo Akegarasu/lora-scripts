@@ -20,7 +20,6 @@ if [[ $multi_gpu == 1 ]]; then
   launchArgs+=("--multi_gpu")
   launchArgs+=("--num_processes=2")
 fi
-if [[ $sdxl == 1 ]]; then launchArgs+=("--sdxl"); fi
 
 # run train
 if [[ $sdxl == 1 ]]; then
