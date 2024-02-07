@@ -6,7 +6,7 @@ opencv-python==4.7.0.68
 einops==0.6.1
 pytorch-lightning==1.9.0
 tensorboard==2.10.1
-safetensors==0.3.1
+safetensors==0.4.2
 altair==4.2.2
 easygui==0.98.3
 toml==0.10.2
