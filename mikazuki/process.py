@@ -31,7 +31,7 @@ def run_train(toml_path: str,
         log.info(f"Using GPU(s) / 使用 GPU: {gpu_ids}")
 
         if len(gpu_ids) > 1:
-            args[3:3] = ["--multi_gpu", "--num_processes", "2"]
+            args[3:3] = ["--multi_gpu", "--num_processes", str(len(gpu_ids))]
 
     if not (task := tm.create_task(args, customize_env)):
         return APIResponse(status="error", message="Failed to create task / 无法创建训练任务")
