@@ -176,6 +176,7 @@ def validate_requirements(requirements_file: str):
                     run_pip(f"install {line}", line, live=True)
 
 
+'''
 def setup_windows_bitsandbytes():
     if sys.platform != "win32":
         return
@@ -191,6 +192,7 @@ def setup_windows_bitsandbytes():
         log.error("detected wrong install of bitsandbytes, reinstall it")
         run_pip(f"uninstall bitsandbytes -y", "bitsandbytes", live=True)
         run_pip(f"install {bnb_package} --index-url {bnb_windows_index}", bnb_package, live=True)
+'''
 
 
 def run_pip(command, desc=None, live=False):
