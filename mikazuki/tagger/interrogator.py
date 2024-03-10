@@ -202,6 +202,18 @@ class WaifuDiffusionInterrogator(Interrogator):
 
 
 available_interrogators = {
+    'wd-convnext-v3': WaifuDiffusionInterrogator(
+        'wd-convnext-v3',
+        repo_id='SmilingWolf/wd-convnext-tagger-v3',
+    ),
+    'wd-swinv2-v3': WaifuDiffusionInterrogator(
+        'wd-swinv2-v3',
+        repo_id='SmilingWolf/wd-swinv2-tagger-v3',
+    ),
+    'wd-vit-v3': WaifuDiffusionInterrogator(
+        'wd14-vit-v3',
+        repo_id='SmilingWolf/wd-vit-tagger-v3',
+    ),
     'wd14-convnextv2-v2': WaifuDiffusionInterrogator(
         'wd14-convnextv2-v2', repo_id='SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
         revision='v2.0'
