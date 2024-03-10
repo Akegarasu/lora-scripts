@@ -31,13 +31,13 @@ cuda_minor_version=$(echo "$cuda_version" | awk -F'.' '{print $2}')
 echo "Cuda Version:$cuda_version"
 
 if (( cuda_major_version >= 12 )); then
-    echo "install torch 2.1.0+cu121"
-    pip install torch==2.1.2+cu121 torchvision==0.16.2+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
-    pip install --no-deps xformers===0.0.23.post1
+    echo "install torch 2.2.1+cu121"
+    pip install torch==2.2.1+cu121 torchvision==0.16.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
+    pip install --no-deps xformers==0.0.23
 elif (( cuda_major_version == 11 && cuda_minor_version >= 8 )); then
-    echo "install torch 2.0.1+cu118"
-    pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
-    pip install --no-deps xformers==0.0.21
+    echo "install torch 2.2.1+cu118"
+    pip install torch==2.2.1+cu118 torchvision==0.16.1+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+    pip install --no-deps xformers==0.0.23+cu118
 elif (( cuda_major_version == 11 && cuda_minor_version >= 6 )); then
     echo "install torch 1.12.1+cu116"
     pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
