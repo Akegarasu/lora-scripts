@@ -17,7 +17,7 @@ pip install bitsandbytes==0.41.1 --index-url https://jllllll.github.io/bitsandby
 pip install --upgrade -r requirements.txt
 
 Set-Location ..
-pip install --upgrade -r requirements_win.txt
+pip install --upgrade -r requirements.txt
 
 Write-Output "Install completed"
 Read-Host | Out-Null ;
