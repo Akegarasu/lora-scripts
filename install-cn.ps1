@@ -1,7 +1,7 @@
 $Env:HF_HOME = "huggingface"
 $Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
 $Env:PIP_NO_CACHE_DIR = 1
-$Env:PIP_INDEX_URL = "https://mirror.baidu.com/pypi/simple"
+$Env:PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
 function InstallFail {
     Write-Output "°²×°Ê§°Ü¡£"
     Read-Host | Out-Null ;

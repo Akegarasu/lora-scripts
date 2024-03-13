@@ -216,7 +216,7 @@ def prepare_environment():
     if locale.getdefaultlocale()[0] == "zh_CN":
         log.info("detected locale zh_CN, use pip mirrors")
         os.environ.setdefault("PIP_FIND_LINKS", "https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html")
-        os.environ.setdefault("PIP_INDEX_URL", "https://mirror.baidu.com/pypi/simple")
+        os.environ.setdefault("PIP_INDEX_URL", "https://pypi.tuna.tsinghua.edu.cn/simple")
 
     if not os.environ.get("PATH"):
         os.environ["PATH"] = os.path.dirname(sys.executable)
