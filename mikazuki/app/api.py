@@ -42,7 +42,8 @@ async def create_toml_file(request: Request):
     json_data = await request.body()
     config: dict = json.loads(json_data.decode("utf-8"))
     output_name = config.get("output_name", None)
-    toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{output_name}_{timestamp}.toml")
+    filename = clean_filename(output_name)
+    toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{filename}_{timestamp}.toml")
 
     gpu_ids = config.pop("gpu_ids", None)
 
@@ -168,3 +169,10 @@ async def list_avaliable_cards() -> APIResponse:
     return APIResponseSuccess(data={
         "cards": printable_devices
     })
+
+
+def clean_filename(filename):
+    invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+    for char in invalid_chars:
+        filename = filename.replace(char, '')
+    return filename
