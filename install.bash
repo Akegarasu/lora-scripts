@@ -38,6 +38,10 @@ elif (( cuda_major_version == 11 && cuda_minor_version >= 8 )); then
     echo "install torch 2.2.1+cu118"
     pip install torch==2.2.1+cu118 torchvision==0.17.1+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
     pip install --no-deps xformers==0.0.24+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+elif (( cuda_major_version == 11 && cuda_minor_version >= 7 )); then
+    echo "install torch 2.0.1+cu117"
+    pip install torch==2.0.1+cu117 torchvision==0.15.2+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
+    pip install --no-deps xformers --extra-index-url https://download.pytorch.org/whl/cu117
 elif (( cuda_major_version == 11 && cuda_minor_version >= 6 )); then
     echo "install torch 1.12.1+cu116"
     pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
