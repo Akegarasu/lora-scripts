@@ -172,6 +172,8 @@ async def list_avaliable_cards() -> APIResponse:
 
 
 def clean_filename(filename):
+    if filename is None:
+        return ""
     invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
     for char in invalid_chars:
         filename = filename.replace(char, '')
