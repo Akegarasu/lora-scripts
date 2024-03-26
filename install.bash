@@ -24,7 +24,7 @@ fi
 
 echo "Installing torch & xformers..."
 
-cuda_version=$(nvcc --version | grep 'release' | sed -n -e 's/^.*release \([0-9]\+\.[0-9]\+\),.*$/\1/p')
+cuda_version=$(nvidia-smi | grep -oiP 'CUDA Version: \K[\d\.]+')
 cuda_major_version=$(echo "$cuda_version" | awk -F'.' '{print $1}')
 cuda_minor_version=$(echo "$cuda_version" | awk -F'.' '{print $2}')
 
