@@ -180,8 +180,8 @@ def setup_windows_bitsandbytes():
     if sys.platform != "win32":
         return
 
-    bnb_windows_index = os.environ.get("BNB_WINDOWS_INDEX", "https://jihulab.com/api/v4/projects/140618/packages/pypi/simple")
-    bnb_package = "bitsandbytes==0.41.1"
+    # bnb_windows_index = os.environ.get("BNB_WINDOWS_INDEX", "https://jihulab.com/api/v4/projects/140618/packages/pypi/simple")
+    bnb_package = "bitsandbytes==0.43.0"
     bnb_path = os.path.join(sysconfig.get_paths()["purelib"], "bitsandbytes")
 
     installed_bnb = is_installed(bnb_package)
@@ -190,7 +190,8 @@ def setup_windows_bitsandbytes():
     if not installed_bnb or not bnb_cuda_setup:
         log.error("detected wrong install of bitsandbytes, reinstall it")
         run_pip(f"uninstall bitsandbytes -y", "bitsandbytes", live=True)
-        run_pip(f"install {bnb_package} --index-url {bnb_windows_index}", bnb_package, live=True)
+        run_pip(f"install {bnb_package}", bnb_package, live=True)
+
 
 def setup_onnxruntime():
     onnx_version = "1.17.1"
