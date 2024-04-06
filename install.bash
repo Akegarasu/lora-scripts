@@ -25,10 +25,15 @@ fi
 echo "Installing torch & xformers..."
 
 cuda_version=$(nvidia-smi | grep -oiP 'CUDA Version: \K[\d\.]+')
+
+if [ -z "$cuda_version" ]; then
+    cuda_version=$(nvcc --version | grep -oiP 'release \K[\d\.]+')
+fi
 cuda_major_version=$(echo "$cuda_version" | awk -F'.' '{print $1}')
 cuda_minor_version=$(echo "$cuda_version" | awk -F'.' '{print $2}')
 
-echo "Cuda Version:$cuda_version"
+echo "CUDA Version: $cuda_version"
+
 
 if (( cuda_major_version >= 12 )); then
     echo "install torch 2.2.1+cu121"
