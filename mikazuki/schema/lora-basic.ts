@@ -1,17 +1,17 @@
 Schema.intersect([
     Schema.object({
-        pretrained_model_name_or_path: Schema.string().role('textarea').default("./sd-models/model.ckpt").description("底模文件路径"),
+        pretrained_model_name_or_path: Schema.string().role('filepicker').default("./sd-models/model.safetensors").description("底模文件路径"),
     }).description("训练用模型"),
 
     Schema.object({
-        train_data_dir: Schema.string().role('textarea').default("./train/aki").description("训练数据集路径"),
-        reg_data_dir: Schema.string().role('textarea').description("正则化数据集路径。默认留空，不使用正则化图像"),
+        train_data_dir: Schema.string().role('filepicker', { type: "folder" }).default("./train/aki").description("训练数据集路径"),
+        reg_data_dir: Schema.string().role('filepicker', { type: "folder" }).description("正则化数据集路径。默认留空，不使用正则化图像"),
         resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
     }).description("数据集设置"),
 
     Schema.object({
         output_name: Schema.string().default("aki").description("模型保存名称"),
-        output_dir: Schema.string().default("./output").description("模型保存文件夹"),
+        output_dir: Schema.string().default("./output").role('filepicker', { type: "folder" }).description("模型保存文件夹"),
         save_every_n_epochs: Schema.number().default(2).description("每 N epoch（轮）自动保存一次模型"),
     }).description("保存设置"),
 
@@ -55,7 +55,7 @@ Schema.intersect([
         Schema.union([
             Schema.object({
                 enable_preview: Schema.const(true).required(),
-                sample_prompts: Schema.string().role('textarea').default("(masterpiece, best quality:1.2), 1girl, solo, --n lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry,  --w 512  --h 768  --l 7  --s 24  --d 1337").description("预览图生成参数。`--n` 后方为反向提示词，<br>`--w`宽，`--h`高<br>`--l`: CFG Scale<br>`--s`: 迭代步数<br>`--d`: 种子"),
+                sample_prompts: Schema.string().role('textarea').default(window.__MIKAZUKI__.SAMPLE_PROMPTS_DEFAULT).description(window.__MIKAZUKI__.SAMPLE_PROMPTS_DESCRIPTION),
                 sample_sampler: Schema.union(["ddim", "pndm", "lms", "euler", "euler_a", "heun", "dpm_2", "dpm_2_a", "dpmsolver", "dpmsolver++", "dpmsingle", "k_lms", "k_euler", "k_euler_a", "k_dpm_2", "k_dpm_2_a"]).default("euler_a").description("生成预览图所用采样器"),
                 sample_every_n_epochs: Schema.number().default(2).description("每 N 个 epoch 生成一次预览图"),
             }),
@@ -65,10 +65,10 @@ Schema.intersect([
 
     Schema.intersect([
         Schema.object({
-            network_weights: Schema.string().role('textarea').description("从已有的 LoRA 模型上继续训练，填写路径"),
+            network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
             network_dim: Schema.number().min(8).max(256).step(8).default(32).description("网络维度，常用 4~128，不是越大越好"),
             network_alpha: Schema.number().min(1).default(32).description(
-                "常用与 network_dim 相同的值或者采用较小的值，如 network_dim 的一半。使用较小的 alpha 需要提升学习率。"
+                "常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率。"
             ),
         }).description("网络设置"),
     ]),
@@ -77,4 +77,11 @@ Schema.intersect([
         shuffle_caption: Schema.boolean().default(true).description("训练时随机打乱 tokens"),
         keep_tokens: Schema.number().min(0).max(255).step(1).default(0).description("在随机打乱 tokens 时，保留前 N 个不变"),
     }).description("caption 选项"),
+
+    Schema.object({
+        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("fp16").description("混合精度"),
+        no_half_vae: Schema.boolean().description("不使用半精度 VAE，当出现 NaN detected in latents 报错时使用"),
+        xformers: Schema.boolean().default(true).description("启用 xformers"),
+        cache_latents: Schema.boolean().default(true).description("缓存图像 latent")
+    }).description("速度优化选项"),
 ]);
