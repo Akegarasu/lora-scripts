@@ -3,6 +3,7 @@ Schema.intersect([
         Schema.object({
             model_train_type: Schema.union(["sd-dreambooth", "sdxl-finetune"]).default("sd-dreambooth").description("模型种类"),
             pretrained_model_name_or_path: Schema.string().role('textarea').default("./sd-models/model.safetensors").description("底模文件路径"),
+            resume: Schema.string().role('filepicker').description("从某个 `save_state` 保存的中断状态继续训练，填写文件路径"),
             vae: Schema.string().role('textarea').description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
             v2: Schema.boolean().default(false).description("底模为 sd2.0 以后的版本需要启用"),
         }).description("训练用模型"),
@@ -34,6 +35,7 @@ Schema.intersect([
         save_model_as: Schema.union(["safetensors", "pt", "ckpt"]).default("safetensors").description("模型保存格式"),
         save_precision: Schema.union(["fp16", "float", "bf16"]).default("fp16").description("模型保存精度"),
         save_every_n_epochs: Schema.number().default(2).description("每 N epoch（轮）自动保存一次模型"),
+        save_state: Schema.boolean().description("保存训练状态 配合 `resume` 参数可以继续从某个状态训练"),
     }).description("保存设置"),
 
     Schema.object({
