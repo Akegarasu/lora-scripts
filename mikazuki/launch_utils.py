@@ -1,5 +1,6 @@
 import locale
 import os
+import platform
 import re
 import shutil
 import subprocess
@@ -195,6 +196,11 @@ def setup_windows_bitsandbytes():
 
 def setup_onnxruntime():
     onnx_version = "1.17.1"
+
+    if sys.platform == "linux":
+        libc_ver = platform.libc_ver()
+        if libc_ver[0] == "glibc" and libc_ver[1] <= "2.27":
+            onnx_version = "1.16.3"
 
     if not is_installed(f"onnxruntime-gpu=={onnx_version}"):
         log.info("uninstalling wrong onnxruntime version")
