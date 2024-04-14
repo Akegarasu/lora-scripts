@@ -11,7 +11,9 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from mikazuki.utils.devices import check_torch_gpu
+from mikazuki.app.api import load_schemas
 from mikazuki.app.api import router as api_router
+# from mikazuki.app.ipc import router as ipc_router
 from mikazuki.app.proxy import router as proxy_router
 
 mimetypes.add_type("application/javascript", ".js")
@@ -20,7 +22,8 @@ mimetypes.add_type("text/css", ".css")
 
 async def app_startup():
     await asyncio.to_thread(check_torch_gpu)
-    if sys.platform == "win32":
+    await load_schemas()
+    if sys.platform == "win32" and os.environ.get("MIKAZUKI_DEV", "0") != "1":
         webbrowser.open(f'http://{os.environ["MIKAZUKI_HOST"]}:{os.environ["MIKAZUKI_PORT"]}')
 
 
@@ -37,7 +40,7 @@ app.include_router(proxy_router)
 cors_config = os.environ.get("MIKAZUKI_APP_CORS", "")
 if cors_config != "":
     if cors_config == "1":
-        cors_config = ["http://localhost:8004"]
+        cors_config = ["http://localhost:8004", "*"]
     else:
         cors_config = cors_config.split(";")
     app.add_middleware(
@@ -56,6 +59,7 @@ async def add_cache_control_header(request, call_next):
     return response
 
 app.include_router(api_router, prefix="/api")
+# app.include_router(ipc_router, prefix="/ipc")
 
 
 @app.get("/")

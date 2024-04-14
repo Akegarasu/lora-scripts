@@ -56,6 +56,7 @@ def launch():
     os.environ["MIKAZUKI_PORT"] = str(args.port)
     os.environ["MIKAZUKI_TENSORBOARD_HOST"] = args.tensorboard_host
     os.environ["MIKAZUKI_TENSORBOARD_PORT"] = str(args.tensorboard_port)
+    os.environ["MIKAZUKI_DEV"] = "1" if args.dev else "0"
 
     if args.listen:
         args.host = "0.0.0.0"

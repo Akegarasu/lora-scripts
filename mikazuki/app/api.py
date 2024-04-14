@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 import toml
+import hashlib
 from fastapi import APIRouter, BackgroundTasks, Request
 from starlette.requests import Request
 
@@ -28,12 +29,31 @@ avaliable_scripts = [
     "networks/extract_lora_from_dylora.py"
 ]
 
+avaliable_schemas = []
+
 trainer_mapping = {
     "sd-lora": "./sd-scripts/train_network.py",
     "sdxl-lora": "./sd-scripts/sdxl_train_network.py",
     "sd-dreambooth": "./sd-scripts/train_db.py",
     "sdxl-finetune": "./sd-scripts/sdxl_train.py",
 }
+
+
+async def load_schemas():
+    schema_dir = os.path.join(os.getcwd(), "mikazuki", "schema")
+    schemas = os.listdir(schema_dir)
+
+    def lambda_hash(x):
+        return hashlib.md5(x.encode()).hexdigest()
+
+    for schema_name in schemas:
+        with open(os.path.join(schema_dir, schema_name), encoding="utf-8") as f:
+            content = f.read()
+            avaliable_schemas.append({
+                "name": schema_name.strip(".ts"),
+                "schema": content,
+                "hash": lambda_hash(content)
+            })
 
 
 @router.post("/run")
@@ -124,12 +144,6 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
     )
     return APIResponseSuccess()
 
-# @router.get("/api/schema/{name}")
-# async def get_schema(name: str):
-#     with open(os.path.join(os.getcwd(), "mikazuki", "schema", name), encoding="utf-8") as f:
-#         content = f.read()
-#         return Response(content=content, media_type="text/plain")
-
 
 @router.get("/pick_file")
 async def pick_file(picker_type: str):
@@ -170,6 +184,23 @@ async def list_avaliable_cards() -> APIResponse:
         "cards": printable_devices
     })
 
+@router.get("/schemas/hashes")
+async def list_schema_hashes() -> APIResponse:
+    return APIResponseSuccess(data={
+        "schemas": [
+            {
+                "name": schema["name"],
+                "hash": schema["hash"]
+            }
+            for schema in avaliable_schemas
+        ]
+    })
+
+@router.get("/schemas/all")
+async def get_all_schemas() -> APIResponse:
+    return APIResponseSuccess(data={
+        "schemas": avaliable_schemas
+    })
 
 def clean_filename(filename):
     if filename is None:
