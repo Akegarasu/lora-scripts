@@ -2,9 +2,9 @@ Schema.intersect([
     Schema.intersect([
         Schema.object({
             model_train_type: Schema.union(["sd-dreambooth", "sdxl-finetune"]).default("sd-dreambooth").description("模型种类"),
-            pretrained_model_name_or_path: Schema.string().role('textarea').default("./sd-models/model.safetensors").description("底模文件路径"),
+            pretrained_model_name_or_path: Schema.string().role('filepicker').default("./sd-models/model.safetensors").description("底模文件路径"),
             resume: Schema.string().role('filepicker').description("从某个 `save_state` 保存的中断状态继续训练，填写文件路径"),
-            vae: Schema.string().role('textarea').description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
+            vae: Schema.string().role('filepicker').description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
             v2: Schema.boolean().default(false).description("底模为 sd2.0 以后的版本需要启用"),
         }).description("训练用模型"),
 
@@ -19,8 +19,8 @@ Schema.intersect([
     ]),
 
     Schema.object({
-        train_data_dir: Schema.string().role('textarea').default("./train/aki").description("训练数据集路径"),
-        reg_data_dir: Schema.string().role('textarea').description("正则化数据集路径。默认留空，不使用正则化图像"),
+        train_data_dir: Schema.string().role('filepicker').default("./train/aki").description("训练数据集路径"),
+        reg_data_dir: Schema.string().role('filepicker').description("正则化数据集路径。默认留空，不使用正则化图像"),
         prior_loss_weight: Schema.number().step(0.1).description("正则化 - 先验损失权重"),
         resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
         enable_bucket: Schema.boolean().default(true).description("启用 arb 桶以允许非固定宽高比的图片"),
@@ -154,7 +154,7 @@ Schema.intersect([
     }).description("caption（Tag）选项"),
 
     Schema.object({
-        noise_offset: Schema.number().step(0.01).description("在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用推荐为 0.1"),
+        noise_offset: Schema.number().step(0.0001).description("在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用推荐为 0.1"),
         multires_noise_iterations: Schema.number().step(1).description("多分辨率（金字塔）噪声迭代次数 推荐 6-10。无法与 noise_offset 一同启用"),
         multires_noise_discount: Schema.number().step(0.1).description("多分辨率（金字塔）衰减率 推荐 0.3-0.8，须同时与上方参数 multires_noise_iterations 一同启用"),
     }).description("噪声设置"),
