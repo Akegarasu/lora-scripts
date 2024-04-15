@@ -1,10 +1,10 @@
 Schema.intersect([
     Schema.intersect([
         Schema.object({
-            model_train_type: Schema.union(["sd-dreambooth", "sdxl-finetune"]).default("sd-dreambooth").description("模型种类"),
-            pretrained_model_name_or_path: Schema.string().role('filepicker').default("./sd-models/model.safetensors").description("底模文件路径"),
-            resume: Schema.string().role('filepicker').description("从某个 `save_state` 保存的中断状态继续训练，填写文件路径"),
-            vae: Schema.string().role('filepicker').description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
+            model_train_type: Schema.union(["sd-dreambooth", "sdxl-finetune"]).default("sd-dreambooth").description("训练种类"),
+            pretrained_model_name_or_path: Schema.string().role("filepicker").default("./sd-models/model.safetensors").description("底模文件路径"),
+            resume: Schema.string().role("filepicker").description("从某个 `save_state` 保存的中断状态继续训练，填写文件路径"),
+            vae: Schema.string().role("filepicker").description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
             v2: Schema.boolean().default(false).description("底模为 sd2.0 以后的版本需要启用"),
         }).description("训练用模型"),
 
@@ -19,8 +19,8 @@ Schema.intersect([
     ]),
 
     Schema.object({
-        train_data_dir: Schema.string().role('filepicker').default("./train/aki").description("训练数据集路径"),
-        reg_data_dir: Schema.string().role('filepicker').description("正则化数据集路径。默认留空，不使用正则化图像"),
+        train_data_dir: Schema.string().role("filepicker", { type: "folder" }).default("./train/aki").description("训练数据集路径"),
+        reg_data_dir: Schema.string().role("filepicker", { type: "folder" }).description("正则化数据集路径。默认留空，不使用正则化图像"),
         prior_loss_weight: Schema.number().step(0.1).description("正则化 - 先验损失权重"),
         resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
         enable_bucket: Schema.boolean().default(true).description("启用 arb 桶以允许非固定宽高比的图片"),
@@ -31,7 +31,7 @@ Schema.intersect([
 
     Schema.object({
         output_name: Schema.string().default("aki").description("模型保存名称"),
-        output_dir: Schema.string().default("./output").description("模型保存文件夹"),
+        output_dir: Schema.string().role("filepicker", { type: "folder" }).default("./output").description("模型保存文件夹"),
         save_model_as: Schema.union(["safetensors", "pt", "ckpt"]).default("safetensors").description("模型保存格式"),
         save_precision: Schema.union(["fp16", "float", "bf16"]).default("fp16").description("模型保存精度"),
         save_every_n_epochs: Schema.number().default(2).description("每 N epoch（轮）自动保存一次模型"),
@@ -50,9 +50,26 @@ Schema.intersect([
     Schema.intersect([
         Schema.object({
             learning_rate: Schema.string().default("1e-6").description("学习率"),
-            learning_rate_te: Schema.string().default("5e-7").description("文本编码器学习率"),
-            learning_rate_te1: Schema.string().default("5e-7").description("仅 SDXL 可用。文本编码器 1 (ViT-L) 学习率"),
-            learning_rate_te2: Schema.string().default("5e-7").description("仅 SDXL 可用。文本编码器 2 (BiG-G) 学习率"),
+        }).description("学习率与优化器设置"),
+
+        Schema.union([
+            Schema.object({
+                model_train_type: Schema.const("sd-dreambooth"),
+                learning_rate_te: Schema.string().default("5e-7").description("文本编码器学习率"),
+            }),
+            Schema.object({}),
+        ]),
+
+        Schema.union([
+            Schema.object({
+                model_train_type: Schema.const("sdxl-finetune").required(),
+                learning_rate_te1: Schema.string().default("5e-7").description("SDXL 文本编码器 1 (ViT-L) 学习率"),
+                learning_rate_te2: Schema.string().default("5e-7").description("SDXL 文本编码器 2 (BiG-G) 学习率"),
+            }),
+            Schema.object({}),
+        ]),
+
+        Schema.object({
             lr_scheduler: Schema.union([
                 "linear",
                 "cosine",
@@ -61,13 +78,13 @@ Schema.intersect([
                 "constant",
                 "constant_with_warmup",
             ]).default("cosine_with_restarts").description("学习率调度器设置"),
-            lr_warmup_steps: Schema.number().default(0).description('学习率预热步数'),
-        }).description("学习率与优化器设置"),
+            lr_warmup_steps: Schema.number().default(0).description("学习率预热步数"),
+        }),
 
         Schema.union([
             Schema.object({
-                lr_scheduler: Schema.const('cosine_with_restarts'),
-                lr_scheduler_num_cycles: Schema.number().default(1).description('重启次数'),
+                lr_scheduler: Schema.const("cosine_with_restarts"),
+                lr_scheduler_num_cycles: Schema.number().default(1).description("重启次数"),
             }),
             Schema.object({}),
         ]),
@@ -96,7 +113,7 @@ Schema.intersect([
 
         Schema.union([
             Schema.object({
-                optimizer_type: Schema.const('Prodigy').required(),
+                optimizer_type: Schema.const("Prodigy").required(),
                 prodigy_d0: Schema.string(),
                 prodigy_d_coef: Schema.string().default("2.0"),
             }),
@@ -104,19 +121,19 @@ Schema.intersect([
         ]),
 
         Schema.object({
-            optimizer_args_custom: Schema.array(String).role('table').description('自定义 optimizer_args，一行一个'),
+            optimizer_args_custom: Schema.array(String).role("table").description("自定义 optimizer_args，一行一个"),
         })
     ]),
 
     Schema.intersect([
         Schema.object({
-            enable_preview: Schema.boolean().default(false).description('启用训练预览图'),
-        }).description('训练预览图设置'),
+            enable_preview: Schema.boolean().default(false).description("启用训练预览图"),
+        }).description("训练预览图设置"),
 
         Schema.union([
             Schema.object({
                 enable_preview: Schema.const(true).required(),
-                sample_prompts: Schema.string().role('textarea').default("(masterpiece, best quality:1.2), 1girl, solo, --n lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry,  --w 512  --h 768  --l 7  --s 24  --d 1337").description("预览图生成参数。`--n` 后方为反向提示词，<br>`--w`宽，`--h`高<br>`--l`: CFG Scale<br>`--s`: 迭代步数<br>`--d`: 种子"),
+                sample_prompts: Schema.string().role("textarea").default("(masterpiece, best quality:1.2), 1girl, solo, --n lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry,  --w 512  --h 768  --l 7  --s 24  --d 1337").description("预览图生成参数。`--n` 后方为反向提示词，<br>`--w`宽，`--h`高<br>`--l`: CFG Scale<br>`--s`: 迭代步数<br>`--d`: 种子"),
                 sample_sampler: Schema.union(["ddim", "pndm", "lms", "euler", "euler_a", "heun", "dpm_2", "dpm_2_a", "dpmsolver", "dpmsolver++", "dpmsingle", "k_lms", "k_euler", "k_euler_a", "k_dpm_2", "k_dpm_2_a"]).default("euler_a").description("生成预览图所用采样器"),
                 sample_every_n_epochs: Schema.number().default(2).description("每 N 个 epoch 生成一次预览图"),
             }),
@@ -130,7 +147,7 @@ Schema.intersect([
             log_prefix: Schema.string().description("日志前缀"),
             log_tracker_name: Schema.string().description("日志追踪器名称"),
             logging_dir: Schema.string().default("./logs").description("日志保存文件夹"),
-        }).description('日志设置'),
+        }).description("日志设置"),
 
         Schema.union([
             Schema.object({

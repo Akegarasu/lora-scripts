@@ -40,6 +40,8 @@ trainer_mapping = {
 
 
 async def load_schemas():
+    avaliable_schemas.clear()
+
     schema_dir = os.path.join(os.getcwd(), "mikazuki", "schema")
     schemas = os.listdir(schema_dir)
 
@@ -185,6 +187,10 @@ async def list_avaliable_cards() -> APIResponse:
 
 @router.get("/schemas/hashes")
 async def list_schema_hashes() -> APIResponse:
+    if os.environ.get("MIKAZUKI_SCHEMA_HOT_RELOAD", "0") == "1":
+        log.info("Hot reloading schemas")
+        await load_schemas()
+
     return APIResponseSuccess(data={
         "schemas": [
             {
