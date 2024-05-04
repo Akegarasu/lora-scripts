@@ -33,7 +33,7 @@ $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq ""){
     pip install torch==2.2.1+cu118 torchvision==0.17.1+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html
     Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
-    pip install -U -I --no-deps xformers==0.0.24+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html
+    pip install -U -I --no-deps xformers==0.0.25+cu118 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html
     Check "xformers 安装失败。"
 }
 
