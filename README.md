@@ -22,6 +22,8 @@ _✨ Enjoy Stable Diffusion Train！ ✨_
     <img src="https://img.shields.io/github/v/release/Akegarasu/lora-scripts?color=blueviolet&include_prereleases" alt="release">
   </a>
 </p>
+  
+# <a href="https://github.com/ANGJustinl/lora-scripts/tree/autodl">auto-dl适配点我</a>
 
 <p align="center">
   <a href="https://github.com/Akegarasu/lora-scripts/releases">Download</a>
