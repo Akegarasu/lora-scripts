@@ -283,6 +283,9 @@ def on_interrogate(
                 batch_input_glob += os.sep
             batch_input_glob += '*'
 
+        if batch_input_recursive:
+            batch_input_glob += '*'
+
         # get root directory of input glob pattern
         base_dir = batch_input_glob.replace('?', '*')
         base_dir = base_dir.split(os.sep + '*').pop(0)
