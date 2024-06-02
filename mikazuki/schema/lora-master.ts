@@ -34,7 +34,7 @@ Schema.intersect([
         enable_bucket: Schema.boolean().default(true).description("启用 arb 桶以允许非固定宽高比的图片"),
         min_bucket_reso: Schema.number().default(256).description("arb 桶最小分辨率"),
         max_bucket_reso: Schema.number().default(1024).description("arb 桶最大分辨率"),
-        bucket_reso_steps: Schema.number().default(64).description("arb 桶分辨率划分单位，SDXL 可以使用 32"),
+        bucket_reso_steps: Schema.number().default(64).description("arb 桶分辨率划分单位，SDXL 可以使用 32 (SDXL低于32时失效)"),
     }).description("数据集设置"),
 
     Schema.object({
@@ -48,16 +48,16 @@ Schema.intersect([
 
     Schema.object({
         max_train_epochs: Schema.number().min(1).default(10).description("最大训练 epoch（轮数）"),
-        train_batch_size: Schema.number().min(1).default(1).description("批量大小"),
-        gradient_checkpointing: Schema.boolean().default(false).description("梯度检查点"),
+        train_batch_size: Schema.number().min(1).default(1).description("批量大小, 越高显存占用越高"),
+        gradient_checkpointing: Schema.boolean().default(false).description("梯度检查点, 通常会减慢速度，但可以增加批次大小，因此总的训练时间实际上可能会更快"),
         gradient_accumulation_steps: Schema.number().min(1).description("梯度累加步数"),
-        network_train_unet_only: Schema.boolean().default(false).description("仅训练 U-Net"),
+        network_train_unet_only: Schema.boolean().default(false).description("仅训练 U-Net 训练SDXL Lora时推荐开启"),
         network_train_text_encoder_only: Schema.boolean().default(false).description("仅训练文本编码器"),
     }).description("训练相关参数"),
 
     Schema.intersect([
         Schema.object({
-            learning_rate: Schema.string().default("1e-4").description("总学习率，在分开设置 U-Net 与文本编码器学习率后这个值失效。"),
+            learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。SDXL 原始学习率为 4e-7"),
             unet_lr: Schema.string().default("1e-4").description("U-Net 学习率"),
             text_encoder_lr: Schema.string().default("1e-5").description("文本编码器学习率"),
             lr_scheduler: Schema.union([
@@ -98,7 +98,7 @@ Schema.intersect([
                 "AdaFactor",
                 "Prodigy"
             ]).default("AdamW8bit").description("优化器设置"),
-            min_snr_gamma: Schema.number().step(0.1).description("最小信噪比伽马值，如果启用推荐为 5"),
+            min_snr_gamma: Schema.number().step(0.1).description("最小信噪比伽马值, 如果启用推荐为 5, 使用 自适应优化器 时失效"),
         }),
 
         Schema.union([
@@ -119,7 +119,7 @@ Schema.intersect([
         Schema.object({
             network_module: Schema.union(["networks.lora", "networks.dylora", "networks.oft", "lycoris.kohya"]).default("networks.lora").description("训练网络模块"),
             network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
-            network_dim: Schema.number().min(1).default(32).description("网络维度，常用 4~128，不是越大越好"),
+            network_dim: Schema.number().min(1).default(32).description("网络维度，常用 4~128，不是越大越好, 低dim可以降低显存占用"),
             network_alpha: Schema.number().min(1).default(32).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率。"),
             network_dropout: Schema.number().step(0.01).default(0).description('dropout 概率 （与 lycoris 不兼容，需要用 lycoris 自带的）'),
             scale_weight_norms: Schema.number().step(0.01).min(0).description("最大范数正则化。如果使用，推荐为 1"),
@@ -238,14 +238,14 @@ Schema.intersect([
     }).description("高级设置"),
 
     Schema.object({
-        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("fp16").description("训练混合精度"),
+        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("fp16").description("训练混合精度, RTX30系列以后也可以指定`bf16`"),
         full_fp16: Schema.boolean().description("完全使用 FP16 精度"),
         full_bf16: Schema.boolean().description("完全使用 BF16 精度"),
         fp8_base: Schema.boolean().description("对基础模型使用 FP8 精度"),
         no_half_vae: Schema.boolean().description("不使用半精度 VAE"),
         xformers: Schema.boolean().default(true).description("启用 xformers"),
         lowram: Schema.boolean().default(false).description("低内存模式 该模式下会将 U-net、文本编码器、VAE 直接加载到显存中"),
-        cache_latents: Schema.boolean().default(true).description("缓存图像 latent"),
+        cache_latents: Schema.boolean().default(true).description("缓存图像 latent, 缓存 VAE 输出以减少 VRAM 使用"),
         cache_latents_to_disk: Schema.boolean().default(true).description("缓存图像 latent 到磁盘"),
         cache_text_encoder_outputs: Schema.boolean().description("缓存文本编码器的输出，减少显存使用。使用时需要关闭 shuffle_caption"),
         cache_text_encoder_outputs_to_disk: Schema.boolean().description("缓存文本编码器的输出到磁盘"),

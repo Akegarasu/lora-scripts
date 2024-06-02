@@ -66,7 +66,7 @@ Schema.intersect([
     Schema.intersect([
         Schema.object({
             network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
-            network_dim: Schema.number().min(8).max(256).step(8).default(32).description("网络维度，常用 4~128，不是越大越好"),
+            network_dim: Schema.number().min(8).max(256).step(8).default(32).description("网络维度，常用 4~128，不是越大越好, 低dim可以降低显存占用"),
             network_alpha: Schema.number().min(1).default(32).description(
                 "常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率。"
             ),
@@ -79,9 +79,9 @@ Schema.intersect([
     }).description("caption 选项"),
 
     Schema.object({
-        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("fp16").description("混合精度"),
+        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("fp16").description("混合精度, RTX30系列以后也可以指定`bf16`"),
         no_half_vae: Schema.boolean().description("不使用半精度 VAE，当出现 NaN detected in latents 报错时使用"),
         xformers: Schema.boolean().default(true).description("启用 xformers"),
-        cache_latents: Schema.boolean().default(true).description("缓存图像 latent")
+        cache_latents: Schema.boolean().default(true).description("缓存图像 latent, 缓存 VAE 输出以减少 VRAM 使用")
     }).description("速度优化选项"),
 ]);
