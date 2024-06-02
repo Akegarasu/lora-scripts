@@ -251,3 +251,12 @@ def prepare_environment():
     validate_requirements("requirements.txt")
     setup_windows_bitsandbytes()
     setup_onnxruntime()
+
+
+def catch_exception(f):
+    def wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            log.error(f"An error occurred: {e}")
+    return wrapper
