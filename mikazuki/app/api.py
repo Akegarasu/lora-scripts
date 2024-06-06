@@ -26,7 +26,9 @@ router = APIRouter()
 
 avaliable_scripts = [
     "networks/extract_lora_from_models.py",
-    "networks/extract_lora_from_dylora.py"
+    "networks/extract_lora_from_dylora.py",
+    "networks/merge_lora.py",
+    "tools/merge_models.py",
 ]
 
 avaliable_schemas = []
@@ -87,7 +89,7 @@ async def create_toml_file(request: Request):
         config["sample_prompts"] = sample_prompts_file
         log.info(f"Wrote promopts to file {sample_prompts_file}")
 
-    with open(toml_file, "w") as f:
+    with open(toml_file, "w", encoding="utf-8") as f:
         f.write(toml.dumps(config))
 
     result = process.run_train(toml_file, trainer_file, gpu_ids, suggest_cpu_threads)
