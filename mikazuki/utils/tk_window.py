@@ -1,5 +1,12 @@
-import tkinter
-from tkinter.filedialog import askdirectory, askopenfilename
+from mikazuki.log import log
+try:
+    import tkinter
+    from tkinter.filedialog import askdirectory, askopenfilename
+except ImportError:
+    tkinter = None
+    askdirectory = None
+    askopenfilename = None
+    log.warning("tkinter not found, file selector will not work.")
 
 
 def tk_window():
