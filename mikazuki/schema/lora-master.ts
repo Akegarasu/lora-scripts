@@ -49,7 +49,7 @@ Schema.intersect([
     Schema.object({
         max_train_epochs: Schema.number().min(1).default(10).description("最大训练 epoch（轮数）"),
         train_batch_size: Schema.number().min(1).default(1).description("批量大小, 越高显存占用越高"),
-        gradient_checkpointing: Schema.boolean().default(false).description("梯度检查点, 通常会减慢速度，但可以增加批次大小，因此总的训练时间实际上可能会更快"),
+        gradient_checkpointing: Schema.boolean().default(false).description("梯度检查点"),
         gradient_accumulation_steps: Schema.number().min(1).description("梯度累加步数"),
         network_train_unet_only: Schema.boolean().default(false).description("仅训练 U-Net 训练SDXL Lora时推荐开启"),
         network_train_text_encoder_only: Schema.boolean().default(false).description("仅训练文本编码器"),
@@ -57,7 +57,7 @@ Schema.intersect([
 
     Schema.intersect([
         Schema.object({
-            learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。SDXL 原始学习率为 4e-7"),
+            learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。"),
             unet_lr: Schema.string().default("1e-4").description("U-Net 学习率"),
             text_encoder_lr: Schema.string().default("1e-5").description("文本编码器学习率"),
             lr_scheduler: Schema.union([
@@ -98,7 +98,7 @@ Schema.intersect([
                 "AdaFactor",
                 "Prodigy"
             ]).default("AdamW8bit").description("优化器设置"),
-            min_snr_gamma: Schema.number().step(0.1).description("最小信噪比伽马值, 如果启用推荐为 5, 使用 自适应优化器 时失效"),
+            min_snr_gamma: Schema.number().step(0.1).description("最小信噪比伽马值, 如果启用推荐为 5"),
         }),
 
         Schema.union([
@@ -120,7 +120,7 @@ Schema.intersect([
             network_module: Schema.union(["networks.lora", "networks.dylora", "networks.oft", "lycoris.kohya"]).default("networks.lora").description("训练网络模块"),
             network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
             network_dim: Schema.number().min(1).default(32).description("网络维度，常用 4~128，不是越大越好, 低dim可以降低显存占用"),
-            network_alpha: Schema.number().min(1).default(32).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率。"),
+            network_alpha: Schema.number().min(1).default(32).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率"),
             network_dropout: Schema.number().step(0.01).default(0).description('dropout 概率 （与 lycoris 不兼容，需要用 lycoris 自带的）'),
             scale_weight_norms: Schema.number().step(0.01).min(0).description("最大范数正则化。如果使用，推荐为 1"),
             network_args_custom: Schema.array(String).role('table').description('自定义 network_args，一行一个'),
