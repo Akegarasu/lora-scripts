@@ -1,3 +1,4 @@
+from enum import Enum
 import glob
 import os
 import re
@@ -9,6 +10,15 @@ from mikazuki.log import log
 python_bin = sys.executable
 
 
+class ModelType(Enum):
+    UNKNOWN = -1
+    SD15 = 1
+    SD2 = 2
+    SDXL = 3
+    SD3 = 4
+    LoRA = 5
+
+
 def is_promopt_like(s):
     for p in ["--n", "--s", "--l", "--d"]:
         if p in s:
@@ -16,16 +26,24 @@ def is_promopt_like(s):
     return False
 
 
-def validate_model(model_name: str):
+def validate_model(model_name: str, training_type: str = "sd-lora"):
     if os.path.exists(model_name):
         try:
             with open(model_name, "rb") as f:
                 content = f.read(1024 * 200)
-                if b"model.diffusion_model" in content or b"cond_stage_model.transformer.text_model" in content:
-                    return True, "ok"
 
-                if b"lora_unet" in content or b"lora_te" in content:
-                    return False, "pretrained model is not a Stable Diffusion checkpoint / 校验失败：底模不是 Stable Diffusion 模型"
+                model_type = match_model_type(content)
+
+                if model_type == ModelType.UNKNOWN:
+                    log.error(f"Can't match model type from {model_name}")
+
+                if model_type not in [ModelType.SD15,  ModelType.SD2, ModelType.SDXL]:
+                    return False, "Pretrained model is not a Stable Diffusion checkpoint / 校验失败：底模不是 Stable Diffusion 模型"
+                elif model_type == ModelType.SD3:
+                    return False, "Pretrained model not supported yet / 校验失败：SD3 模型暂不支持"
+                elif model_type == ModelType.SDXL and training_type == "sd-lora":
+                    return False, "Pretrained model is SDXL, but you are training with LoRA / 校验失败：你选择的是 LoRA 训练，但预训练模型是 SDXL。请前往专家模式选择正确的模型种类。"
+
         except Exception as e:
             log.warn(f"model file {model_name} can't open: {e}")
             return True, ""
@@ -37,6 +55,19 @@ def validate_model(model_name: str):
         return True, "ok"
 
     return False, "model not found"
+
+
+def match_model_type(sig_content: bytes):
+    if b"conditioner.embedders.1.model.transformer.resblocks" in sig_content:
+        return ModelType.SDXL
+
+    if b"model.diffusion_model" in sig_content or b"cond_stage_model.transformer.text_model" in sig_content:
+        return ModelType.SD15
+
+    if b"lora_unet" in sig_content or b"lora_te" in sig_content:
+        return ModelType.LoRA
+
+    return ModelType.UNKNOWN
 
 
 def validate_data_dir(path):

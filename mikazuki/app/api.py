@@ -77,7 +77,7 @@ async def create_toml_file(request: Request):
         if not train_utils.validate_data_dir(config["train_data_dir"]):
             return APIResponseFail(message="训练数据集路径不存在或没有图片，请检查目录。")
 
-    validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"])
+    validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"], model_train_type)
     if not validated:
         return APIResponseFail(message=message)
 
