@@ -58,6 +58,9 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
 
 
 def match_model_type(sig_content: bytes):
+    if b"model.diffusion_model.x_embedder.proj.weight" in sig_content:
+        return ModelType.SD3
+
     if b"conditioner.embedders.1.model.transformer.resblocks" in sig_content:
         return ModelType.SDXL
 
