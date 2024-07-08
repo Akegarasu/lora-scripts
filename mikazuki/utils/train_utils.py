@@ -30,8 +30,7 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
     if os.path.exists(model_name):
         try:
             with open(model_name, "rb") as f:
-                content = f.read(1024 * 200)
-
+                content = f.read(1024 * 500)
                 model_type = match_model_type(content)
 
                 if model_type == ModelType.UNKNOWN:
@@ -50,8 +49,10 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
 
         return True, "ok"
 
-    # huggerface model repo
-    if model_name.count("/") <= 1:
+    # huggingface model repo
+    if model_name.count("/") == 1 \
+            and not model_name[0] in [".", "/"] \
+            and not model_name.split(".")[-1] in ["pt", "pth", "ckpt", "safetensors"]:
         return True, "ok"
 
     return False, "model not found"
