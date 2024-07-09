@@ -63,9 +63,11 @@ async def load_schemas():
 @router.post("/run")
 async def create_toml_file(request: Request):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
     json_data = await request.body()
     config: dict = json.loads(json_data.decode("utf-8"))
+    output_name = config.get("output_name", None)
+    filename = clean_filename(output_name)
+    toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{filename}_{timestamp}.toml")
 
     gpu_ids = config.pop("gpu_ids", None)
 
@@ -186,7 +188,6 @@ async def list_avaliable_cards() -> APIResponse:
         "cards": printable_devices
     })
 
-
 @router.get("/schemas/hashes")
 async def list_schema_hashes() -> APIResponse:
     if os.environ.get("MIKAZUKI_SCHEMA_HOT_RELOAD", "0") == "1":
@@ -203,9 +204,16 @@ async def list_schema_hashes() -> APIResponse:
         ]
     })
 
-
 @router.get("/schemas/all")
 async def get_all_schemas() -> APIResponse:
     return APIResponseSuccess(data={
         "schemas": avaliable_schemas
     })
+
+def clean_filename(filename):
+    if filename is None:
+        return ""
+    invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+    for char in invalid_chars:
+        filename = filename.replace(char, '')
+    return filename
