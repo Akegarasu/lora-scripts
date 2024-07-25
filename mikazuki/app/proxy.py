@@ -84,7 +84,7 @@ async def websocket_a(ws_a: WebSocket):
     # for temp use
     ws_b_uri = "ws://127.0.0.1:28001/queue/join"
     await ws_a.accept()
-    async with websockets.connect(ws_b_uri, timeout=360) as ws_b_client:
+    async with websockets.connect(ws_b_uri, timeout=360, ping_timeout=None) as ws_b_client:
         fwd_task = asyncio.create_task(proxy_ws_forward(ws_a, ws_b_client))
         rev_task = asyncio.create_task(proxy_ws_reverse(ws_a, ws_b_client))
         await asyncio.gather(fwd_task, rev_task)
