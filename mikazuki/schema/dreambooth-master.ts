@@ -188,6 +188,7 @@ Schema.intersect([
         seed: Schema.number().default(1337).description("随机种子"),
         clip_skip: Schema.number().role("slider").min(0).max(12).step(1).default(2).description("CLIP 跳过层数 *玄学*"),
         no_token_padding: Schema.boolean().default(false).description("禁用 token 填充（与 Diffusers 的旧 Dreambooth 脚本一致）"),
+        ui_custom_params: Schema.string().role('textarea').description("**危险** 自定义参数，请输入 TOML 格式，将会直接覆盖当前界面内任何参数。实时更新，推荐写完后再粘贴过来"),
     }).description("高级设置"),
 
     Schema.object({
@@ -199,6 +200,7 @@ Schema.intersect([
         cache_latents: Schema.boolean().default(true).description("缓存图像 latent"),
         cache_latents_to_disk: Schema.boolean().default(true).description("缓存图像 latent 到磁盘"),
         persistent_data_loader_workers: Schema.boolean().default(true).description("保留加载训练集的worker，减少每个 epoch 之间的停顿。"),
+        vae_batch_size: Schema.number().min(1).default(1).description("vae编码批量大小, 越高显存占用越高(不是越高越好)"),
     }).description("速度优化选项"),
 
     Schema.object({
