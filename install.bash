@@ -36,13 +36,13 @@ echo "CUDA Version: $cuda_version"
 
 
 if (( cuda_major_version >= 12 )); then
-    echo "install torch 2.2.1+cu121"
-    pip install torch==2.2.1+cu121 torchvision==0.17.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
-    pip install --no-deps xformers==0.0.25 --extra-index-url https://download.pytorch.org/whl/cu118
+    echo "install torch 2.4.0+cu121"
+    pip install torch==2.4.0+cu121 torchvision==0.19.0+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
+    pip install --no-deps xformers==0.0.27.post2 --extra-index-url https://download.pytorch.org/whl/cu121
 elif (( cuda_major_version == 11 && cuda_minor_version >= 8 )); then
-    echo "install torch 2.2.1+cu118"
-    pip install torch==2.2.1+cu118 torchvision==0.17.1+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
-    pip install --no-deps xformers==0.0.25+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+    echo "install torch 2.4.0+cu118"
+    pip install torch==2.4.0+cu118 torchvision==0.19.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
+    pip install --no-deps xformers==0.0.27.post2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
 elif (( cuda_major_version == 11 && cuda_minor_version >= 6 )); then
     echo "install torch 1.12.1+cu116"
     pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
