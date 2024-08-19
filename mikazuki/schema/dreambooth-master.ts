@@ -195,6 +195,7 @@ Schema.intersect([
         full_fp16: Schema.boolean().description("完全使用 FP16 精度"),
         full_bf16: Schema.boolean().description("完全使用 BF16 精度 仅支持 SDXL"),
         xformers: Schema.boolean().default(true).description("启用 xformers"),
+        sdpa: Schema.boolean().description("启用 sdpa"),
         lowram: Schema.boolean().default(false).description("低内存模式 该模式下会将 U-net、文本编码器、VAE 直接加载到显存中"),
         cache_latents: Schema.boolean().default(true).description("缓存图像 latent"),
         cache_latents_to_disk: Schema.boolean().default(true).description("缓存图像 latent 到磁盘"),

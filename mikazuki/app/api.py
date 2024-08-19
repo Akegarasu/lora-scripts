@@ -36,6 +36,8 @@ avaliable_schemas = []
 trainer_mapping = {
     "sd-lora": "./sd-scripts/train_network.py",
     "sdxl-lora": "./sd-scripts/sdxl_train_network.py",
+    "sd3-lora": "./sd-scripts/sd3_train_network.py",
+    "flux-lora": "./sd-scripts/flux_train_network.py",
     "sd-dreambooth": "./sd-scripts/train_db.py",
     "sdxl-finetune": "./sd-scripts/sdxl_train.py",
 }
