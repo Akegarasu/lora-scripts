@@ -185,7 +185,6 @@ Schema.intersect([
     Schema.object({
         seed: Schema.number().default(1337).description("随机种子"),
         clip_skip: Schema.number().role("slider").min(0).max(12).step(1).default(2).description("CLIP 跳过层数 *玄学*"),
-        no_metadata: Schema.boolean().description("不保存模型元数据"),
         ui_custom_params: Schema.string().role('textarea').description("**危险** 自定义参数，请输入 TOML 格式，将会直接覆盖当前界面内任何参数。实时更新，推荐写完后再粘贴过来"),
     }).description("高级设置"),
 
