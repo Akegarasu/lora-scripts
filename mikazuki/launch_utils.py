@@ -234,9 +234,10 @@ def prepare_environment():
     os.environ["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
 
     if locale.getdefaultlocale()[0] == "zh_CN":
-        log.info("detected locale zh_CN, use pip mirrors")
+        log.info("detected locale zh_CN, use pip & huggingface mirrors")
         os.environ.setdefault("PIP_FIND_LINKS", "https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html")
         os.environ.setdefault("PIP_INDEX_URL", "https://pypi.tuna.tsinghua.edu.cn/simple")
+        os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
 
     if not os.environ.get("PATH"):
         os.environ["PATH"] = os.path.dirname(sys.executable)
