@@ -16,7 +16,8 @@ class ModelType(Enum):
     SD2 = 2
     SDXL = 3
     SD3 = 4
-    LoRA = 5
+    FLUX = 5
+    LoRA = 10
 
 
 def is_promopt_like(s):
@@ -30,7 +31,7 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
     if os.path.exists(model_name):
         try:
             with open(model_name, "rb") as f:
-                content = f.read(1024 * 500)
+                content = f.read(1024 * 1000)
                 model_type = match_model_type(content)
 
                 if model_type == ModelType.UNKNOWN:
@@ -59,7 +60,10 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
 
 
 def match_model_type(sig_content: bytes):
-    if b"model.diffusion_model.x_embedder.proj.weight" in sig_content:
+    if b"model.diffusion_model.double_blocks" in sig_content or b"model.diffusion_model.double_blocks.0.img_attn.norm.query_norm.scale" in sig_content:
+        return ModelType.FLUX
+
+    if b"model.diffusion_model.x_embedder.proj.weight" in sig_content or b"model.diffusion_model.input_blocks.8.1.transformer_blocks.3.ff.net.2.weight" in sig_content:
         return ModelType.SD3
 
     if b"conditioner.embedders.1.model.transformer.resblocks" in sig_content:
