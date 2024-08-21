@@ -59,7 +59,7 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
 
 
 def match_model_type(sig_content: bytes):
-    if b"model.diffusion_model.double_blocks" in sig_content or b"model.diffusion_model.double_blocks.0.img_attn.norm.query_norm.scale" in sig_content:
+    if b"model.diffusion_model.double_blocks" in sig_content or b"double_blocks.0.img_attn.norm.query_norm.scale" in sig_content:
         return ModelType.FLUX
 
     if b"model.diffusion_model.x_embedder.proj.weight" in sig_content:
