@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/pytorch:23.07-py3
+FROM nvcr.io/nvidia/pytorch:24.07-py3
 
 EXPOSE 28000
 
@@ -11,7 +11,7 @@ WORKDIR /app
 RUN git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 WORKDIR /app/lora-scripts
-RUN pip install xformers==0.0.21 --no-deps && pip install -r requirements.txt
+RUN pip install xformers==0.0.27.post2 --no-deps && pip install -r requirements.txt
 
 WORKDIR /app/lora-scripts/sd-scripts
 RUN pip install -r requirements.txt
