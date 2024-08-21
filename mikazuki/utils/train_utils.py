@@ -37,12 +37,11 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
                 if model_type == ModelType.UNKNOWN:
                     log.error(f"Can't match model type from {model_name}")
 
-                if model_type not in [ModelType.SD15, ModelType.SD2, ModelType.SDXL, ModelType.FLUX]:
+                if model_type not in [ModelType.SD15, ModelType.SD2, ModelType.SD3, ModelType.SDXL, ModelType.FLUX]:
                     return False, "Pretrained model is not a Stable Diffusion or Flux checkpoint / 校验失败：底模不是 Stable Diffusion 或 Flux 模型"
-                elif model_type == ModelType.SD3:
-                    return False, "Pretrained model not supported yet / 校验失败：SD3 模型暂不支持"
-                elif model_type == ModelType.SDXL and training_type == "sd-lora":
-                    return False, "Pretrained model is SDXL, but you are training with LoRA / 校验失败：你选择的是 LoRA 训练，但预训练模型是 SDXL。请前往专家模式选择正确的模型种类。"
+
+                if model_type == ModelType.SDXL and training_type == "sd-lora":
+                    return False, "Pretrained model is SDXL, but you are training with SD1.5 LoRA / 校验失败：你选择的是 SD1.5 LoRA 训练，但预训练模型是 SDXL。请前往专家模式选择正确的模型种类。"
 
         except Exception as e:
             log.warn(f"model file {model_name} can't open: {e}")
@@ -63,7 +62,7 @@ def match_model_type(sig_content: bytes):
     if b"model.diffusion_model.double_blocks" in sig_content or b"model.diffusion_model.double_blocks.0.img_attn.norm.query_norm.scale" in sig_content:
         return ModelType.FLUX
 
-    if b"model.diffusion_model.x_embedder.proj.weight" in sig_content or b"model.diffusion_model.input_blocks.8.1.transformer_blocks.3.ff.net.2.weight" in sig_content:
+    if b"model.diffusion_model.x_embedder.proj.weight" in sig_content:
         return ModelType.SD3
 
     if b"conditioner.embedders.1.model.transformer.resblocks" in sig_content:
