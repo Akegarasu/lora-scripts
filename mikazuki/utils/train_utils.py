@@ -37,8 +37,8 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
                 if model_type == ModelType.UNKNOWN:
                     log.error(f"Can't match model type from {model_name}")
 
-                if model_type not in [ModelType.SD15,  ModelType.SD2, ModelType.SDXL]:
-                    return False, "Pretrained model is not a Stable Diffusion checkpoint / 校验失败：底模不是 Stable Diffusion 模型"
+                if model_type not in [ModelType.SD15, ModelType.SD2, ModelType.SDXL, ModelType.FLUX]:
+                    return False, "Pretrained model is not a Stable Diffusion or Flux checkpoint / 校验失败：底模不是 Stable Diffusion 或 Flux 模型"
                 elif model_type == ModelType.SD3:
                     return False, "Pretrained model not supported yet / 校验失败：SD3 模型暂不支持"
                 elif model_type == ModelType.SDXL and training_type == "sd-lora":
