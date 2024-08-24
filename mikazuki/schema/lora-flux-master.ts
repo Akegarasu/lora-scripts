@@ -45,7 +45,7 @@ Schema.intersect([
         train_batch_size: Schema.number().min(1).default(1).description("批量大小, 越高显存占用越高"),
         gradient_checkpointing: Schema.boolean().default(false).description("梯度检查点"),
         gradient_accumulation_steps: Schema.number().min(1).description("梯度累加步数"),
-        network_train_unet_only: Schema.boolean().default(false).description("仅训练 U-Net 训练SDXL Lora时推荐开启"),
+        network_train_unet_only: Schema.boolean().default(true).description("仅训练 U-Net"),
         network_train_text_encoder_only: Schema.boolean().default(false).description("仅训练文本编码器"),
     }).description("训练相关参数"),
 
@@ -166,7 +166,7 @@ Schema.intersect([
 
     Schema.object({
         caption_extension: Schema.string().default(".txt").description("Tag 文件扩展名"),
-        shuffle_caption: Schema.boolean().default(true).description("训练时随机打乱 tokens"),
+        shuffle_caption: Schema.boolean().default(false).description("训练时随机打乱 tokens"),
         weighted_captions: Schema.boolean().description("使用带权重的 token，不推荐与 shuffle_caption 一同开启"),
         keep_tokens: Schema.number().min(0).max(255).step(1).default(0).description("在随机打乱 tokens 时，保留前 N 个不变"),
         keep_tokens_separator: Schema.string().description("保留 tokens 时使用的分隔符"),
@@ -189,18 +189,18 @@ Schema.intersect([
     }).description("高级设置"),
 
     Schema.object({
-        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("fp16").description("训练混合精度, RTX30系列以后也可以指定`bf16`"),
+        mixed_precision: Schema.union(["no", "fp16", "bf16"]).default("bf16").description("训练混合精度, RTX30系列以后也可以指定`bf16`"),
         full_fp16: Schema.boolean().description("完全使用 FP16 精度"),
         full_bf16: Schema.boolean().description("完全使用 BF16 精度"),
-        fp8_base: Schema.boolean().description("对基础模型使用 FP8 精度"),
+        fp8_base: Schema.boolean().default(true).description("对基础模型使用 FP8 精度"),
         no_half_vae: Schema.boolean().description("不使用半精度 VAE"),
         // xformers: Schema.boolean().default(true).description("启用 xformers"),
         sdpa: Schema.boolean().default(true).description("启用 sdpa"),
         lowram: Schema.boolean().default(false).description("低内存模式 该模式下会将 U-net、文本编码器、VAE 直接加载到显存中"),
         cache_latents: Schema.boolean().default(true).description("缓存图像 latent, 缓存 VAE 输出以减少 VRAM 使用"),
         cache_latents_to_disk: Schema.boolean().default(true).description("缓存图像 latent 到磁盘"),
-        cache_text_encoder_outputs: Schema.boolean().description("缓存文本编码器的输出，减少显存使用。使用时需要关闭 shuffle_caption"),
-        cache_text_encoder_outputs_to_disk: Schema.boolean().description("缓存文本编码器的输出到磁盘"),
+        cache_text_encoder_outputs: Schema.boolean().default(true).description("缓存文本编码器的输出，减少显存使用。使用时需要关闭 shuffle_caption"),
+        cache_text_encoder_outputs_to_disk: Schema.boolean().default(true).description("缓存文本编码器的输出到磁盘"),
         persistent_data_loader_workers: Schema.boolean().default(true).description("保留加载训练集的worker，减少每个 epoch 之间的停顿。"),
     }).description("速度优化选项"),
 
