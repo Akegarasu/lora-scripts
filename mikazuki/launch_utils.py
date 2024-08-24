@@ -194,7 +194,10 @@ def setup_windows_bitsandbytes():
         run_pip(f"install {bnb_package}", bnb_package, live=True)
 
 
-def setup_onnxruntime():
+def setup_onnxruntime(skip_prepare_onnxruntime: bool = False):
+    if skip_prepare_onnxruntime:
+        return
+
     onnx_version = "1.17.1"
 
     if sys.platform == "linux":
@@ -223,7 +226,7 @@ def check_run(file: str) -> bool:
     return result.returncode == 0
 
 
-def prepare_environment(disable_auto_mirror: bool = True):
+def prepare_environment(disable_auto_mirror: bool = True, skip_prepare_onnxruntime: bool = False):
     if sys.platform == "win32":
         # disable triton on windows
         os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
@@ -251,7 +254,7 @@ def prepare_environment(disable_auto_mirror: bool = True):
 
     validate_requirements("requirements.txt")
     setup_windows_bitsandbytes()
-    setup_onnxruntime()
+    setup_onnxruntime(skip_prepare_onnxruntime)
 
 
 def catch_exception(f):
