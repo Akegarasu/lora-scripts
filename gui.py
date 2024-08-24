@@ -16,6 +16,7 @@ parser.add_argument("--listen", action="store_true")
 parser.add_argument("--skip-prepare-environment", action="store_true")
 parser.add_argument("--disable-tensorboard", action="store_true")
 parser.add_argument("--disable-tageditor", action="store_true")
+parser.add_argument("--disable-auto-mirror", action="store_true")
 parser.add_argument("--tensorboard-host", type=str, default="127.0.0.1", help="Port to run the tensorboard")
 parser.add_argument("--tensorboard-port", type=int, default=6006, help="Port to run the tensorboard")
 parser.add_argument("--localization", type=str)
@@ -54,7 +55,7 @@ def launch():
     log.info(f'{platform.system()} Python {platform.python_version()} {sys.executable}')
 
     if not args.skip_prepare_environment:
-        prepare_environment()
+        prepare_environment(disable_auto_mirror=args.disable_auto_mirror)
 
     os.environ["MIKAZUKI_HOST"] = args.host
     os.environ["MIKAZUKI_PORT"] = str(args.port)
