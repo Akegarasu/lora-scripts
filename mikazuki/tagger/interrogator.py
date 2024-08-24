@@ -128,14 +128,14 @@ class WaifuDiffusionInterrogator(Interrogator):
         # only one of these packages should be installed at a time in any one environment
         # https://onnxruntime.ai/docs/get-started/with-python.html#install-onnx-runtime
         # TODO: remove old package when the environment changes?
-        from mikazuki.launch_utils import is_installed, run_pip
-        if not is_installed('onnxruntime'):
-            package = os.environ.get(
-                'ONNXRUNTIME_PACKAGE',
-                'onnxruntime-gpu'
-            )
+        # from mikazuki.launch_utils import is_installed, run_pip
+        # if not is_installed('onnxruntime'):
+        #     package = os.environ.get(
+        #         'ONNXRUNTIME_PACKAGE',
+        #         'onnxruntime-gpu'
+        #     )
 
-            run_pip(f'install {package}', 'onnxruntime')
+        #     run_pip(f'install {package}', 'onnxruntime')
 
         # Load torch to load cuda libs built in torch for onnxruntime, do not delete this.
         import torch
