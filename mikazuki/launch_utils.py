@@ -223,7 +223,7 @@ def check_run(file: str) -> bool:
     return result.returncode == 0
 
 
-def prepare_environment():
+def prepare_environment(disable_auto_mirror: bool = True):
     if sys.platform == "win32":
         # disable triton on windows
         os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
@@ -233,7 +233,7 @@ def prepare_environment():
     os.environ["PYTHONWARNINGS"] = "ignore::UserWarning"
     os.environ["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
 
-    if locale.getdefaultlocale()[0] == "zh_CN":
+    if not disable_auto_mirror and locale.getdefaultlocale()[0] == "zh_CN":
         log.info("detected locale zh_CN, use pip & huggingface mirrors")
         os.environ.setdefault("PIP_FIND_LINKS", "https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html")
         os.environ.setdefault("PIP_INDEX_URL", "https://pypi.tuna.tsinghua.edu.cn/simple")

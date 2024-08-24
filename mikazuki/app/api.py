@@ -152,10 +152,10 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
 @router.get("/pick_file")
 async def pick_file(picker_type: str):
     if picker_type == "folder":
-        coro = asyncio.to_thread(open_directory_selector, os.getcwd())
+        coro = asyncio.to_thread(open_directory_selector, "")
     elif picker_type == "modelfile":
         file_types = [("checkpoints", "*.safetensors;*.ckpt;*.pt"), ("all files", "*.*")]
-        coro = asyncio.to_thread(open_file_selector, os.getcwd(), "Select file", file_types)
+        coro = asyncio.to_thread(open_file_selector, "", "Select file", file_types)
 
     result = await coro
     if result == "":
