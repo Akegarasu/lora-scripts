@@ -2,7 +2,6 @@ import os
 import json
 from pathlib import Path
 from mikazuki.log import log
-from threading import rwlock
 
 class Config:
 
