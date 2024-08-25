@@ -196,11 +196,23 @@ def setup_windows_bitsandbytes():
 
 def setup_onnxruntime():
     onnx_version = "1.17.1"
+    extra_index_url = None
+
+    try:
+        import torch
+        torch_version = torch.__version__
+        if "cu12" in torch_version:
+            onnx_version = f"1.19.0"
+            extra_index_url = "https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/"
+    except ImportError:
+        log.error("torch not found")
 
     if sys.platform == "linux":
         libc_ver = platform.libc_ver()
         if libc_ver[0] == "glibc" and libc_ver[1] <= "2.27":
             onnx_version = "1.16.3"
+
+    onnx_version = os.environ.get("ONNXRUNTIME_VERSION", onnx_version)
 
     if not is_installed(f"onnxruntime-gpu=={onnx_version}"):
         log.info("uninstalling wrong onnxruntime version")
@@ -210,7 +222,10 @@ def setup_onnxruntime():
 
         log.info(f"installing onnxruntime")
         run_pip(f"install onnxruntime=={onnx_version}", f"onnxruntime", live=True)
-        run_pip(f"install onnxruntime-gpu=={onnx_version}", f"onnxruntime-gpu", live=True)
+        if extra_index_url:
+            run_pip(f"install onnxruntime-gpu=={onnx_version} --extra-index-url {extra_index_url}", f"onnxruntime-gpu", live=True)
+        else:
+            run_pip(f"install onnxruntime-gpu=={onnx_version}", f"onnxruntime-gpu", live=True)
 
 
 def run_pip(command, desc=None, live=False):
