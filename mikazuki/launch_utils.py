@@ -194,10 +194,7 @@ def setup_windows_bitsandbytes():
         run_pip(f"install {bnb_package}", bnb_package, live=True)
 
 
-def setup_onnxruntime(skip_prepare_onnxruntime: bool = False):
-    if skip_prepare_onnxruntime:
-        return
-
+def setup_onnxruntime():
     onnx_version = "1.17.1"
 
     if sys.platform == "linux":
@@ -254,7 +251,8 @@ def prepare_environment(disable_auto_mirror: bool = True, skip_prepare_onnxrunti
 
     validate_requirements("requirements.txt")
     setup_windows_bitsandbytes()
-    setup_onnxruntime(skip_prepare_onnxruntime)
+    if not skip_prepare_onnxruntime:
+        setup_onnxruntime()
 
 
 def catch_exception(f):

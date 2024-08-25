@@ -1,16 +1,17 @@
 import asyncio
+import hashlib
 import json
 import os
 from datetime import datetime
 from pathlib import Path
 
 import toml
-import hashlib
 from fastapi import APIRouter, BackgroundTasks, Request
 from starlette.requests import Request
 
 import mikazuki.process as process
 from mikazuki import launch_utils
+from mikazuki.app.config import app_config
 from mikazuki.app.models import (APIResponse, APIResponseFail,
                                  APIResponseSuccess, TaggerInterrogateRequest)
 from mikazuki.log import log
@@ -211,3 +212,9 @@ async def get_all_schemas() -> APIResponse:
     return APIResponseSuccess(data={
         "schemas": avaliable_schemas
     })
+
+
+@router.get("/config/saved_params")
+async def get_saved_params() -> APIResponse:
+    saved_params = app_config["saved_params"]
+    return APIResponseSuccess(data=saved_params)

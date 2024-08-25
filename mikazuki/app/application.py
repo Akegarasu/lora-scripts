@@ -11,6 +11,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
+from mikazuki.app.config import app_config
 from mikazuki.app.api import load_schemas
 from mikazuki.app.api import router as api_router
 # from mikazuki.app.ipc import router as ipc_router
@@ -33,8 +34,11 @@ class SPAStaticFiles(StaticFiles):
 
 
 async def app_startup():
-    await asyncio.to_thread(check_torch_gpu)
+    app_config.load_config()
+
     await load_schemas()
+    await asyncio.to_thread(check_torch_gpu)
+
     if sys.platform == "win32" and os.environ.get("MIKAZUKI_DEV", "0") != "1":
         webbrowser.open(f'http://{os.environ["MIKAZUKI_HOST"]}:{os.environ["MIKAZUKI_PORT"]}')
 
