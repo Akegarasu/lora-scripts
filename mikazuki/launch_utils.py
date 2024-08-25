@@ -195,15 +195,16 @@ def setup_windows_bitsandbytes():
 
 
 def setup_onnxruntime():
-    onnx_version = "1.17.1"
-    extra_index_url = None
+    onnx_version = "1.18.1"
+    index_url = None
 
     try:
         import torch
         torch_version = torch.__version__
         if "cu12" in torch_version:
-            onnx_version = f"1.19.0"
-            extra_index_url = "https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/"
+            # for cuda 12
+            onnx_version = f"1.18.1"
+            index_url = "https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/"
     except ImportError:
         log.error("torch not found")
 
@@ -222,8 +223,8 @@ def setup_onnxruntime():
 
         log.info(f"installing onnxruntime")
         run_pip(f"install onnxruntime=={onnx_version}", f"onnxruntime", live=True)
-        if extra_index_url:
-            run_pip(f"install onnxruntime-gpu=={onnx_version} --extra-index-url {extra_index_url}", f"onnxruntime-gpu", live=True)
+        if index_url:
+            run_pip(f"install onnxruntime-gpu=={onnx_version} -i {index_url}", f"onnxruntime-gpu", live=True)
         else:
             run_pip(f"install onnxruntime-gpu=={onnx_version}", f"onnxruntime-gpu", live=True)
 
