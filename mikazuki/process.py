@@ -7,6 +7,7 @@ from typing import Optional
 from mikazuki.app.models import APIResponse
 from mikazuki.log import log
 from mikazuki.tasks import tm
+from mikazuki.launch_utils import base_dir_path
 
 
 def run_train(toml_path: str,
@@ -25,6 +26,7 @@ def run_train(toml_path: str,
     customize_env = os.environ.copy()
     customize_env["ACCELERATE_DISABLE_RICH"] = "1"
     customize_env["PYTHONUNBUFFERED"] = "1"
+    customize_env["PYTHONWARNINGS"] = "ignore::FutureWarning,ignore::UserWarning"
 
     if gpu_ids:
         customize_env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)
