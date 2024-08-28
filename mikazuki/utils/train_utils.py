@@ -154,3 +154,10 @@ def get_total_images(path, recursive=True):
         image_files += glob.glob(path + '/*.jpeg')
         image_files += glob.glob(path + '/*.png')
     return image_files
+
+
+def fix_config_types(config: dict):
+    keep_float_params = ["guidance_scale", "sigmoid_scale", "discrete_flow_shift"]
+    for k in keep_float_params:
+        if k in config:
+            config[k] = float(config[k])
