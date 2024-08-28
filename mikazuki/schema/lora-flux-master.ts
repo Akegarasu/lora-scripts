@@ -16,25 +16,26 @@ Schema.intersect([
         model_prediction_type: Schema.union(["raw", "additive", "sigma_scaled"]).default("raw").description("模型预测类型"),
         discrete_flow_shift: Schema.number().step(0.001).default(1.0).description("Euler 调度器离散流位移"),
         loss_type: Schema.union(["l1", "l2", "huber", "smooth_l1"]).default("l2").description("损失函数类型"),
-        guidance_scale: Schema.number().step(0.001).default(1.0).description("CFG 引导缩放"),
+        guidance_scale: Schema.number().step(0.01).default(1.0).description("CFG 引导缩放"),
     }).description("Flux 专用参数"),
 
     Schema.object({
         train_data_dir: Schema.string().role('filepicker', { type: "folder" }).default("./train/aki").description("训练数据集路径"),
         reg_data_dir: Schema.string().role('filepicker', { type: "folder" }).description("正则化数据集路径。默认留空，不使用正则化图像"),
         prior_loss_weight: Schema.number().step(0.1).default(1.0).description("正则化 - 先验损失权重"),
-        resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
+        resolution: Schema.string().default("768,768").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
         enable_bucket: Schema.boolean().default(true).description("启用 arb 桶以允许非固定宽高比的图片"),
         min_bucket_reso: Schema.number().default(256).description("arb 桶最小分辨率"),
-        max_bucket_reso: Schema.number().default(1024).description("arb 桶最大分辨率"),
-        bucket_reso_steps: Schema.number().default(64).description("arb 桶分辨率划分单位，SDXL 可以使用 32 (SDXL低于32时失效)"),
+        max_bucket_reso: Schema.number().default(2048).description("arb 桶最大分辨率"),
+        bucket_reso_steps: Schema.number().default(32).description("arb 桶分辨率划分单位，SDXL 可以使用 32 (SDXL低于32时失效)"),
+        bucket_no_upscale: Schema.boolean().default(true).description("arb 桶不放大图片"),
     }).description("数据集设置"),
 
     Schema.object({
         output_name: Schema.string().default("aki").description("模型保存名称"),
         output_dir: Schema.string().role('filepicker', { type: "folder" }).default("./output").description("模型保存文件夹"),
         save_model_as: Schema.union(["safetensors", "pt", "ckpt"]).default("safetensors").description("模型保存格式"),
-        save_precision: Schema.union(["fp16", "float", "bf16"]).default("fp16").description("模型保存精度"),
+        save_precision: Schema.union(["fp16", "float", "bf16"]).default("bf16").description("模型保存精度"),
         save_every_n_epochs: Schema.number().default(2).description("每 N epoch（轮）自动保存一次模型"),
         save_state: Schema.boolean().description("保存训练状态 配合 `resume` 参数可以继续从某个状态训练"),
     }).description("保存设置"),
@@ -42,8 +43,8 @@ Schema.intersect([
     Schema.object({
         max_train_epochs: Schema.number().min(1).default(20).description("最大训练 epoch（轮数）"),
         train_batch_size: Schema.number().min(1).default(1).description("批量大小, 越高显存占用越高"),
-        gradient_checkpointing: Schema.boolean().default(false).description("梯度检查点"),
-        gradient_accumulation_steps: Schema.number().min(1).description("梯度累加步数"),
+        gradient_checkpointing: Schema.boolean().default(true).description("梯度检查点"),
+        gradient_accumulation_steps: Schema.number().min(1).default(1).description("梯度累加步数"),
         network_train_unet_only: Schema.boolean().default(true).description("仅训练 U-Net"),
         network_train_text_encoder_only: Schema.boolean().default(false).description("仅训练文本编码器"),
     }).description("训练相关参数"),
@@ -51,7 +52,7 @@ Schema.intersect([
     Schema.intersect([
         Schema.object({
             learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。"),
-            unet_lr: Schema.string().default("1e-4").description("U-Net 学习率"),
+            unet_lr: Schema.string().default("3e-4").description("U-Net 学习率"),
             text_encoder_lr: Schema.string().default("1e-5").description("文本编码器学习率"),
             lr_scheduler: Schema.union([
                 "linear",
@@ -194,7 +195,6 @@ Schema.intersect([
         fp8_base: Schema.boolean().default(true).description("对基础模型使用 FP8 精度"),
         fp8_base_unet: Schema.boolean().description("仅对 U-Net 使用 FP8 精度（CLIP-L不使用）"),
         no_half_vae: Schema.boolean().description("不使用半精度 VAE"),
-        // xformers: Schema.boolean().default(true).description("启用 xformers"),
         sdpa: Schema.boolean().default(true).description("启用 sdpa"),
         lowram: Schema.boolean().default(false).description("低内存模式 该模式下会将 U-net、文本编码器、VAE 直接加载到显存中"),
         cache_latents: Schema.boolean().default(true).description("缓存图像 latent, 缓存 VAE 输出以减少 VRAM 使用"),

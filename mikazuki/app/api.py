@@ -68,7 +68,9 @@ async def create_toml_file(request: Request):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     toml_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}.toml")
     json_data = await request.body()
+
     config: dict = json.loads(json_data.decode("utf-8"))
+    train_utils.fix_config_types(config)
 
     gpu_ids = config.pop("gpu_ids", None)
 
