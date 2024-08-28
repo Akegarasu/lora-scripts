@@ -52,7 +52,7 @@ Schema.intersect([
     Schema.intersect([
         Schema.object({
             learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。"),
-            unet_lr: Schema.string().default("3e-4").description("U-Net 学习率"),
+            unet_lr: Schema.string().default("5e-4").description("U-Net 学习率"),
             text_encoder_lr: Schema.string().default("1e-5").description("文本编码器学习率"),
             lr_scheduler: Schema.union([
                 "linear",
