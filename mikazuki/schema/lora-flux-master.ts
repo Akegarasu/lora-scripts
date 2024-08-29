@@ -11,7 +11,7 @@ Schema.intersect([
     ]),
 
     Schema.object({
-        timestep_sampling: Schema.union(["sigma", "uniform", "sigmoid", "shift"]).default("sigma").description("时间步采样"),
+        timestep_sampling: Schema.union(["sigma", "uniform", "sigmoid", "shift"]).default("sigmoid").description("时间步采样"),
         sigmoid_scale: Schema.number().step(0.001).default(1.0).description("sigmoid 缩放"),
         model_prediction_type: Schema.union(["raw", "additive", "sigma_scaled"]).default("raw").description("模型预测类型"),
         discrete_flow_shift: Schema.number().step(0.001).default(1.0).description("Euler 调度器离散流位移"),
