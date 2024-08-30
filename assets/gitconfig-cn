@@ -1,6 +1,9 @@
 [url "https://jihulab.com/Akegarasu/lora-scripts"]
     insteadOf = https://github.com/Akegarasu/lora-scripts
 
+[url "https://jihulab.com/Akegarasu/sd-scripts"]
+    insteadOf = https://github.com/Akegarasu/sd-scripts
+
 [url "https://jihulab.com/affair3547/sd-scripts"]
     insteadOf = https://github.com/kohya-ss/sd-scripts.git
 
