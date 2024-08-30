@@ -31,7 +31,7 @@ if ($new_conv_rank) {
 }
 
 # run svd_merge
-accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/networks/svd_merge_lora.py" `
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/networks/svd_merge_lora.py" `
 	--save_precision=$save_precision `
 	--precision=$precision `
 	--new_rank=$new_rank `

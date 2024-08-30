@@ -119,7 +119,7 @@ async def run_script(request: Request, background_tasks: BackgroundTasks):
                 value = f'"{v}"'
             result.append(value)
     script_args = " ".join(result)
-    script_path = Path(os.getcwd()) / "sd-scripts" / script_name
+    script_path = Path(os.getcwd()) / "scripts" / script_name
     cmd = f"{launch_utils.python_bin} {script_path} {script_args}"
     background_tasks.add_task(launch_utils.run, cmd)
     return APIResponseSuccess()

@@ -7,6 +7,8 @@ __pycache__
 output/*
 !output/.keep
 
+assets/config.json
+
 py310
 python
 git
