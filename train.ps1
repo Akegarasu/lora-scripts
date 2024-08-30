@@ -75,14 +75,14 @@ $Env:XFORMERS_FORCE_DISABLE_TRITON = "1"
 $ext_args = [System.Collections.ArrayList]::new()
 $launch_args = [System.Collections.ArrayList]::new()
 
-$trainer_file = "./sd-scripts/train_network.py"
+$trainer_file = "./scripts/train_network.py"
 
 if ($model_type -eq "sd1.5") {
   [void]$ext_args.Add("--clip_skip=$clip_skip")
 } elseif ($model_type -eq "sd2.0") {
   [void]$ext_args.Add("--v2")
 } elseif ($model_type -eq "sdxl") {
-  $trainer_file = "./sd-scripts/sdxl_train_network.py"
+  $trainer_file = "./scripts/sdxl_train_network.py"
 }
 
 if ($multi_gpu) {

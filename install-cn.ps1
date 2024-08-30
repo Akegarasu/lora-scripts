@@ -27,7 +27,7 @@ if (!(Test-Path -Path "venv")) {
 .\venv\Scripts\activate
 Check "激活虚拟环境失败。"
 
-Set-Location .\sd-scripts
+Set-Location .\scripts
 Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 install.ps1 脚本)"
 $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq ""){

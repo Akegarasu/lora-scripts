@@ -74,14 +74,14 @@ export TF_CPP_MIN_LOG_LEVEL=3
 extArgs=()
 launchArgs=()
 
-trainer_file="./sd-scripts/train_network.py"
+trainer_file="./scripts/train_network.py"
 
 if [ $model_type == "sd1.5" ]; then
   ext_args+=("--clip_skip=$clip_skip")
 elif [ $model_type == "sd2.0" ]; then
   ext_args+=("--v2")
 elif [ $model_type == "sdxl" ]; then
-  trainer_file="./sd-scripts/sdxl_train_network.py"
+  trainer_file="./scripts/sdxl_train_network.py"
 fi
 
 if [[ $multi_gpu == 1 ]]; then

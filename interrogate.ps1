@@ -18,7 +18,7 @@ if ($v2) {
 }
 
 # run interrogate
-accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/networks/lora_interrogator.py" `
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/networks/lora_interrogator.py" `
 	--sd_model=$sd_model `
 	--model=$model `
 	--batch_size=$batch_size `

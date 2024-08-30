@@ -28,7 +28,7 @@ else
   script_name="train_network.py"
 fi
 
-python -m accelerate.commands.launch "${launchArgs[@]}" --num_cpu_threads_per_process=8 "./sd-scripts/$script_name" \
+python -m accelerate.commands.launch "${launchArgs[@]}" --num_cpu_threads_per_process=8 "./scripts/$script_name" \
   --config_file="$config_file" \
   --sample_prompts="$sample_prompts" \
   "${extArgs[@]}"

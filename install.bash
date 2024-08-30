@@ -60,7 +60,7 @@ else
 fi
 
 echo "Installing deps..."
-cd "$script_dir/sd-scripts" || exit
+cd "$script_dir/scripts" || exit
 
 pip install --upgrade -r requirements.txt
 

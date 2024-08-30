@@ -11,7 +11,7 @@ from mikazuki.launch_utils import base_dir_path
 
 
 def run_train(toml_path: str,
-              trainer_file: str = "./sd-scripts/train_network.py",
+              trainer_file: str = "./scripts/train_network.py",
               gpu_ids: Optional[list] = None,
               cpu_threads: Optional[int] = 2):
     log.info(f"Training started with config file / 训练开始，使用配置文件: {toml_path}")

@@ -24,7 +24,7 @@ if ($multi_gpu) {
 
 # run train
 $script_name = if ($sdxl) { "sdxl_train_network.py" } else { "train_network.py" }
-python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./sd-scripts/$script_name" `
+python -m accelerate.commands.launch $launch_args --num_cpu_threads_per_process=8 "./scripts/$script_name" `
   --config_file=$config_file `
   --sample_prompts=$sample_prompts `
   $ext_args

@@ -63,7 +63,7 @@ fi
 
 
 # run tagger
-accelerate launch --num_cpu_threads_per_process=8 "./sd-scripts/finetune/tag_images_by_wd14_tagger.py" \
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/finetune/tag_images_by_wd14_tagger.py" \
   $train_data_dir \
   --thresh=$thresh \
   --caption_extension .txt \

@@ -1,6 +1,3 @@
-[submodule "sd-scripts"]
-	path = sd-scripts
-	url = https://github.com/Akegarasu/sd-scripts.git
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/hanamizuki-ai/lora-gui-dist
