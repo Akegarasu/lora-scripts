@@ -202,6 +202,7 @@ Schema.intersect([
         cache_text_encoder_outputs: Schema.boolean().default(true).description("缓存文本编码器的输出，减少显存使用。使用时需要关闭 shuffle_caption"),
         cache_text_encoder_outputs_to_disk: Schema.boolean().default(true).description("缓存文本编码器的输出到磁盘"),
         persistent_data_loader_workers: Schema.boolean().default(true).description("保留加载训练集的worker，减少每个 epoch 之间的停顿。"),
+        vae_batch_size: Schema.number().min(1).description("vae 编码批量大小"),
     }).description("速度优化选项"),
 
     Schema.object({

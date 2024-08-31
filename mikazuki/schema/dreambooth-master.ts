@@ -200,6 +200,7 @@ Schema.intersect([
         cache_latents: Schema.boolean().default(true).description("缓存图像 latent"),
         cache_latents_to_disk: Schema.boolean().default(true).description("缓存图像 latent 到磁盘"),
         persistent_data_loader_workers: Schema.boolean().default(true).description("保留加载训练集的worker，减少每个 epoch 之间的停顿。"),
+        vae_batch_size: Schema.number().min(1).description("vae 编码批量大小"),
     }).description("速度优化选项"),
 
     Schema.object({
