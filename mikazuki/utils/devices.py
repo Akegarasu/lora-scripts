@@ -1,4 +1,5 @@
 from mikazuki.log import log
+from packaging.version import Version
 
 available_devices = []
 printable_devices = []
@@ -12,6 +13,10 @@ def check_torch_gpu():
             log.error("Torch is not able to use GPU, please check your torch installation.\n Use --skip-prepare-environment to disable this check")
             log.error("！！！Torch 无法使用 GPU，您无法正常开始训练！！！\n您的显卡可能并不支持，或是 torch 安装有误。请检查您的 torch 安装。")
             return
+
+        if Version(torch.__version__) < Version("2.3.0"):
+            log.warning("Torch version is lower than 2.3.0, which may not be able to train FLUX model properly. Consider upgrading to a newer version.")
+            log.warning("！！！Torch 版本低于 2.3.0，将无法正常训练 FLUX 模型。请考虑升级到更新的版本。！！！")
 
         if torch.version.cuda:
             log.info(
