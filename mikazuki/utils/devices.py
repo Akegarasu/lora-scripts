@@ -15,8 +15,8 @@ def check_torch_gpu():
             return
 
         if Version(torch.__version__) < Version("2.3.0"):
-            log.warning("Torch version is lower than 2.3.0, which may not be able to train FLUX model properly. Consider upgrading to a newer version.")
-            log.warning("！！！Torch 版本低于 2.3.0，将无法正常训练 FLUX 模型。请考虑升级到更新的版本。！！！")
+            log.warning("Torch version is lower than 2.3.0, which may not be able to train FLUX model properly. Please re-run the installation script (install.ps1 or install.bash) to upgrade Torch.")
+            log.warning("！！！Torch 版本低于 2.3.0，将无法正常训练 FLUX 模型。请重新运行安装脚本（install-cn.ps1）以升级 Torch！！！")
 
         if torch.version.cuda:
             log.info(
