@@ -38,9 +38,9 @@ Set-Location .\scripts
 Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 install.ps1 脚本)"
 $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "") {
-    python -m pip install torch==2.4.0+cu121 torchvision==0.19.0+cu121 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html
+    python -m pip install torch==2.3.1+cu121 torchvision==0.18.1+cu121 -f https://mirror.sjtu.edu.cn/pytorch-wheels/torch_stable.html
     Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
-    python -m pip install -U -I --no-deps xformers==0.0.27.post2
+    python -m pip install -U -I --no-deps xformers===0.0.27
     Check "xformers 安装失败。"
 }
 
