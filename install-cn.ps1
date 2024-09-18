@@ -41,7 +41,7 @@ $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "") {
     python -m pip install torch==2.4.1+cu121 torchvision==0.19.1+cu121 --extra-index-url https://download.pytorch.org/whl/cu121
     Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
-    python -m pip install -U -I --no-deps xformers===0.0.28.post1 --extra-index-url https://download.pytorch.org/whl/cu121
+    python -m pip install -U -I --no-deps xformers===0.0.28.post1 -i https://download.pytorch.org/whl/cu121
     Check "xformers 安装失败。"
 }
 
