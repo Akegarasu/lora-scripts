@@ -29,6 +29,13 @@ def is_promopt_like(s):
 
 def validate_model(model_name: str, training_type: str = "sd-lora"):
     if os.path.exists(model_name):
+        if os.path.isdir(model_name):
+            files = os.listdir(model_name)
+            if "model_index.json" in files or "unet" in model_name:
+                return True, "ok"
+            else:
+                log.warning("Can't find model, is this a huggingface model folder?")
+                return True, "ok"
         try:
             with open(model_name, "rb") as f:
                 content = f.read(1024 * 1000)
@@ -44,7 +51,7 @@ def validate_model(model_name: str, training_type: str = "sd-lora"):
                     return False, "Pretrained model is SDXL, but you are training with SD1.5 LoRA / 校验失败：你选择的是 SD1.5 LoRA 训练，但预训练模型是 SDXL。请前往专家模式选择正确的模型种类。"
 
         except Exception as e:
-            log.warn(f"model file {model_name} can't open: {e}")
+            log.warning(f"model file {model_name} can't open: {e}")
             return True, ""
 
         return True, "ok"
