@@ -78,11 +78,13 @@ Schema.intersect([
                 "AdamW",
                 "AdamW8bit",
                 "PagedAdamW8bit",
+                "AdamWScheduleFree",
                 "Lion",
                 "Lion8bit",
                 "PagedLion8bit",
                 "SGDNesterov",
                 "SGDNesterov8bit",
+                "SGDScheduleFree",
                 "DAdaptation",
                 "DAdaptAdam",
                 "DAdaptAdaGrad",
@@ -111,7 +113,7 @@ Schema.intersect([
 
     Schema.intersect([
         Schema.object({
-            network_module: Schema.union(["networks.lora_flux"]).default("networks.lora_flux").description("训练网络模块"),
+            network_module: Schema.union(["networks.lora_flux", "networks.oft_flux"]).default("networks.lora_flux").description("训练网络模块"),
             network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
             network_dim: Schema.number().min(1).default(2).description("网络维度，常用 4~128，不是越大越好, 低dim可以降低显存占用"),
             network_alpha: Schema.number().min(1).default(16).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率"),
