@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -35,12 +36,15 @@ avaliable_scripts = [
 avaliable_schemas = []
 
 trainer_mapping = {
-    "sd-lora": "./scripts/train_network.py",
-    "sdxl-lora": "./scripts/sdxl_train_network.py",
-    "sd3-lora": "./scripts/sd3_train_network.py",
-    "flux-lora": "./scripts/flux_train_network.py",
-    "sd-dreambooth": "./scripts/train_db.py",
-    "sdxl-finetune": "./scripts/sdxl_train.py",
+    "sd-lora": "./scripts/stable/train_network.py",
+    "sdxl-lora": "./scripts/stable/sdxl_train_network.py",
+
+    "sd-dreambooth": "./scripts/stable/train_db.py",
+    "sdxl-finetune": "./scripts/stable/sdxl_train.py",
+
+    "sd3-lora": "./scripts/dev/sd3_train_network.py",
+    "flux-lora": "./scripts/dev/flux_train_network.py",
+    "flux-finetune": "./scripts/dev/flux_train.py",
 }
 
 
@@ -156,7 +160,7 @@ async def run_interrogate(req: TaggerInterrogateRequest, background_tasks: Backg
 async def pick_file(picker_type: str):
     if picker_type == "folder":
         coro = asyncio.to_thread(open_directory_selector, "")
-    elif picker_type == "modelfile":
+    elif picker_type == "model-file":
         file_types = [("checkpoints", "*.safetensors;*.ckpt;*.pt"), ("all files", "*.*")]
         coro = asyncio.to_thread(open_file_selector, "", "Select file", file_types)
 
@@ -166,6 +170,64 @@ async def pick_file(picker_type: str):
 
     return APIResponseSuccess(data={
         "path": result
+    })
+
+
+@router.get("/get_files")
+async def get_files(pick_type) -> APIResponse:
+    pick_preset = {
+        "model-file": {
+            "type": "file",
+            "path": "./sd-models",
+            "filter": "(.safetensors|.ckpt|.pt)"
+        },
+        "model-saved-file": {
+            "type": "file",
+            "path": "./output",
+            "filter": "(.safetensors|.ckpt|.pt)"
+        },
+        "train-dir": {
+            "type": "folder",
+            "path": "./train",
+            "filter": None
+        },
+    }
+
+    def list_path_or_files(preset_info):
+        path = Path(preset_info["path"])
+        file_type = preset_info["type"]
+        regex_filter = preset_info["filter"]
+        result_list = []
+
+        if file_type == "file":
+            if regex_filter:
+                pattern = re.compile(regex_filter)
+                files = [f for f in path.glob("**/*") if f.is_file() and pattern.search(f.name)]
+            else:
+                files = [f for f in path.glob("**/*") if f.is_file()]
+            for file in files:
+                result_list.append({
+                    "path": str(file.resolve().absolute()).replace("\\", "/"),
+                    "name": file.name,
+                    "size": f"{round(file.stat().st_size / (1024**3),2)} GB"
+                })
+        elif file_type == "folder":
+            folders = [f for f in path.iterdir() if f.is_dir()]
+            for folder in folders:
+                result_list.append({
+                    "path": str(folder.resolve().absolute()).replace("\\", "/"),
+                    "name": folder.name,
+                    "size": 0
+                })
+
+        return result_list
+
+    if pick_type not in pick_preset:
+        return APIResponseFail(message="Invalid request")
+
+    dirs = list_path_or_files(pick_preset[pick_type])
+    return APIResponseSuccess(data={
+        "files": dirs
     })
 
 

@@ -2,9 +2,9 @@ Schema.intersect([
     Schema.intersect([
         Schema.object({
             model_train_type: Schema.union(["sd-dreambooth", "sdxl-finetune"]).default("sd-dreambooth").description("训练种类"),
-            pretrained_model_name_or_path: Schema.string().role("filepicker").default("./sd-models/model.safetensors").description("底模文件路径"),
+            pretrained_model_name_or_path: Schema.string().role("filepicker", {type: "model-file"}).default("./sd-models/model.safetensors").description("底模文件路径"),
             resume: Schema.string().role("filepicker").description("从某个 `save_state` 保存的中断状态继续训练，填写文件路径"),
-            vae: Schema.string().role("filepicker").description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
+            vae: Schema.string().role("filepicker", {type: "model-file"}).description("(可选) VAE 模型文件路径，使用外置 VAE 文件覆盖模型内本身的"),
         }).description("训练用模型"),
 
         Schema.union([

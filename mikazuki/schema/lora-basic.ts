@@ -1,11 +1,11 @@
 Schema.intersect([
     Schema.object({
-        pretrained_model_name_or_path: Schema.string().role('filepicker').default("./sd-models/model.safetensors").description("底模文件路径"),
+        pretrained_model_name_or_path: Schema.string().role('filepicker', {type: "model-file"}).default("./sd-models/model.safetensors").description("底模文件路径"),
     }).description("训练用模型"),
 
     Schema.object({
-        train_data_dir: Schema.string().role('filepicker', { type: "folder" }).default("./train/aki").description("训练数据集路径"),
-        reg_data_dir: Schema.string().role('filepicker', { type: "folder" }).description("正则化数据集路径。默认留空，不使用正则化图像"),
+        train_data_dir: Schema.string().role('filepicker', { type: "folder", internal: "train-dir" }).default("./train/aki").description("训练数据集路径"),
+        reg_data_dir: Schema.string().role('filepicker', { type: "folder", internal: "train-dir" }).description("正则化数据集路径。默认留空，不使用正则化图像"),
         resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
     }).description("数据集设置"),
 
@@ -65,7 +65,7 @@ Schema.intersect([
 
     Schema.intersect([
         Schema.object({
-            network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
+            network_weights: Schema.string().role('filepicker', { type: "model-file", internal: "model-saved-file" }).description("从已有的 LoRA 模型上继续训练，填写路径"),
             network_dim: Schema.number().min(8).max(256).step(8).default(32).description("网络维度，常用 4~128，不是越大越好, 低dim可以降低显存占用"),
             network_alpha: Schema.number().min(1).default(32).description(
                 "常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率。"
