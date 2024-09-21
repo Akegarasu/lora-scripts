@@ -66,7 +66,7 @@ git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 #### Installation
 
-Run `install.ps1` will automaticilly create a venv for you and install necessary deps. 
+Run `install.ps1` will automatically create a venv for you and install necessary deps. 
 If you are in China mainland, please use `install-cn.ps1`
 
 #### Train
@@ -89,7 +89,7 @@ run `bash run_gui.bash`, then program will open [http://127.0.0.1:28000](http://
 
 #### Installation
 
-Run `install.ps1` will automaticilly create a venv for you and install necessary deps.
+Run `install.ps1` will automatically create a venv for you and install necessary deps.
 
 #### Train
 
