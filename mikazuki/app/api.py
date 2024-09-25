@@ -193,6 +193,8 @@ async def get_files(pick_type) -> APIResponse:
         },
     }
 
+    folder_blacklist = [".ipynb_checkpoints", ".DS_Store"]
+
     def list_path_or_files(preset_info):
         path = Path(preset_info["path"])
         file_type = preset_info["type"]
@@ -214,6 +216,8 @@ async def get_files(pick_type) -> APIResponse:
         elif file_type == "folder":
             folders = [f for f in path.iterdir() if f.is_dir()]
             for folder in folders:
+                if folder.name in folder_blacklist:
+                    continue
                 result_list.append({
                     "path": str(folder.resolve().absolute()).replace("\\", "/"),
                     "name": folder.name,
