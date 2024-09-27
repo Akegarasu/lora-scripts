@@ -34,6 +34,8 @@ def run_train(toml_path: str,
 
         if len(gpu_ids) > 1:
             args[3:3] = ["--multi_gpu", "--num_processes", str(len(gpu_ids))]
+            if sys.platform == "win32":
+                customize_env["USE_LIBUV"] = "0"
 
     if not (task := tm.create_task(args, customize_env)):
         return APIResponse(status="error", message="Failed to create task / 无法创建训练任务")
