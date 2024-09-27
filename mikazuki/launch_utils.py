@@ -5,6 +5,7 @@ import re
 import shutil
 import subprocess
 import sys
+import socket
 import sysconfig
 from typing import List
 from pathlib import Path
@@ -278,3 +279,25 @@ def catch_exception(f):
         except Exception as e:
             log.error(f"An error occurred: {e}")
     return wrapper
+
+
+def check_port_avaliable(port: int):
+    try:
+        s = socket.socket()
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("127.0.0.1", port))
+        s.close()
+        return True
+    except:
+        return False
+
+
+def find_avaliable_ports(port_init: int, port_range: int):
+    server_ports = range(port_init, port_range)
+
+    for p in server_ports:
+        if check_port_avaliable(p):
+            return p
+
+    log.error(f"error finding avaliable ports in range: {port_init} -> {port_range}")
+    return None

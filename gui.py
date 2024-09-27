@@ -6,7 +6,7 @@ import subprocess
 import sys
 
 from mikazuki.launch_utils import (base_dir_path, catch_exception,
-                                   prepare_environment)
+                                   prepare_environment, check_port_avaliable, find_avaliable_ports)
 from mikazuki.log import log
 
 parser = argparse.ArgumentParser(description="GUI for stable diffusion training")
@@ -57,6 +57,13 @@ def launch():
 
     if not args.skip_prepare_environment:
         prepare_environment(disable_auto_mirror=args.disable_auto_mirror, skip_prepare_onnxruntime=args.skip_prepare_onnxruntime)
+
+    if not check_port_avaliable(args.port):
+        avaliable = find_avaliable_ports(30000, 30000+20)
+        if avaliable:
+            args.port = avaliable
+        else:
+            log.error("port finding fallback error")
 
     os.environ["MIKAZUKI_HOST"] = args.host
     os.environ["MIKAZUKI_PORT"] = str(args.port)
