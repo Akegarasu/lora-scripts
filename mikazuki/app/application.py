@@ -82,5 +82,8 @@ app.include_router(api_router, prefix="/api")
 async def index():
     return FileResponse("./frontend/dist/index.html")
 
+@app.get("/favicon.ico", response_class=FileResponse)
+async def favicon():
+    return FileResponse("mikazuki.ico")
 
 app.mount("/", SPAStaticFiles(directory="frontend/dist", html=True), name="static")
