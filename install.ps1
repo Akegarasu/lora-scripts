@@ -9,7 +9,7 @@ if (!(Test-Path -Path "venv")) {
 Write-Output "Installing deps..."
 Set-Location .\scripts
 pip install torch==2.4.1 torchvision==0.19.1 --extra-index-url https://download.pytorch.org/whl/cu124
-pip install -U -I --no-deps xformers==0.0.28.post1
+pip install -U -I --no-deps xformers==0.0.28.post1 --extra-index-url https://download.pytorch.org/whl/cu124
 pip install --upgrade -r requirements.txt
 
 Set-Location ..
