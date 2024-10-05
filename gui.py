@@ -5,7 +5,7 @@ import platform
 import subprocess
 import sys
 
-from mikazuki.launch_utils import (base_dir_path, catch_exception,
+from mikazuki.launch_utils import (base_dir_path, catch_exception, git_tag,
                                    prepare_environment, check_port_avaliable, find_avaliable_ports)
 from mikazuki.log import log
 
@@ -53,7 +53,7 @@ def run_tag_editor():
 def launch():
     log.info("Starting SD-Trainer Mikazuki GUI...")
     log.info(f"Base directory: {base_dir_path()}, Working directory: {os.getcwd()}")
-    log.info(f'{platform.system()} Python {platform.python_version()} {sys.executable}')
+    log.info(f"{platform.system()} Python {platform.python_version()} {sys.executable}")
 
     if not args.skip_prepare_environment:
         prepare_environment(disable_auto_mirror=args.disable_auto_mirror, skip_prepare_onnxruntime=args.skip_prepare_onnxruntime)
@@ -64,6 +64,8 @@ def launch():
             args.port = avaliable
         else:
             log.error("port finding fallback error")
+
+    log.info(f"SD-Trainer Version: {git_tag(base_dir_path())}")
 
     os.environ["MIKAZUKI_HOST"] = args.host
     os.environ["MIKAZUKI_PORT"] = str(args.port)

@@ -23,10 +23,30 @@ def base_dir_path():
 
 
 def find_windows_git():
-    possible_paths = ["git\\bin\\git.exe", "git\\cmd\\git.exe", "Git\\mingw64\\libexec\\git-core\\git.exe"]
+    possible_paths = ["git\\bin\\git.exe", "git\\cmd\\git.exe", "Git\\mingw64\\libexec\\git-core\\git.exe", "C:\\Program Files\\Git\\cmd\\git.exe"]
     for path in possible_paths:
         if os.path.exists(path):
             return path
+
+
+def prepare_git():
+    if shutil.which("git"):
+        return True
+
+    log.info("Finding git...")
+
+    if sys.platform == "win32":
+        git_path = find_windows_git()
+
+        if git_path is not None:
+            log.info(f"Git not found, but found git in {git_path}, add it to PATH")
+            os.environ["PATH"] += os.pathsep + os.path.dirname(git_path)
+            return True
+        else:
+            return False
+    else:
+        log.error("git not found, please install git first")
+        return False
 
 
 def prepare_submodules():
@@ -36,19 +56,18 @@ def prepare_submodules():
     if not os.path.exists(frontend_path) or not os.path.exists(tag_editor_path):
         log.info("submodule not found, try clone...")
         log.info("checking git installation...")
-        if not shutil.which("git"):
-            if sys.platform == "win32":
-                git_path = find_windows_git()
-
-                if git_path is not None:
-                    log.info(f"Git not found, but found git in {git_path}, add it to PATH")
-                    os.environ["PATH"] += os.pathsep + os.path.dirname(git_path)
-                    return
-            else:
-                log.error("git not found, please install git first")
-                sys.exit(1)
+        if not prepare_git():
+            log.error("git not found, please install git first")
+            sys.exit(1)
         subprocess.run(["git", "submodule", "init"])
         subprocess.run(["git", "submodule", "update"])
+
+
+def git_tag(path: str) -> str:
+    try:
+        return subprocess.check_output(["git", "-C", path, "describe", "--tags"]).strip().decode("utf-8")
+    except Exception as e:
+        return "<none>"
 
 
 def check_dirs(dirs: List):
