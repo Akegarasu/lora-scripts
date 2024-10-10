@@ -96,7 +96,7 @@ class NetworkTrainer:
         return logs
 
     def assert_extra_args(self, args, train_dataset_group):
-        pass
+        train_dataset_group.verify_bucket_reso_steps(64)
 
     def load_target_model(self, args, weight_dtype, accelerator):
         text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
@@ -472,7 +472,7 @@ class NetworkTrainer:
             text_encoder_lr = args.text_encoder_lr
         else:
             # toml backward compatibility
-            if args.text_encoder_lr is None or isinstance(args.text_encoder_lr, float):
+            if args.text_encoder_lr is None or isinstance(args.text_encoder_lr, float) or isinstance(args.text_encoder_lr, int):
                 text_encoder_lr = args.text_encoder_lr
             else:
                 text_encoder_lr = None if len(args.text_encoder_lr) == 0 else args.text_encoder_lr[0]
@@ -1042,7 +1042,9 @@ class NetworkTrainer:
             text_encoder = None
 
         # For --sample_at_first
+        optimizer_eval_fn()
         self.sample_images(accelerator, args, 0, global_step, accelerator.device, vae, tokenizers, text_encoder, unet)
+        optimizer_train_fn()
         if len(accelerator.trackers) > 0:
             # log empty object to commit the sample images to wandb
             accelerator.log({}, step=0)
