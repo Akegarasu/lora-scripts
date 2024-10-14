@@ -34,7 +34,7 @@ else {
     Check "激活虚拟环境失败。"
 }
 
-Set-Location .\scripts
+Set-Location .\scripts\dev
 Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 install.ps1 脚本)"
 Write-Output "受限于国内加速镜像，torch 安装无法使用镜像源，安装较为缓慢。"
 $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
@@ -48,7 +48,7 @@ if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "")
 python -m pip install --upgrade -r requirements.txt
 Check "sd-scripts 依赖安装失败。"
 
-Set-Location ..
+Set-Location ..\..
 python -m pip install --upgrade -r requirements.txt
 Check "训练界面依赖安装失败。"
 
