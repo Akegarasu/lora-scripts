@@ -60,12 +60,8 @@ else
 fi
 
 echo "Installing deps..."
-cd "$script_dir/scripts" || exit
-
-pip install --upgrade -r requirements.txt
 
 cd "$script_dir" || exit
-
 pip install --upgrade -r requirements.txt
 
 echo "Install completed"

@@ -46,10 +46,6 @@ if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "")
 }
 
 python -m pip install --upgrade -r requirements.txt
-Check "sd-scripts 依赖安装失败。"
-
-Set-Location ..
-python -m pip install --upgrade -r requirements.txt
 Check "训练界面依赖安装失败。"
 
 Write-Output "安装完毕"
