@@ -104,8 +104,8 @@ def train(args):
     setup_logging(args, reset=True)
 
     assert (
-        not args.weighted_captions
-    ), "weighted_captions is not supported currently / weighted_captionsは現在サポートされていません"
+        not args.weighted_captions or not args.cache_text_encoder_outputs
+    ), "weighted_captions is not supported when caching text encoder outputs / cache_text_encoder_outputsを使うときはweighted_captionsはサポートされていません"
     assert (
         not args.train_text_encoder or not args.cache_text_encoder_outputs
     ), "cache_text_encoder_outputs is not supported when training text encoder / text encoderを学習するときはcache_text_encoder_outputsはサポートされていません"
@@ -131,7 +131,7 @@ def train(args):
     # prepare caching strategy: this must be set before preparing dataset. because dataset may use this strategy for initialization.
     if args.cache_latents:
         latents_caching_strategy = strategy_sd.SdSdxlLatentsCachingStrategy(
-            False, args.cache_latents_to_disk, args.vae_batch_size, False
+            False, args.cache_latents_to_disk, args.vae_batch_size, args.skip_cache_check
         )
         strategy_base.LatentsCachingStrategy.set_strategy(latents_caching_strategy)
 
@@ -272,7 +272,7 @@ def train(args):
         vae.requires_grad_(False)
         vae.eval()
 
-        train_dataset_group.new_cache_latents(vae, accelerator.is_main_process)
+        train_dataset_group.new_cache_latents(vae, accelerator)
 
         vae.to("cpu")
         clean_memory_on_device(accelerator.device)
@@ -321,14 +321,14 @@ def train(args):
         if args.cache_text_encoder_outputs:
             # Text Encodes are eval and no grad
             text_encoder_output_caching_strategy = strategy_sdxl.SdxlTextEncoderOutputsCachingStrategy(
-                args.cache_text_encoder_outputs_to_disk, None, False
+                args.cache_text_encoder_outputs_to_disk, None, False, is_weighted=args.weighted_captions
             )
             strategy_base.TextEncoderOutputsCachingStrategy.set_strategy(text_encoder_output_caching_strategy)
 
             text_encoder1.to(accelerator.device)
             text_encoder2.to(accelerator.device)
             with accelerator.autocast():
-                train_dataset_group.new_cache_text_encoder_outputs([text_encoder1, text_encoder2], accelerator.is_main_process)
+                train_dataset_group.new_cache_text_encoder_outputs([text_encoder1, text_encoder2], accelerator)
 
         accelerator.wait_for_everyone()
 
@@ -660,22 +660,24 @@ def train(args):
                     input_ids1, input_ids2 = batch["input_ids_list"]
                     with torch.set_grad_enabled(args.train_text_encoder):
                         # Get the text embedding for conditioning
-                        # TODO support weighted captions
-                        # if args.weighted_captions:
-                        #     encoder_hidden_states = get_weighted_text_embeddings(
-                        #         tokenizer,
-                        #         text_encoder,
-                        #         batch["captions"],
-                        #         accelerator.device,
-                        #         args.max_token_length // 75 if args.max_token_length else 1,
-                        #         clip_skip=args.clip_skip,
-                        #     )
-                        # else:
-                        input_ids1 = input_ids1.to(accelerator.device)
-                        input_ids2 = input_ids2.to(accelerator.device)
-                        encoder_hidden_states1, encoder_hidden_states2, pool2 = text_encoding_strategy.encode_tokens(
-                            tokenize_strategy, [text_encoder1, text_encoder2], [input_ids1, input_ids2]
-                        )
+                        if args.weighted_captions:
+                            input_ids_list, weights_list = tokenize_strategy.tokenize_with_weights(batch["captions"])
+                            encoder_hidden_states1, encoder_hidden_states2, pool2 = (
+                                text_encoding_strategy.encode_tokens_with_weights(
+                                    tokenize_strategy,
+                                    [text_encoder1, text_encoder2, accelerator.unwrap_model(text_encoder2)],
+                                    input_ids_list,
+                                    weights_list,
+                                )
+                            )
+                        else:
+                            input_ids1 = input_ids1.to(accelerator.device)
+                            input_ids2 = input_ids2.to(accelerator.device)
+                            encoder_hidden_states1, encoder_hidden_states2, pool2 = text_encoding_strategy.encode_tokens(
+                                tokenize_strategy,
+                                [text_encoder1, text_encoder2, accelerator.unwrap_model(text_encoder2)],
+                                [input_ids1, input_ids2],
+                            )
                         if args.full_fp16:
                             encoder_hidden_states1 = encoder_hidden_states1.to(weight_dtype)
                             encoder_hidden_states2 = encoder_hidden_states2.to(weight_dtype)
@@ -731,7 +733,7 @@ def train(args):
                     if args.v_pred_like_loss:
                         loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
                     if args.debiased_estimation_loss:
-                        loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
+                        loss = apply_debiased_estimation(loss, timesteps, noise_scheduler, args.v_parameterization)
 
                     loss = loss.mean()  # mean over batch dimension
                 else:

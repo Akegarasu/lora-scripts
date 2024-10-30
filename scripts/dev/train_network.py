@@ -116,7 +116,7 @@ class NetworkTrainer:
 
     def get_latents_caching_strategy(self, args):
         latents_caching_strategy = strategy_sd.SdSdxlLatentsCachingStrategy(
-            True, args.cache_latents_to_disk, args.vae_batch_size, False
+            True, args.cache_latents_to_disk, args.vae_batch_size, args.skip_cache_check
         )
         return latents_caching_strategy
 
@@ -143,7 +143,7 @@ class NetworkTrainer:
         for t_enc in text_encoders:
             t_enc.to(accelerator.device, dtype=weight_dtype)
 
-    def call_unet(self, args, accelerator, unet, noisy_latents, timesteps, text_conds, batch, weight_dtype):
+    def call_unet(self, args, accelerator, unet, noisy_latents, timesteps, text_conds, batch, weight_dtype, **kwargs):
         noise_pred = unet(noisy_latents, timesteps, text_conds[0]).sample
         return noise_pred
 
@@ -218,6 +218,30 @@ class NetworkTrainer:
         else:
             target = noise
 
+        # differential output preservation
+        if "custom_attributes" in batch:
+            diff_output_pr_indices = []
+            for i, custom_attributes in enumerate(batch["custom_attributes"]):
+                if "diff_output_preservation" in custom_attributes and custom_attributes["diff_output_preservation"]:
+                    diff_output_pr_indices.append(i)
+
+            if len(diff_output_pr_indices) > 0:
+                network.set_multiplier(0.0)
+                with torch.no_grad(), accelerator.autocast():
+                    noise_pred_prior = self.call_unet(
+                        args,
+                        accelerator,
+                        unet,
+                        noisy_latents,
+                        timesteps,
+                        text_encoder_conds,
+                        batch,
+                        weight_dtype,
+                        indices=diff_output_pr_indices,
+                    )
+                network.set_multiplier(1.0)  # may be overwritten by "network_multipliers" in the next step
+                target[diff_output_pr_indices] = noise_pred_prior.to(target.dtype)
+
         return noise_pred, target, timesteps, huber_c, None
 
     def post_process_loss(self, loss, args, timesteps, noise_scheduler):
@@ -228,7 +252,7 @@ class NetworkTrainer:
         if args.v_pred_like_loss:
             loss = add_v_prediction_like_loss(loss, timesteps, noise_scheduler, args.v_pred_like_loss)
         if args.debiased_estimation_loss:
-            loss = apply_debiased_estimation(loss, timesteps, noise_scheduler)
+            loss = apply_debiased_estimation(loss, timesteps, noise_scheduler, args.v_parameterization)
         return loss
 
     def get_sai_model_spec(self, args):
@@ -384,7 +408,7 @@ class NetworkTrainer:
             vae.requires_grad_(False)
             vae.eval()
 
-            train_dataset_group.new_cache_latents(vae, accelerator.is_main_process)
+            train_dataset_group.new_cache_latents(vae, accelerator)
 
             vae.to("cpu")
             clean_memory_on_device(accelerator.device)
@@ -1123,14 +1147,12 @@ class NetworkTrainer:
                         with torch.set_grad_enabled(train_text_encoder), accelerator.autocast():
                             # Get the text embedding for conditioning
                             if args.weighted_captions:
-                                # SD only
-                                encoded_text_encoder_conds = get_weighted_text_embeddings(
-                                    tokenizers[0],
-                                    text_encoder,
-                                    batch["captions"],
-                                    accelerator.device,
-                                    args.max_token_length // 75 if args.max_token_length else 1,
-                                    clip_skip=args.clip_skip,
+                                input_ids_list, weights_list = tokenize_strategy.tokenize_with_weights(batch["captions"])
+                                encoded_text_encoder_conds = text_encoding_strategy.encode_tokens_with_weights(
+                                    tokenize_strategy,
+                                    self.get_models_for_text_encoding(args, accelerator, text_encoders),
+                                    input_ids_list,
+                                    weights_list,
                                 )
                             else:
                                 input_ids = [ids.to(accelerator.device) for ids in batch["input_ids_list"]]
@@ -1139,8 +1161,8 @@ class NetworkTrainer:
                                     self.get_models_for_text_encoding(args, accelerator, text_encoders),
                                     input_ids,
                                 )
-                                if args.full_fp16:
-                                    encoded_text_encoder_conds = [c.to(weight_dtype) for c in encoded_text_encoder_conds]
+                            if args.full_fp16:
+                                encoded_text_encoder_conds = [c.to(weight_dtype) for c in encoded_text_encoder_conds]
 
                         # if text_encoder_conds is not cached, use encoded_text_encoder_conds
                         if len(text_encoder_conds) == 0:

@@ -1,4 +1,5 @@
 import argparse
+from typing import List, Optional
 
 import torch
 from accelerate import Accelerator
@@ -67,7 +68,7 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
 
     def get_latents_caching_strategy(self, args):
         latents_caching_strategy = strategy_sd.SdSdxlLatentsCachingStrategy(
-            False, args.cache_latents_to_disk, args.vae_batch_size, False
+            False, args.cache_latents_to_disk, args.vae_batch_size, args.skip_cache_check
         )
         return latents_caching_strategy
 
@@ -79,7 +80,9 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
 
     def get_text_encoder_outputs_caching_strategy(self, args):
         if args.cache_text_encoder_outputs:
-            return strategy_sdxl.SdxlTextEncoderOutputsCachingStrategy(args.cache_text_encoder_outputs_to_disk, None, False)
+            return strategy_sdxl.SdxlTextEncoderOutputsCachingStrategy(
+                args.cache_text_encoder_outputs_to_disk, None, args.skip_cache_check, is_weighted=args.weighted_captions
+            )
         else:
             return None
 
@@ -100,9 +103,7 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
             text_encoders[0].to(accelerator.device, dtype=weight_dtype)
             text_encoders[1].to(accelerator.device, dtype=weight_dtype)
             with accelerator.autocast():
-                dataset.new_cache_text_encoder_outputs(
-                    text_encoders + [accelerator.unwrap_model(text_encoders[-1])], accelerator.is_main_process
-                )
+                dataset.new_cache_text_encoder_outputs(text_encoders + [accelerator.unwrap_model(text_encoders[-1])], accelerator)
             accelerator.wait_for_everyone()
 
             text_encoders[0].to("cpu", dtype=torch.float32)  # Text Encoder doesn't work with fp16 on CPU
@@ -172,7 +173,18 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
 
         return encoder_hidden_states1, encoder_hidden_states2, pool2
 
-    def call_unet(self, args, accelerator, unet, noisy_latents, timesteps, text_conds, batch, weight_dtype):
+    def call_unet(
+        self,
+        args,
+        accelerator,
+        unet,
+        noisy_latents,
+        timesteps,
+        text_conds,
+        batch,
+        weight_dtype,
+        indices: Optional[List[int]] = None,
+    ):
         noisy_latents = noisy_latents.to(weight_dtype)  # TODO check why noisy_latents is not weight_dtype
 
         # get size embeddings
@@ -185,6 +197,12 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
         encoder_hidden_states1, encoder_hidden_states2, pool2 = text_conds
         vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
         text_embedding = torch.cat([encoder_hidden_states1, encoder_hidden_states2], dim=2).to(weight_dtype)
+
+        if indices is not None and len(indices) > 0:
+            noisy_latents = noisy_latents[indices]
+            timesteps = timesteps[indices]
+            text_embedding = text_embedding[indices]
+            vector_embedding = vector_embedding[indices]
 
         noise_pred = unet(noisy_latents, timesteps, text_embedding, vector_embedding)
         return noise_pred
