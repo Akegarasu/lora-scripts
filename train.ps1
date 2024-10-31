@@ -2,7 +2,7 @@
 
 # Train data path | 设置训练用模型、图片
 $pretrained_model = "./sd-models/model.ckpt" # base model path | 底模路径
-$model_type = "sd1.5" # sd1.5 sd2.0 sdxl model | 可选 sd1.5 sd2.0 sdxl。SD2.0模型 2.0模型下 clip_skip 默认无效
+$model_type = "sd1.5" # sd1.5 sd2.0 sdxl flux model | 可选 sd1.5 sd2.0 sdxl flux。SD2.0模型下 clip_skip 默认无效
 $parameterization = 0 # parameterization | 参数化 本参数需要在 model_type 为 sd2.0 时才可启用
 
 $train_data_dir = "./train/aki" # train dataset path | 训练数据集路径
@@ -75,14 +75,19 @@ $Env:XFORMERS_FORCE_DISABLE_TRITON = "1"
 $ext_args = [System.Collections.ArrayList]::new()
 $launch_args = [System.Collections.ArrayList]::new()
 
-$trainer_file = "./scripts/train_network.py"
+$trainer_file = "./scripts/stable/train_network.py"
 
 if ($model_type -eq "sd1.5") {
   [void]$ext_args.Add("--clip_skip=$clip_skip")
-} elseif ($model_type -eq "sd2.0") {
+}
+elseif ($model_type -eq "sd2.0") {
   [void]$ext_args.Add("--v2")
-} elseif ($model_type -eq "sdxl") {
-  $trainer_file = "./scripts/sdxl_train_network.py"
+}
+elseif ($model_type -eq "sdxl") {
+  $trainer_file = "./scripts/stable/sdxl_train_network.py"
+}
+elseif ($model_type -eq "flux") {
+  $trainer_file = "./scripts/dev/flux_train_network.py"
 }
 
 if ($multi_gpu) {
