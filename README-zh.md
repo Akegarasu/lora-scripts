@@ -80,7 +80,7 @@ git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 #### 训练
 
-运行 `bash run_gui.bash`，程序将自动打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)
+运行 `bash run_gui.sh`，程序将自动打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)
 
 ## 通过手动运行脚本的传统训练方式
 
