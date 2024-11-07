@@ -95,10 +95,10 @@ docker push akegarasu_lora-scripts:latest
 
 #### 使用镜像
 
-> 提供一个本人已打包好并推送到阿里云 cs 的镜像。
+> 提供一个本人已打包好并推送到 `aliyuncs` 上的镜像。
 
 ```bash
-docker run -gpus all registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest -p 28000:28000 -p 6006:6006
+docker run --gpus all registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest -p 28000:28000 -p 6006:6006
 ```
 
 或者使用 `docker-compose.yaml` 。
@@ -109,14 +109,14 @@ services:
     container_name: lora-scripts
     build:
       context: .
-      dockerfile: Dockerfile
-    image: "registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:patch-6"
+      dockerfile: Dockerfile-for-Mainland-China
+    image: "registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest"
     ports:
       - "28000:28000"
       - "26006:6006"  
-    volumes:
-      # 共享本地文件夹（请根据实际修改）
-      - "/data/srv/lora-scripts:/app/lora-scripts"
+    # 共享本地文件夹（请根据实际修改）
+    #volumes:
+      # - "/data/srv/lora-scripts:/app/lora-scripts"
       # 共享 comfyui 大模型
       # - "/data/srv/comfyui/models/checkpoints:/app/lora-scripts/sd-models/comfyui"
       # 共享 sd-webui 大模型
