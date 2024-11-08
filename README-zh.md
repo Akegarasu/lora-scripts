@@ -113,7 +113,7 @@ services:
     image: "registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest"
     ports:
       - "28000:28000"
-      - "26006:6006"  
+      - "6006:6006"  
     # 共享本地文件夹（请根据实际修改）
     #volumes:
       # - "/data/srv/lora-scripts:/app/lora-scripts"
