@@ -95,7 +95,7 @@ docker push akegarasu_lora-scripts:latest
 
 #### 使用镜像
 
-> 提供一个本人已打包好并推送到 `aliyuncs` 上的镜像，此镜像归档大小约 `22G` 左右，请耐心等待拉取。
+> 提供一个本人已打包好并推送到 `aliyuncs` 上的镜像，此镜像压缩归档大小约 `10G` 左右，请耐心等待拉取。
 
 ```bash
 docker run --gpus all registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest -p 28000:28000 -p 6006:6006
