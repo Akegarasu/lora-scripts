@@ -82,6 +82,62 @@ git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 运行 `bash run_gui.bash`，程序将自动打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)
 
+### Docker
+
+#### 编译镜像
+
+```bash
+# 国内镜像优化版本
+# 其中 akegarasu_lora-scripts:latest 为镜像及其 tag 名，根据镜像托管服务商实际进行修改
+docker build -t akegarasu_lora-scripts:latest -f Dockfile-for-Mainland-China .
+docker push akegarasu_lora-scripts:latest
+```
+
+#### 使用镜像
+
+> 提供一个本人已打包好并推送到 `aliyuncs` 上的镜像，此镜像压缩归档大小约 `10G` 左右，请耐心等待拉取。
+
+```bash
+docker run --gpus all -p 28000:28000 -p 6006:6006 registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest 
+```
+
+或者使用 `docker-compose.yaml` 。
+
+```yaml
+services:
+  lora-scripts:
+    container_name: lora-scripts
+    build:
+      context: .
+      dockerfile: Dockerfile-for-Mainland-China
+    image: "registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest"
+    ports:
+      - "28000:28000"
+      - "6006:6006"  
+    # 共享本地文件夹（请根据实际修改）
+    #volumes:
+      # - "/data/srv/lora-scripts:/app/lora-scripts"
+      # 共享 comfyui 大模型
+      # - "/data/srv/comfyui/models/checkpoints:/app/lora-scripts/sd-models/comfyui"
+      # 共享 sd-webui 大模型
+      # - "/data/srv/stable-diffusion-webui/models/Stable-diffusion:/app/lora-scripts/sd-models/sd-webui"
+    environment:
+      - HF_HOME=huggingface
+      - PYTHONUTF8=1
+    security_opt:
+      - "label=type:nvidia_container_t"
+    runtime: nvidia
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+```
+ 
+关于容器使用 GPU 相关依赖安装问题，请自行搜索查阅资料解决。
+
 ## 通过手动运行脚本的传统训练方式
 
 ### Windows
