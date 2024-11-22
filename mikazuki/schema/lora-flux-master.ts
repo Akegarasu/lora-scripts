@@ -28,7 +28,7 @@ Schema.intersect([
         enable_bucket: Schema.boolean().default(true).description("启用 arb 桶以允许非固定宽高比的图片"),
         min_bucket_reso: Schema.number().default(256).description("arb 桶最小分辨率"),
         max_bucket_reso: Schema.number().default(2048).description("arb 桶最大分辨率"),
-        bucket_reso_steps: Schema.number().default(32).description("arb 桶分辨率划分单位，SDXL 可以使用 32 (SDXL低于32时失效)"),
+        bucket_reso_steps: Schema.number().default(64).description("arb 桶分辨率划分单位，FLUX 必须为 64 的倍数 (FLUX低于64时无法训练)"),
         bucket_no_upscale: Schema.boolean().default(true).description("arb 桶不放大图片"),
     }).description("数据集设置"),
 
