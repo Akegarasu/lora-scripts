@@ -1,0 +1,16 @@
+# 模板显示的信息
+[metadata]
+name = "中分辨率训练" # 模板名称
+version = "0.0.1" # 模板版本
+author = "秋叶" # 模板作者
+# train_type 参数可以设置 lora-basic，lora-master，flux-lora 等内容。用于过滤显示的。不填就全部显示
+# train_type = ""
+description = "这是一个样例模板，提高训练分辨率。"
+
+# 模板配置内容。请只填写修改了的内容，未修改无需填写。
+[data]
+resolution = "768,768"
+enable_bucket = true
+min_bucket_reso = 256
+max_bucket_reso = 2048
+bucket_no_upscale = true
