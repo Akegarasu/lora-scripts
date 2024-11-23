@@ -127,3 +127,7 @@ declare namespace Schemastery {
 type SchemaI<S = any, T = S> = Schemastery.Schemastery<S, T>;
 
 declare const Schema: Schemastery.Static
+
+declare const SHARED_SCHEMAS: Dict<any>
+
+declare function UpdateSchema(origin: Record<string, any>, modify?: Record<string, any>, toDelete?: string[]): Record<string, any>;

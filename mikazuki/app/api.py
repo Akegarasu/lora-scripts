@@ -34,6 +34,7 @@ avaliable_scripts = [
 ]
 
 avaliable_schemas = []
+avaliable_presets = []
 
 trainer_mapping = {
     "sd-lora": "./scripts/stable/train_network.py",
@@ -65,6 +66,18 @@ async def load_schemas():
                 "schema": content,
                 "hash": lambda_hash(content)
             })
+
+
+async def load_presets():
+    avaliable_presets.clear()
+
+    preset_dir = os.path.join(os.getcwd(), "config", "presets")
+    presets = os.listdir(preset_dir)
+
+    for preset_name in presets:
+        with open(os.path.join(preset_dir, preset_name), encoding="utf-8") as f:
+            content = f.read()
+            avaliable_presets.append(toml.loads(content))
 
 
 @router.post("/run")
@@ -279,6 +292,17 @@ async def list_schema_hashes() -> APIResponse:
 async def get_all_schemas() -> APIResponse:
     return APIResponseSuccess(data={
         "schemas": avaliable_schemas
+    })
+
+
+@router.get("/presets")
+async def get_presets() -> APIResponse:
+    if os.environ.get("MIKAZUKI_SCHEMA_HOT_RELOAD", "0") == "1":
+        log.info("Hot reloading presets")
+        await load_presets()
+
+    return APIResponseSuccess(data={
+        "presets": avaliable_presets
     })
 
 
