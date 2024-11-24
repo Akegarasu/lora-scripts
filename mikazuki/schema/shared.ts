@@ -28,6 +28,52 @@
             }
         },
 
+        LYCORIS_MAIN: Schema.union([
+            Schema.object({
+                network_module: Schema.const('lycoris.kohya').required(),
+                lycoris_algo: Schema.union(["locon", "loha", "lokr", "ia3", "dylora", "glora", "diag-oft", "boft"]).default("locon").description('LyCORIS 网络算法'),
+                conv_dim: Schema.number().default(4),
+                conv_alpha: Schema.number().default(1),
+                dropout: Schema.number().step(0.01).default(0).description('dropout 概率。推荐 0~0.5，LoHa/LoKr/(IA)^3暂不支持'),
+                train_norm: Schema.boolean().default(false).description('训练 Norm 层，不支持 (IA)^3'),
+            }),
+
+            Schema.object({}),
+        ]),
+
+        LYCORIS_LOKR: Schema.union([
+            Schema.object({
+                lycoris_algo: Schema.const('lokr').required(),
+                lokr_factor: Schema.number().min(-1).default(-1).description('常用 `4~无穷`（填写 -1 为无穷）'),
+            }),
+            Schema.object({}),
+        ]),
+
+        NETWORK_OPTION_DYLORA: Schema.object({
+            network_module: Schema.const('networks.dylora').required(),
+            dylora_unit: Schema.number().min(1).default(4).description(' dylora 分割块数单位，最小 1 也最慢。一般 4、8、12、16 这几个选'),
+        }),
+
+        NETWORK_OPTION_BASEWEIGHT: Schema.union([
+            Schema.object({
+                enable_base_weight: Schema.const(true).required(),
+                base_weights: Schema.string().role('textarea').description("合并入底模的 LoRA 路径，一行一个路径"),
+                base_weights_multiplier: Schema.string().role('textarea').description("合并入底模的 LoRA 权重，一行一个数字"),
+            }),
+            Schema.object({}),
+        ]),
+
+        NETWORK_OPTION_BLOCK_WEIGHTS: Schema.union([
+            Schema.object({
+                enable_block_weights: Schema.const(true).required(),
+                down_lr_weight: Schema.string().role('folder').default("1,1,1,1,1,1,1,1,1,1,1,1").description("U-Net 的 Encoder 层分层学习率权重，共 12 层"),
+                mid_lr_weight: Schema.string().role('folder').default("1").description("U-Net 的 Mid 层分层学习率权重，共 1 层"),
+                up_lr_weight: Schema.string().role('folder').default("1,1,1,1,1,1,1,1,1,1,1,1").description("U-Net 的 Decoder 层分层学习率权重，共 12 层"),
+                block_lr_zero_threshold: Schema.number().step(0.01).default(0).description("分层学习率置 0 阈值"),
+            }),
+            Schema.object({}),
+        ]),
+
         SAVE_SETTINGS: Schema.object({
             output_name: Schema.string().default("aki").description("模型保存名称"),
             output_dir: Schema.string().role('filepicker', { type: "folder" }).default("./output").description("模型保存文件夹"),

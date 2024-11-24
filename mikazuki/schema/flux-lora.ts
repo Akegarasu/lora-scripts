@@ -46,7 +46,7 @@ Schema.intersect([
 
     Schema.intersect([
         Schema.object({
-            network_module: Schema.union(["networks.lora_flux", "networks.oft_flux"]).default("networks.lora_flux").description("训练网络模块"),
+            network_module: Schema.union(["networks.lora_flux", "networks.oft_flux", "lycoris.kohya"]).default("networks.lora_flux").description("训练网络模块"),
             network_weights: Schema.string().role('filepicker').description("从已有的 LoRA 模型上继续训练，填写路径"),
             network_dim: Schema.number().min(1).default(2).description("网络维度，常用 4~128，不是越大越好, 低dim可以降低显存占用"),
             network_alpha: Schema.number().min(1).default(16).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率"),
@@ -56,14 +56,11 @@ Schema.intersect([
             enable_base_weight: Schema.boolean().default(false).description('启用基础权重（差异炼丹）'),
         }).description("网络设置"),
 
-        Schema.union([
-            Schema.object({
-                enable_base_weight: Schema.const(true).required(),
-                base_weights: Schema.string().role('textarea').description("合并入底模的 LoRA 路径，一行一个路径"),
-                base_weights_multiplier: Schema.string().role('textarea').description("合并入底模的 LoRA 权重，一行一个数字"),
-            }),
-            Schema.object({}),
-        ]),
+        // lycoris 参数
+        SHARED_SCHEMAS.LYCORIS_MAIN,
+        SHARED_SCHEMAS.LYCORIS_LOKR,
+
+        SHARED_SCHEMAS.NETWORK_OPTION_BASEWEIGHT,
     ]),
 
     // 预览图设置
