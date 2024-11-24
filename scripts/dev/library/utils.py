@@ -6,6 +6,7 @@ import json
 import struct
 
 import torch
+import torch.nn as nn
 from torchvision import transforms
 from diffusers import EulerAncestralDiscreteScheduler
 import diffusers.schedulers.scheduling_euler_ancestral_discrete
@@ -13,10 +14,14 @@ from diffusers.schedulers.scheduling_euler_ancestral_discrete import EulerAncest
 import cv2
 from PIL import Image
 import numpy as np
+from safetensors.torch import load_file
 
 
 def fire_in_thread(f, *args, **kwargs):
     threading.Thread(target=f, args=args, kwargs=kwargs).start()
+
+
+# region Logging
 
 
 def add_logging_arguments(parser):
@@ -83,6 +88,45 @@ def setup_logging(args=None, log_level=None, reset=False):
     if msg_init is not None:
         logger = logging.getLogger(__name__)
         logger.info(msg_init)
+
+
+# endregion
+
+# region PyTorch utils
+
+
+def swap_weight_devices(layer_to_cpu: nn.Module, layer_to_cuda: nn.Module):
+    assert layer_to_cpu.__class__ == layer_to_cuda.__class__
+
+    weight_swap_jobs = []
+    for module_to_cpu, module_to_cuda in zip(layer_to_cpu.modules(), layer_to_cuda.modules()):
+        if hasattr(module_to_cpu, "weight") and module_to_cpu.weight is not None:
+            weight_swap_jobs.append((module_to_cpu, module_to_cuda, module_to_cpu.weight.data, module_to_cuda.weight.data))
+
+    torch.cuda.current_stream().synchronize()  # this prevents the illegal loss value
+
+    stream = torch.cuda.Stream()
+    with torch.cuda.stream(stream):
+        # cuda to cpu
+        for module_to_cpu, module_to_cuda, cuda_data_view, cpu_data_view in weight_swap_jobs:
+            cuda_data_view.record_stream(stream)
+            module_to_cpu.weight.data = cuda_data_view.data.to("cpu", non_blocking=True)
+
+        stream.synchronize()
+
+        # cpu to cuda
+        for module_to_cpu, module_to_cuda, cuda_data_view, cpu_data_view in weight_swap_jobs:
+            cuda_data_view.copy_(module_to_cuda.weight.data, non_blocking=True)
+            module_to_cuda.weight.data = cuda_data_view
+
+    stream.synchronize()
+    torch.cuda.current_stream().synchronize()  # this prevents the illegal loss value
+
+
+def weighs_to_device(layer: nn.Module, device: torch.device):
+    for module in layer.modules():
+        if hasattr(module, "weight") and module.weight is not None:
+            module.weight.data = module.weight.data.to(device, non_blocking=True)
 
 
 def str_to_dtype(s: Optional[str], default_dtype: Optional[torch.dtype] = None) -> torch.dtype:
@@ -304,6 +348,35 @@ class MemoryEfficientSafeOpen:
             # return byte_tensor.view(torch.uint8).to(torch.float16).reshape(shape)
             raise ValueError(f"Unsupported float8 type: {dtype_str} (upgrade PyTorch to support float8 types)")
 
+
+def load_safetensors(
+    path: str, device: Union[str, torch.device], disable_mmap: bool = False, dtype: Optional[torch.dtype] = torch.float32
+) -> dict[str, torch.Tensor]:
+    if disable_mmap:
+        # return safetensors.torch.load(open(path, "rb").read())
+        # use experimental loader
+        # logger.info(f"Loading without mmap (experimental)")
+        state_dict = {}
+        with MemoryEfficientSafeOpen(path) as f:
+            for key in f.keys():
+                state_dict[key] = f.get_tensor(key).to(device, dtype=dtype)
+        return state_dict
+    else:
+        try:
+            state_dict = load_file(path, device=device)
+        except:
+            state_dict = load_file(path)  # prevent device invalid Error
+        if dtype is not None:
+            for key in state_dict.keys():
+                state_dict[key] = state_dict[key].to(dtype=dtype)
+        return state_dict
+
+
+# endregion
+
+# region Image utils
+
+
 def pil_resize(image, size, interpolation=Image.LANCZOS):
     has_alpha = image.shape[2] == 4 if len(image.shape) == 3 else False
 
@@ -323,9 +396,9 @@ def pil_resize(image, size, interpolation=Image.LANCZOS):
     return resized_cv2
 
 
+# endregion
+
 # TODO make inf_utils.py
-
-
 # region Gradual Latent hires fix
 
 

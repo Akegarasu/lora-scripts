@@ -1082,6 +1082,10 @@ class BaseDataset(torch.utils.data.Dataset):
                     info.image = info.image.result()  # future to image
             caching_strategy.cache_batch_latents(model, batch, cond.flip_aug, cond.alpha_mask, cond.random_crop)
 
+            # remove image from memory
+            for info in batch:
+                info.image = None
+
         # define ThreadPoolExecutor to load images in parallel
         max_workers = min(os.cpu_count(), len(image_infos))
         max_workers = max(1, max_workers // num_processes)  # consider multi-gpu
@@ -1397,7 +1401,17 @@ class BaseDataset(torch.utils.data.Dataset):
                 )
 
     def get_image_size(self, image_path):
-        return imagesize.get(image_path)
+        # return imagesize.get(image_path)
+        image_size = imagesize.get(image_path)
+        if image_size[0] <= 0:
+            # imagesize doesn't work for some images, so use PIL as a fallback
+            try:
+                with Image.open(image_path) as img:
+                    image_size = img.size
+            except Exception as e:
+                logger.warning(f"failed to get image size: {image_path}, error: {e}")
+                image_size = (0, 0)
+        return image_size
 
     def load_image_with_face_info(self, subset: BaseSubset, image_path: str, alpha_mask=False):
         img = load_image(image_path, alpha_mask)
@@ -1615,7 +1629,6 @@ class BaseDataset(torch.utils.data.Dataset):
                 text_encoder_outputs = self.text_encoder_output_caching_strategy.load_outputs_npz(
                     image_info.text_encoder_outputs_npz
                 )
-                text_encoder_outputs = [torch.FloatTensor(x) for x in text_encoder_outputs]
             else:
                 tokenization_required = True
             text_encoder_outputs_list.append(text_encoder_outputs)
@@ -1874,7 +1887,9 @@ class DreamBoothDataset(BaseDataset):
 
                     # make image path to npz path mapping
                     npz_paths = glob.glob(os.path.join(subset.image_dir, "*" + strategy.cache_suffix))
-                    npz_paths.sort()
+                    npz_paths.sort(
+                        key=lambda item: item.rsplit("_", maxsplit=2)[0]
+                    )  # sort by name excluding resolution and cache_suffix
                     npz_path_index = 0
 
                     size_set_count = 0
@@ -2510,6 +2525,9 @@ class DatasetGroup(torch.utils.data.ConcatDataset):
     def verify_bucket_reso_steps(self, min_steps: int):
         for dataset in self.datasets:
             dataset.verify_bucket_reso_steps(min_steps)
+
+    def get_resolutions(self) -> List[Tuple[int, int]]:
+        return [(dataset.width, dataset.height) for dataset in self.datasets]
 
     def is_latent_cacheable(self) -> bool:
         return all([dataset.is_latent_cacheable() for dataset in self.datasets])
@@ -3521,8 +3539,8 @@ def add_optimizer_arguments(parser: argparse.ArgumentParser):
     parser.add_argument(
         "--fused_backward_pass",
         action="store_true",
-        help="Combines backward pass and optimizer step to reduce VRAM usage. Only available in SDXL"
-        + " / バックワードパスとオプティマイザステップを組み合わせてVRAMの使用量を削減します。SDXLでのみ有効",
+        help="Combines backward pass and optimizer step to reduce VRAM usage. Only available in SDXL, SD3 and FLUX"
+        " / バックワードパスとオプティマイザステップを組み合わせてVRAMの使用量を削減します。SDXL、SD3、FLUXでのみ利用可能",
     )
     parser.add_argument(
         "--lr_scheduler_timescale",
@@ -4008,6 +4026,72 @@ def add_masked_loss_arguments(parser: argparse.ArgumentParser):
         "--masked_loss",
         action="store_true",
         help="apply mask for calculating loss. conditioning_data_dir is required for dataset. / 損失計算時にマスクを適用する。datasetにはconditioning_data_dirが必要",
+    )
+
+
+def add_dit_training_arguments(parser: argparse.ArgumentParser):
+    # Text encoder related arguments
+    parser.add_argument(
+        "--cache_text_encoder_outputs", action="store_true", help="cache text encoder outputs / text encoderの出力をキャッシュする"
+    )
+    parser.add_argument(
+        "--cache_text_encoder_outputs_to_disk",
+        action="store_true",
+        help="cache text encoder outputs to disk / text encoderの出力をディスクにキャッシュする",
+    )
+    parser.add_argument(
+        "--text_encoder_batch_size",
+        type=int,
+        default=None,
+        help="text encoder batch size (default: None, use dataset's batch size)"
+        + " / text encoderのバッチサイズ（デフォルト: None, データセットのバッチサイズを使用）",
+    )
+
+    # Model loading optimization
+    parser.add_argument(
+        "--disable_mmap_load_safetensors",
+        action="store_true",
+        help="disable mmap load for safetensors. Speed up model loading in WSL environment / safetensorsのmmapロードを無効にする。WSL環境等でモデル読み込みを高速化できる",
+    )
+
+    # Training arguments. partial copy from Diffusers
+    parser.add_argument(
+        "--weighting_scheme",
+        type=str,
+        default="uniform",
+        choices=["sigma_sqrt", "logit_normal", "mode", "cosmap", "none", "uniform"],
+        help="weighting scheme for timestep distribution. Default is uniform, uniform and none are the same behavior"
+        " / タイムステップ分布の重み付けスキーム、デフォルトはuniform、uniform と none は同じ挙動",
+    )
+    parser.add_argument(
+        "--logit_mean",
+        type=float,
+        default=0.0,
+        help="mean to use when using the `'logit_normal'` weighting scheme / `'logit_normal'`重み付けスキームを使用する場合の平均",
+    )
+    parser.add_argument(
+        "--logit_std",
+        type=float,
+        default=1.0,
+        help="std to use when using the `'logit_normal'` weighting scheme / `'logit_normal'`重み付けスキームを使用する場合のstd",
+    )
+    parser.add_argument(
+        "--mode_scale",
+        type=float,
+        default=1.29,
+        help="Scale of mode weighting scheme. Only effective when using the `'mode'` as the `weighting_scheme` / モード重み付けスキームのスケール",
+    )
+
+    # offloading
+    parser.add_argument(
+        "--blocks_to_swap",
+        type=int,
+        default=None,
+        help="[EXPERIMENTAL] "
+        "Sets the number of blocks to swap during the forward and backward passes."
+        "Increasing this number lowers the overall VRAM used during training at the expense of training speed (s/it)."
+        " / 順伝播および逆伝播中にスワップするブロックの数を設定します。"
+        "この数を増やすと、トレーニング中のVRAM使用量が減りますが、トレーニング速度（s/it）も低下します。",
     )
 
 
@@ -5829,6 +5913,7 @@ def append_lr_to_logs(logs, lr_scheduler, optimizer_type, including_unet=True):
         names.append("unet")
     names.append("text_encoder1")
     names.append("text_encoder2")
+    names.append("text_encoder3") # SD3
 
     append_lr_to_logs_with_names(logs, lr_scheduler, optimizer_type, names)
 
@@ -5961,6 +6046,37 @@ def line_to_prompt_dict(line: str) -> dict:
             logger.error(ex)
 
     return prompt_dict
+
+
+def load_prompts(prompt_file: str) -> List[Dict]:
+    # read prompts
+    if prompt_file.endswith(".txt"):
+        with open(prompt_file, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        prompts = [line.strip() for line in lines if len(line.strip()) > 0 and line[0] != "#"]
+    elif prompt_file.endswith(".toml"):
+        with open(prompt_file, "r", encoding="utf-8") as f:
+            data = toml.load(f)
+        prompts = [dict(**data["prompt"], **subset) for subset in data["prompt"]["subset"]]
+    elif prompt_file.endswith(".json"):
+        with open(prompt_file, "r", encoding="utf-8") as f:
+            prompts = json.load(f)
+
+    # preprocess prompts
+    for i in range(len(prompts)):
+        prompt_dict = prompts[i]
+        if isinstance(prompt_dict, str):
+            from library.train_util import line_to_prompt_dict
+
+            prompt_dict = line_to_prompt_dict(prompt_dict)
+            prompts[i] = prompt_dict
+        assert isinstance(prompt_dict, dict)
+
+        # Adds an enumerator to the dict based on prompt position. Used later to name image files. Also cleanup of extra data in original prompt dict.
+        prompt_dict["enum"] = i
+        prompt_dict.pop("subset", None)
+
+    return prompts
 
 
 def sample_images_common(
