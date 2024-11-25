@@ -37,7 +37,6 @@
                 dropout: Schema.number().step(0.01).default(0).description('dropout 概率。推荐 0~0.5，LoHa/LoKr/(IA)^3暂不支持'),
                 train_norm: Schema.boolean().default(false).description('训练 Norm 层，不支持 (IA)^3'),
             }),
-
             Schema.object({}),
         ]),
 
@@ -49,10 +48,13 @@
             Schema.object({}),
         ]),
 
-        NETWORK_OPTION_DYLORA: Schema.object({
-            network_module: Schema.const('networks.dylora').required(),
-            dylora_unit: Schema.number().min(1).default(4).description(' dylora 分割块数单位，最小 1 也最慢。一般 4、8、12、16 这几个选'),
-        }),
+        NETWORK_OPTION_DYLORA: Schema.union([
+            Schema.object({
+                network_module: Schema.const('networks.dylora').required(),
+                dylora_unit: Schema.number().min(1).default(4).description(' dylora 分割块数单位，最小 1 也最慢。一般 4、8、12、16 这几个选'),
+            }),
+            Schema.object({}),
+        ]),
 
         NETWORK_OPTION_BASEWEIGHT: Schema.union([
             Schema.object({
