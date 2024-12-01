@@ -86,7 +86,7 @@ Schema.intersect([
     SHARED_SCHEMAS.OTHER,
 
     // 速度优化选项
-    SHARED_SCHEMAS.PRECISION_CACHE_BATCH,
+    Schema.object(SHARED_SCHEMAS.RAW.PRECISION_CACHE_BATCH).description("速度优化选项"),
 
     // 分布式训练
     SHARED_SCHEMAS.DISTRIBUTED_TRAINING

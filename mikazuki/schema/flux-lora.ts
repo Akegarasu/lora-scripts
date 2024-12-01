@@ -80,7 +80,15 @@ Schema.intersect([
     SHARED_SCHEMAS.OTHER,
 
     // 速度优化选项
-    SHARED_SCHEMAS.PRECISION_CACHE_BATCH,
+    Schema.object(
+        UpdateSchema(SHARED_SCHEMAS.RAW.PRECISION_CACHE_BATCH, {
+            fp8_base: Schema.boolean().default(true).description("对基础模型使用 FP8 精度"),
+            fp8_base_unet: Schema.boolean().description("仅对 U-Net 使用 FP8 精度（CLIP-L不使用）"),
+            sdpa: Schema.boolean().default(true).description("启用 sdpa"),
+            cache_text_encoder_outputs: Schema.boolean().default(true).description("缓存文本编码器的输出，减少显存使用。使用时需要关闭 shuffle_caption"),
+            cache_text_encoder_outputs_to_disk: Schema.boolean().default(true).description("缓存文本编码器的输出到磁盘"),
+        }, ["xformers"])
+    ).description("速度优化选项"),
 
     // 分布式训练
     SHARED_SCHEMAS.DISTRIBUTED_TRAINING

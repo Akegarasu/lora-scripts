@@ -97,9 +97,13 @@ def validate_data_dir(path):
     subdirs = [f for f in dir_content if os.path.isdir(os.path.join(path, f))]
 
     if len(subdirs) == 0:
-        log.warn(f"No subdir found in data dir")
+        log.warning(f"No subdir found in data dir")
 
     ok_dir = [d for d in subdirs if re.findall(r"^\d+_.+", d)]
+
+    if len(ok_dir) > 0:
+        log.info(f"Found {len(ok_dir)} legal dataset")
+        return True
 
     if len(ok_dir) == 0:
         log.warning(f"No leagal dataset found. Try find avaliable images")
