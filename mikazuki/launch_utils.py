@@ -259,7 +259,7 @@ def check_run(file: str) -> bool:
     return result.returncode == 0
 
 
-def prepare_environment(disable_auto_mirror: bool = True, skip_prepare_onnxruntime: bool = False):
+def prepare_environment(disable_auto_mirror: bool = True):
     if sys.platform == "win32":
         # disable triton on windows
         os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
@@ -287,8 +287,9 @@ def prepare_environment(disable_auto_mirror: bool = True, skip_prepare_onnxrunti
 
     validate_requirements("requirements.txt")
     setup_windows_bitsandbytes()
-    if not skip_prepare_onnxruntime:
-        setup_onnxruntime()
+
+    # if not skip_prepare_onnxruntime:
+    #     setup_onnxruntime()
 
 
 def catch_exception(f):
