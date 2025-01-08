@@ -8,6 +8,7 @@ import random
 from glob import glob
 from datetime import datetime
 from pathlib import Path
+from typing import Tuple, Optional
 
 import toml
 from fastapi import APIRouter, BackgroundTasks, Request
@@ -83,7 +84,7 @@ async def load_presets():
             avaliable_presets.append(toml.loads(content))
 
 
-def get_sample_prompts(config: dict) -> str:
+def get_sample_prompts(config: dict) -> Tuple[Optional[str], str]:
     train_data_dir = config["train_data_dir"]
     sub_dir = [dir for dir in glob(os.path.join(train_data_dir, '*')) if os.path.isdir(dir)]
 
