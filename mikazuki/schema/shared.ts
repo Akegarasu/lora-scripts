@@ -168,7 +168,14 @@
             Schema.union([
                 Schema.object({
                     enable_preview: Schema.const(true).required(),
-                    sample_prompts: Schema.string().role('textarea').default(SAMPLE_PROMPTS_DEFAULT).description(SAMPLE_PROMPTS_DESCRIPTION),
+                    randomly_choice_prompt: Schema.boolean().default(false).description('随机选择预览图 Prompt'),
+                    positive_prompts: Schema.string().role('textarea').default('masterpiece, best quality, 1girl, solo').description("Prompt"),
+                    negative_prompts: Schema.string().role('textarea').default('lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry').description("Negative Prompt"),
+                    sample_width: Schema.number().default(512).description('预览图宽'),
+                    sample_height: Schema.number().default(512).description('预览图高'),
+                    sample_cfg: Schema.number().min(1).max(30).default(7).description('CFG Scale'),
+                    sample_seed: Schema.number().default(2333).description('种子'),
+                    sample_steps: Schema.number().min(1).max(300).default(24).description('迭代步数'),
                     sample_sampler: Schema.union(["ddim", "pndm", "lms", "euler", "euler_a", "heun", "dpm_2", "dpm_2_a", "dpmsolver", "dpmsolver++", "dpmsingle", "k_lms", "k_euler", "k_euler_a", "k_dpm_2", "k_dpm_2_a"]).default("euler_a").description("生成预览图所用采样器"),
                     sample_every_n_epochs: Schema.number().default(2).description("每 N 个 epoch 生成一次预览图"),
                 }),
