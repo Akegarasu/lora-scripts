@@ -148,7 +148,7 @@ async def create_toml_file(request: Request):
                 f.write(sample_prompts_arg)
 
             config["sample_prompts"] = sample_prompts_file
-            log.info(f"Wrote promopts to file {sample_prompts_file}")
+            log.info(f"Wrote prompts to file {sample_prompts_file}")
     except ValueError as e:
         return APIResponseFail(message=str(e))
 
