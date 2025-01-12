@@ -99,15 +99,15 @@
                 save_precision: Schema.union(["fp16", "float", "bf16"]).default("fp16").description("模型保存精度"),
                 save_every_n_epochs: Schema.number().default(2).description("每 N epoch（轮）自动保存一次模型"),
                 save_state: Schema.boolean().default(false).description("保存训练状态 配合 `resume` 参数可以继续从某个状态训练"),
-            }).description("保存设置"),
+            }),
             Schema.union([
                 Schema.object({
                     save_state: Schema.const(true).required(),
-                    save_last_n_epochs_state: Schema.number().min(1)
-                }).description("仅保存最后 n epoch 的训练状态"),
+                    save_last_n_epochs_state: Schema.number().min(1).description("仅保存最后 n epoch 的训练状态"),
+                }),
                 Schema.object({})
             ])
-        ]),
+        ]).description("保存设置"),
         LR_OPTIMIZER: Schema.intersect([
             Schema.object({
                 learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。"),
