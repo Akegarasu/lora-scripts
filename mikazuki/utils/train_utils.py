@@ -84,7 +84,7 @@ def match_model_type(sig_content: bytes):
     return ModelType.UNKNOWN
 
 
-def validate_data_dir(path):
+def validate_data_dir(path, repeat):
     if not os.path.exists(path):
         log.error(f"Data dir {path} not exists, check your params")
         return False
@@ -111,7 +111,10 @@ def validate_data_dir(path):
         captions = glob.glob(path + '/*.txt')
         log.info(f"{len(imgs)} images found, {len(captions)} captions found")
         if len(imgs) > 0:
-            num_repeat = suggest_num_repeat(len(imgs))
+            if isinstance(repeat, int) and repeat > 0:
+                num_repeat = repeat
+            else:
+                num_repeat = suggest_num_repeat(len(imgs))
             dataset_path = os.path.join(path, f"{num_repeat}_zkz")
             os.makedirs(dataset_path)
             for i in imgs:
