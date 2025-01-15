@@ -73,6 +73,9 @@ Schema.intersect([
     // FLUX 去除 max_token_length
     Schema.object(UpdateSchema(SHARED_SCHEMAS.RAW.CAPTION_SETTINGS, {}, ["max_token_length"])).description("caption（Tag）选项"),
 
+    // 噪声设置
+    SHARED_SCHEMAS.NOISE_SETTINGS,
+
     // 数据增强
     SHARED_SCHEMAS.DATA_ENCHANCEMENT,
 
