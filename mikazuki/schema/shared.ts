@@ -151,7 +151,8 @@
                     "DAdaptLion",
                     "DAdaptSGD",
                     "AdaFactor",
-                    "Prodigy"
+                    "Prodigy",
+                    "prodigyplus.ProdigyPlusScheduleFree"
                 ]).default("AdamW8bit").description("优化器设置"),
                 min_snr_gamma: Schema.number().step(0.1).description("最小信噪比伽马值, 如果启用推荐为 5"),
             }),
