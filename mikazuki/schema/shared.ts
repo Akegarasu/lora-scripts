@@ -138,6 +138,7 @@
                     "AdamW",
                     "AdamW8bit",
                     "PagedAdamW8bit",
+                    "RAdamScheduleFree",
                     "Lion",
                     "Lion8bit",
                     "PagedLion8bit",
