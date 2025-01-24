@@ -109,6 +109,7 @@
                 Schema.object({})
             ])
         ]).description("保存设置"),
+
         LR_OPTIMIZER: Schema.intersect([
             Schema.object({
                 learning_rate: Schema.string().default("1e-4").description("总学习率, 在分开设置 U-Net 与文本编码器学习率后这个值失效。"),
@@ -138,6 +139,7 @@
                     "AdamW",
                     "AdamW8bit",
                     "PagedAdamW8bit",
+                    "RAdamScheduleFree",
                     "Lion",
                     "Lion8bit",
                     "PagedLion8bit",
@@ -150,7 +152,8 @@
                     "DAdaptLion",
                     "DAdaptSGD",
                     "AdaFactor",
-                    "Prodigy"
+                    "Prodigy",
+                    "prodigyplus.ProdigyPlusScheduleFree"
                 ]).default("AdamW8bit").description("优化器设置"),
                 min_snr_gamma: Schema.number().step(0.1).description("最小信噪比伽马值, 如果启用推荐为 5"),
             }),
@@ -208,6 +211,12 @@
                 Schema.object({}),
             ]),
         ]),
+
+        NOISE_SETTINGS: Schema.object({
+            noise_offset: Schema.number().step(0.01).description("在训练中添加噪声偏移来改良生成非常暗或者非常亮的图像，如果启用推荐为 0.1"),
+            multires_noise_iterations: Schema.number().step(1).description("多分辨率（金字塔）噪声迭代次数 推荐 6-10。无法与 noise_offset 一同启用"),
+            multires_noise_discount: Schema.number().step(0.01).description("多分辨率（金字塔）衰减率 推荐 0.3-0.8，须同时与上方参数 multires_noise_iterations 一同启用"),
+        }).description("噪声设置"),
 
         DATA_ENCHANCEMENT: Schema.object({
             color_aug: Schema.boolean().description("颜色改变"),

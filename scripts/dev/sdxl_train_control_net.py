@@ -184,12 +184,12 @@ def train(args):
 
     # make control net
     logger.info("make ControlNet")
-    if args.controlnet_model_path:
+    if args.controlnet_model_name_or_path:
         with init_empty_weights():
             control_net = SdxlControlNet()
 
-        logger.info(f"load ControlNet from {args.controlnet_model_path}")
-        filename = args.controlnet_model_path
+        logger.info(f"load ControlNet from {args.controlnet_model_name_or_path}")
+        filename = args.controlnet_model_name_or_path
         if os.path.splitext(filename)[1] == ".safetensors":
             state_dict = load_file(filename)
         else:
@@ -512,9 +512,7 @@ def train(args):
 
                 # Sample noise, sample a random timestep for each image, and add noise to the latents,
                 # with noise offset and/or multires noise if specified
-                noise, noisy_latents, timesteps, huber_c = train_util.get_noise_noisy_latents_and_timesteps(
-                    args, noise_scheduler, latents
-                )
+                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
 
                 controlnet_image = batch["conditioning_images"].to(dtype=weight_dtype)
 
@@ -533,9 +531,8 @@ def train(args):
                 else:
                     target = noise
 
-                loss = train_util.conditional_loss(
-                    noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c
-                )
+                huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
+                loss = train_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
                 loss = loss.mean([1, 2, 3])
 
                 loss_weights = batch["loss_weights"]  # 各sampleごとのweight
@@ -678,7 +675,7 @@ def setup_parser() -> argparse.ArgumentParser:
     sdxl_train_util.add_sdxl_training_arguments(parser)
 
     parser.add_argument(
-        "--controlnet_model_path",
+        "--controlnet_model_name_or_path",
         type=str,
         default=None,
         help="controlnet model name or path / controlnetのモデル名またはパス",

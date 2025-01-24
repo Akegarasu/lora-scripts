@@ -5,7 +5,7 @@ version = "0.0.1" # 模板版本
 author = "秋叶" # 模板作者
 # train_type 参数可以设置 lora-basic，lora-master，flux-lora 等内容。用于过滤显示的。不填就全部显示
 # train_type = ""
-description = "这是一个样例模板，提高训练分辨率。"
+description = "这是一个样例模板，提高训练分辨率。如果你想加入自己的模板，可以按照 config/presets 中的文件，修改后前往 Github 发起 PR"
 
 # 模板配置内容。请只填写修改了的内容，未修改无需填写。
 [data]
