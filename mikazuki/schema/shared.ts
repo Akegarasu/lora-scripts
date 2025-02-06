@@ -123,6 +123,7 @@
                     "constant_with_warmup",
                 ]).default("cosine_with_restarts").description("学习率调度器设置"),
                 lr_warmup_steps: Schema.number().default(0).description('学习率预热步数'),
+                loss_type: Schema.union(["l1", "l2", "huber", "smooth_l1"]).description("损失函数类型"),
             }).description("学习率与优化器设置"),
 
             Schema.union([

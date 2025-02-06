@@ -94,11 +94,11 @@ def get_sample_prompts(config: dict) -> Tuple[Optional[str], str]:
 
     positive_prompts = config.pop('positive_prompts', None)
     negative_prompts = config.pop('negative_prompts', '')
-    sample_width = config.pop('sample_width', 512)  # 默认宽度 512
-    sample_height = config.pop('sample_height', 512)  # 默认高度 512
-    sample_cfg = config.pop('sample_cfg', 7)  # 默认 CFG 值 7.5
-    sample_seed = config.pop('sample_seed', 2333)  # 默认随机种子 42
-    sample_steps = config.pop('sample_steps', 24)  # 默认步数 50
+    sample_width = config.pop('sample_width', 512)
+    sample_height = config.pop('sample_height', 512)
+    sample_cfg = config.pop('sample_cfg', 7)
+    sample_seed = config.pop('sample_seed', 2333)
+    sample_steps = config.pop('sample_steps', 24)
     randomly_choice_prompt = config.pop('randomly_choice_prompt', False)
 
     if randomly_choice_prompt:
