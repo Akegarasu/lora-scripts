@@ -202,7 +202,7 @@ def setup_windows_bitsandbytes():
         return
 
     # bnb_windows_index = os.environ.get("BNB_WINDOWS_INDEX", "https://jihulab.com/api/v4/projects/140618/packages/pypi/simple")
-    bnb_package = "bitsandbytes==0.43.3"
+    bnb_package = "bitsandbytes==0.44.0"
     bnb_path = os.path.join(sysconfig.get_paths()["purelib"], "bitsandbytes")
 
     installed_bnb = is_installed(bnb_package)
