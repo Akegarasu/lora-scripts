@@ -12,6 +12,7 @@ lion-pytorch==0.1.2
 schedulefree==1.4
 tensorboard==2.10.1
 safetensors==0.4.4
+prodigy-plus-schedule-free
 # gradio==3.16.2
 altair==4.2.2
 easygui==0.98.3
@@ -23,12 +24,12 @@ imagesize==1.4.1
 # for T5XXL tokenizer (SD3/FLUX)
 sentencepiece==0.2.0
 # for ui
-rich
+rich==13.7.0
 pandas
 scipy
 requests
 pillow
-numpy
+numpy<=2.0
 gradio==3.44.2
 fastapi==0.95.1
 uvicorn==0.22.0
