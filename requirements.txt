@@ -29,7 +29,8 @@ pandas
 scipy
 requests
 pillow
-numpy<=2.0
+numpy==1.26.4
+# <=2.0.0
 gradio==3.44.2
 fastapi==0.95.1
 uvicorn==0.22.0
