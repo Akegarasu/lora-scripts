@@ -85,7 +85,7 @@ def launch():
 
     import uvicorn
     log.info(f"Server started at http://{args.host}:{args.port}")
-    uvicorn.run("mikazuki.app:app", host=args.host, port=args.port, log_level="error")
+    uvicorn.run("mikazuki.app:app", host=args.host, port=args.port, log_level="error", reload=args.dev)
 
 
 if __name__ == "__main__":
