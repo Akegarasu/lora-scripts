@@ -1,3 +1,4 @@
+# 使用清华源安装，在第27行修改。
 #!/usr/bin/bash
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
