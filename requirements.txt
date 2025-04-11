@@ -7,9 +7,11 @@ opencv-python==4.8.1.78
 einops==0.7.0
 pytorch-lightning==1.9.0
 bitsandbytes==0.44.0
-prodigyopt==1.0
 lion-pytorch==0.1.2
 schedulefree==1.4
+pytorch-optimizer==3.5.0
+prodigy-plus-schedule-free==1.9.0
+prodigyopt==1.1.2
 tensorboard==2.10.1
 safetensors==0.4.4
 prodigy-plus-schedule-free
@@ -29,7 +31,8 @@ pandas
 scipy
 requests
 pillow
-numpy<=2.0
+numpy==1.26.4
+# <=2.0.0
 gradio==3.44.2
 fastapi==0.95.1
 uvicorn==0.22.0
