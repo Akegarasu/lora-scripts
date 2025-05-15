@@ -38,9 +38,9 @@ Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 i
 Write-Output "受限于国内加速镜像，torch 安装无法使用镜像源，安装较为缓慢。"
 $install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
 if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "") {
-    python -m pip install torch==2.4.1+cu124 torchvision==0.19.1+cu124 --extra-index-url https://download.pytorch.org/whl/cu124
+    python -m pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --index-url https://download.pytorch.org/whl/cu128
     Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
-    python -m pip install -U -I --no-deps xformers===0.0.28.post1 --extra-index-url https://download.pytorch.org/whl/cu124
+    python -m pip install -U -I --no-deps xformers===0.0.30 --extra-index-url https://download.pytorch.org/whl/cu128
     Check "xformers 安装失败。"
 }
 
