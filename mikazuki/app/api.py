@@ -141,19 +141,25 @@ async def create_toml_file(request: Request):
     if not validated:
         return APIResponseFail(message=message)
 
-    try:
-        positive_prompt, sample_prompts_arg = get_sample_prompts(config=config)
+    if "prompt_file" in config and config["prompt_file"].strip() != "":
+        prompt_file = config["prompt_file"].strip()
+        if not os.path.exists(prompt_file):
+            return APIResponseFail(message=f"Prompt 文件 {prompt_file} 不存在，请检查路径。")
+        config["sample_prompts"] = prompt_file
+    else:
+        try:
+            positive_prompt, sample_prompts_arg = get_sample_prompts(config=config)
 
-        if positive_prompt is not None and train_utils.is_promopt_like(sample_prompts_arg):
-            sample_prompts_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}-promopt.txt")
-            with open(sample_prompts_file, "w", encoding="utf-8") as f:
-                f.write(sample_prompts_arg)
+            if positive_prompt is not None and train_utils.is_promopt_like(sample_prompts_arg):
+                sample_prompts_file = os.path.join(os.getcwd(), f"config", "autosave", f"{timestamp}-promopt.txt")
+                with open(sample_prompts_file, "w", encoding="utf-8") as f:
+                    f.write(sample_prompts_arg)
+                config["sample_prompts"] = sample_prompts_file
+                log.info(f"Wrote prompts to file {sample_prompts_file}")
 
-            config["sample_prompts"] = sample_prompts_file
-            log.info(f"Wrote prompts to file {sample_prompts_file}")
-    except ValueError as e:
-        log.error(f"Error while processing prompts: {e}")
-        return APIResponseFail(message=str(e))
+        except ValueError as e:
+            log.error(f"Error while processing prompts: {e}")
+            return APIResponseFail(message=str(e))
 
     with open(toml_file, "w", encoding="utf-8") as f:
         f.write(toml.dumps(config))
