@@ -69,7 +69,8 @@ Schema.intersect([
 
         SHARED_SCHEMAS.NETWORK_OPTION_BASEWEIGHT,
     ]),
-
+    //对比学习设置
+    SHARED_SCHEMAS.CONTRASTIVE
     // 预览图设置
     SHARED_SCHEMAS.PREVIEW_IMAGE,
 
