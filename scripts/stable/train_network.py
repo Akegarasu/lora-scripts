@@ -8,7 +8,7 @@ import time
 import json
 from multiprocessing import Value
 import toml
-
+from contrastive import contrastive_target
 from tqdm import tqdm
 
 import torch
@@ -984,6 +984,19 @@ class NetworkTrainer:
                     loss = train_util.conditional_loss(
                         noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c
                     )
+                    if args.enable_contrastive and epoch>= args.contrastive_warmup_steps:
+                        latents_neg, noise_neg = contrastive_target(latents, noise, method=args.negative_sampling_method,noise_strength=args.noise_strength)
+                        if args.v_parameterization:
+                            # v-parameterization training
+                            target_neg = noise_scheduler.get_velocity(latents_neg, noise_neg, timesteps)
+                        else:
+                            target_neg = noise_neg
+                        loss_neg = train_util.conditional_loss(
+                        noise_pred_neg.float(), target_neg.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c
+                    )
+                        loss = loss - args.contrastive_weight*loss_neg
+
+                    
                     if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
                         loss = apply_masked_loss(loss, batch)
                     loss = loss.mean([1, 2, 3])
