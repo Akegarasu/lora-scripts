@@ -224,15 +224,15 @@
       // 噪音强度参数
       noise_strength: Schema.number()
         .min(0)
-        .max(1)
-        .default(0.999)
-        .description('动量更新系数'),
+        .max(10)
+        .default(1.0)
+        .description('噪音强度参数'),
 
       // 对比损失权重 λ
       contrastive_weight: Schema.number()
         .min(0)
         .max(1)
-        .default(0.5)
+        .default(0.05)
         .description('对比损失权重'),
 
       // 对比学习暖启动
