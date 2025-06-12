@@ -196,6 +196,76 @@
                 Schema.object({}),
             ]),
         ]),
+  CONTRASTIVE: Schema.intersect([
+
+  // 对比学习开关
+  Schema.object({
+    enable_contrastive: Schema.boolean()
+      .default(false)
+      .description('启用对比学习模块'),
+  }).description('对比学习设置'),
+
+  // 只有 enable_contrastive = true 时，下面的配置才生效
+  Schema.union([
+    Schema.object({
+      enable_contrastive: Schema.const(true).required(),
+
+      // 负样本策略
+      negative_sampling_method: Schema.union([
+        'random_permutation',
+        'random_sampling',
+        'distance_based',
+        'memory_queue',
+        'momentum_encoder',
+        'cluster',
+        'adversarial',
+      ])
+        .default('random_permutation')
+        .description('选择负样本生成策略'),
+
+      // 距离/相似度筛选参数（method=distance_based）
+      distance_metric: Schema.union(['euclidean', 'cosine'])
+        .default('cosine')
+        .description('距离/相似度计算方式'),
+
+      // 记忆银行参数（method=memory_queue）
+      queue_capacity: Schema.number()
+        .default(4096)
+        .description('负样本队列大小'),
+
+      // 动量编码器参数（method=momentum_encoder）
+      momentum_coefficient: Schema.number()
+        .min(0)
+        .max(1)
+        .default(0.999)
+        .description('动量更新系数'),
+
+      // 聚类负样本参数（method=cluster）
+      num_clusters: Schema.number()
+        .default(10)
+        .description('聚类簇数量'),
+
+      // 对抗式负样本参数（method=adversarial）
+      adversarial_epsilon: Schema.number()
+        .default(0.01)
+        .description('对抗扰动幅度'),
+
+      // 对比损失权重 λ
+      contrastive_weight: Schema.number()
+        .min(0)
+        .max(1)
+        .default(0.5)
+        .description('对比损失权重'),
+
+      // 对比学习暖启动
+      contrastive_warmup_steps: Schema.number()
+        .default(100)
+        .description('使用随机负样本的步数'),
+    }),
+    Schema.object({}),
+  ]),
+
+]).description('对比学习配置');
 
         LOG_SETTINGS: Schema.intersect([
             Schema.object({
