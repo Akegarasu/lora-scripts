@@ -25,7 +25,7 @@ Schema.intersect([
 
     // 保存设置
     SHARED_SCHEMAS.SAVE_SETTINGS,
-
+    
     Schema.object({
         max_train_epochs: Schema.number().min(1).default(20).description("最大训练 epoch（轮数）"),
         train_batch_size: Schema.number().min(1).default(1).description("批量大小, 越高显存占用越高"),
@@ -54,7 +54,8 @@ Schema.intersect([
 
         SHARED_SCHEMAS.NETWORK_OPTION_BASEWEIGHT,
     ]),
-
+    //对比学习设置
+    SHARED_SCHEMAS.CONTRASTIVE
     // 预览图设置
     SHARED_SCHEMAS.PREVIEW_IMAGE,
 
