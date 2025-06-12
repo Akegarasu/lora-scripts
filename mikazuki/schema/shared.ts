@@ -243,7 +243,7 @@
     Schema.object({}),
   ]),
 
-]).description('对比学习配置');
+]).description('对比学习配置'),
 
         LOG_SETTINGS: Schema.intersect([
             Schema.object({
