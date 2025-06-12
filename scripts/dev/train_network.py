@@ -11,7 +11,7 @@ import json
 from multiprocessing import Value
 import numpy as np
 import toml
-
+from contrastive import contrastive_target
 from tqdm import tqdm
 
 import torch
