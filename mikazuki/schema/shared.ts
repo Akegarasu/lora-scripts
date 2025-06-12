@@ -196,53 +196,37 @@
                 Schema.object({}),
             ]),
         ]),
-        CONTRASTIVE: Schema.intersect([
-              // 对比学习开关
-              Schema.object({
-                enable_contrastive: Schema.boolean()
-                  .default(false)
-                  .description('启用对比学习模块'),
-              }).description('对比学习设置'),
-            
-              // 只有 enable_contrastive = true 时，下面的配置才生效
-              Schema.union([
-                Schema.object({
-                  enable_contrastive: Schema.const(true).required(),
-            
-                  // 负样本策略
-                  negative_sampling_method: Schema.union([
-                    'Random-Noise',
-                    'Permutation',
-                    'Random-index',
-                    'Circular',
-                    'Hard-Negative',
-                  ])
-                    .default('Random-Noise')
-                    .description('选择负样本生成策略'),
-            
-                  // 噪音强度参数
-                  noise_strength: Schema.number()
-                    .min(0)
-                    .max(10)
-                    .default(1.0)
-                    .description('噪音强度参数'),
-            
-                  // 对比损失权重 λ
-                  contrastive_weight: Schema.number()
-                    .min(0)
-                    .max(1)
-                    .default(0.05)
-                    .description('对比损失权重'),
-            
-                  // 对比学习暖启动
-                  contrastive_warmup_steps: Schema.number()
-                    .default(100)
-                    .description('使用随机负样本的步数'),
-                }),
-                Schema.object({}),
-              ]),
-            
-            ]).description('对比学习配置'),
+        CONTRASTIVE: Schema.object({
+          enable_contrastive: Schema.boolean()
+            .default(false)
+            .description('启用对比学习模块'),
+        
+          negative_sampling_method: Schema.union([
+            'Random-Noise','Permutation','Random-index','Circular','Hard-Negative',
+          ])
+            .default('Random-Noise')
+            .description('选择负样本生成策略')
+            .onlyWhen('enable_contrastive', Schema.const(true)),
+        
+          noise_strength: Schema.number()
+            .min(0)
+            .max(10)
+            .default(1.0)
+            .description('噪音强度参数')
+            .onlyWhen('enable_contrastive', Schema.const(true)),
+        
+          contrastive_weight: Schema.number()
+            .min(0)
+            .max(1)
+            .default(0.05)
+            .description('对比损失权重')
+            .onlyWhen('enable_contrastive', Schema.const(true)),
+        
+          contrastive_warmup_steps: Schema.number()
+            .default(100)
+            .description('使用随机负样本的步数')
+            .onlyWhen('enable_contrastive', Schema.const(true)),
+        }).description('对比学习配置'),
 
         LOG_SETTINGS: Schema.intersect([
             Schema.object({
