@@ -19,7 +19,7 @@ from multiprocessing import Value
 import time
 from typing import List, Optional, Tuple, Union
 import toml
-
+from contrastive import contrastive_target
 from tqdm import tqdm
 
 import torch
@@ -669,6 +669,12 @@ def train(args):
                 # calculate loss
                 huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
                 loss = train_util.conditional_loss(model_pred.float(), target.float(), args.loss_type, "none", huber_c)
+                if args.enable_contrastive and epoch>= args.contrastive_warmup_steps:
+                    latents_neg, noise_neg = contrastive_target(latents, noise, method=args.negative_sampling_method,noise_strength=args.noise_strength)
+                    target_neg = noise_neg - latents_neg
+                    loss_neg = train_util.conditional_loss(
+                    noise_pred_neg.float(), target_neg.float(), args.loss_type, "none", huber_c)
+                    loss = loss - args.contrastive_weight*loss_neg
                 if weighting is not None:
                     loss = loss * weighting
                 if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
