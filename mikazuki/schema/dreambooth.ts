@@ -132,8 +132,6 @@ Schema.intersect([
             optimizer_args_custom: Schema.array(String).role("table").description("自定义 optimizer_args，一行一个"),
         })
     ]),
-    //对比学习设置
-    SHARED_SCHEMAS.CONTRASTIVE
     Schema.intersect([
         Schema.object({
             enable_preview: Schema.boolean().default(false).description("启用训练预览图"),
