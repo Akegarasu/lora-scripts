@@ -665,7 +665,8 @@ def train(args):
 
                 # flow matching loss: this is different from SD3
                 target = noise - latents
-
+                
+                model_pred = model_pred*args.network_scale
                 # calculate loss
                 huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
                 loss = train_util.conditional_loss(model_pred.float(), target.float(), args.loss_type, "none", huber_c)
