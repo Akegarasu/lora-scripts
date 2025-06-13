@@ -46,6 +46,7 @@ Schema.intersect([
             network_alpha: Schema.number().min(1).default(1).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率"),
             network_args_custom: Schema.array(String).role('table').description('自定义 network_args，一行一个'),
             enable_base_weight: Schema.boolean().default(false).description('启用基础权重（差异炼丹）'),
+            network_scale: Schema.number().step(0.05).default(1.0).description('网络缩放系数,应该小于等于1.0'),
         }).description("网络设置"),
 
         // lycoris 参数
@@ -74,18 +75,21 @@ Schema.intersect([
             .description('选择负样本生成策略'),
     
           noise_strength: Schema.number()
+            .step(0.5)
             .min(0)
             .max(10)
             .default(1.0)
             .description('噪音强度参数'),
     
           contrastive_weight: Schema.number()
+            .step(0.05)
             .min(0)
             .max(1)
             .default(0.05)
             .description('对比损失权重'),
     
           contrastive_warmup_steps: Schema.number()
+            .step(10)
             .default(100)
             .description('使用随机负样本的步数'),
         }),
