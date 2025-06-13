@@ -444,7 +444,7 @@ class NetworkTrainer:
         noise_pred = noise_pred*args.network_scale
         huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
         loss = train_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
-        if args.enable_contrastive and epoch>= args.contrastive_warmup_steps:
+        if args.enable_contrastive:
             latents_neg, noise_neg = contrastive_target(latents, noise, method=args.negative_sampling_method,noise_strength=args.noise_strength)
             if args.v_parameterization:
                 # v-parameterization training
