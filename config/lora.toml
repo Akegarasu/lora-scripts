@@ -41,6 +41,11 @@ max_train_epochs = 10
 resolution = "512,512"
 clip_skip = 2
 mixed_precision = "fp16"
+enable_contrastive = false
+negative_sampling_method = "Random-Noise"
+noise_strength = 1.0
+contrastive_weight = 0.05
+contrastive_warmup_steps = 100
 
 [sample_prompt_arguments]
 sample_sampler = "euler_a"
