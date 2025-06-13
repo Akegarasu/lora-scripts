@@ -133,6 +133,44 @@ Schema.intersect([
         })
     ]),
     Schema.intersect([
+      // 对比学习主开关
+      Schema.object({
+        enable_contrastive: Schema.boolean()
+          .default(false)
+          .description('启用对比学习模块'),
+      }).description('对比学习配置'),
+    
+      // 当 enable_contrastive = true 时，才展示下面这些配置；否则只用空对象
+      Schema.union([
+        Schema.object({
+          enable_contrastive: Schema.const(true).required(),
+    
+          negative_sampling_method: Schema.union([
+            'Random-Noise', 'Permutation', 'Random-index', 'Circular', 'Hard-Negative',
+          ])
+            .default('Random-Noise')
+            .description('选择负样本生成策略'),
+    
+          noise_strength: Schema.number()
+            .min(0)
+            .max(10)
+            .default(1.0)
+            .description('噪音强度参数'),
+    
+          contrastive_weight: Schema.number()
+            .min(0)
+            .max(1)
+            .default(0.05)
+            .description('对比损失权重'),
+    
+          contrastive_warmup_steps: Schema.number()
+            .default(100)
+            .description('使用随机负样本的步数'),
+        }),
+        Schema.object({}),
+      ]),
+    ]),
+    Schema.intersect([
         Schema.object({
             enable_preview: Schema.boolean().default(false).description("启用训练预览图"),
         }).description("训练预览图设置"),
