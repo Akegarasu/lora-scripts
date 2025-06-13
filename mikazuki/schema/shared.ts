@@ -171,35 +171,7 @@
             Schema.object({
                 optimizer_args_custom: Schema.array(String).role('table').description('自定义 optimizer_args，一行一个'),
             })
-            enable_contrastive: Schema.boolean()
-            .default(false)
-            .description('启用对比学习模块'),
-        
-          negative_sampling_method: Schema.union([
-            'Random-Noise','Permutation','Random-index','Circular','Hard-Negative',
-          ])
-            .default('Random-Noise')
-            .description('选择负样本生成策略')
-            .onlyWhen('enable_contrastive', Schema.const(true)),
-        
-          noise_strength: Schema.number()
-            .min(0)
-            .max(10)
-            .default(1.0)
-            .description('噪音强度参数')
-            .onlyWhen('enable_contrastive', Schema.const(true)),
-        
-          contrastive_weight: Schema.number()
-            .min(0)
-            .max(1)
-            .default(0.05)
-            .description('对比损失权重')
-            .onlyWhen('enable_contrastive', Schema.const(true)),
-        
-          contrastive_warmup_steps: Schema.number()
-            .default(100)
-            .description('使用随机负样本的步数')
-            .onlyWhen('enable_contrastive', Schema.const(true)),
+            
         ]),
 
         PREVIEW_IMAGE: Schema.intersect([
