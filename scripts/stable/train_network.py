@@ -973,7 +973,7 @@ class NetworkTrainer:
                             text_encoder_conds,
                             batch,
                             weight_dtype,
-                        )
+                        )*args.network_scale
 
                     if args.v_parameterization:
                         # v-parameterization training
