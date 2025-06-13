@@ -66,18 +66,21 @@ Schema.intersect([
             .description('选择负样本生成策略'),
     
           noise_strength: Schema.number()
+            .step(0.5)
             .min(0)
             .max(10)
             .default(1.0)
             .description('噪音强度参数'),
     
           contrastive_weight: Schema.number()
+            .step(0.05)
             .min(0)
             .max(1)
             .default(0.05)
             .description('对比损失权重'),
     
           contrastive_warmup_steps: Schema.number()
+            .step(10)
             .default(100)
             .description('使用随机负样本的步数'),
         }),
