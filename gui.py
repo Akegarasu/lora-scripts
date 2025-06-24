@@ -35,7 +35,7 @@ def get_locale_compat():
     if lang:
         lang = locale.normalize(lang).split('.')[0]
     else:
-        lang = 'C'
+        lang = locale.getlocale()[0] or 'C'
     return lang
 
 @catch_exception
