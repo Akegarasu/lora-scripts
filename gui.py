@@ -30,6 +30,13 @@ def run_tensorboard():
     subprocess.Popen([sys.executable, "-m", "tensorboard.main", "--logdir", "logs",
                      "--host", args.tensorboard_host, "--port", str(args.tensorboard_port)])
 
+def get_locale_compat():
+    lang = os.environ.get("LC_ALL") or os.environ.get("LC_CTYPE") or os.environ.get("LANG")
+    if lang:
+        lang = locale.normalize(lang).split('.')[0]
+    else:
+        lang = 'C'
+    return lang
 
 @catch_exception
 def run_tag_editor():
@@ -44,11 +51,10 @@ def run_tag_editor():
     if args.localization:
         cmd.extend(["--localization", args.localization])
     else:
-        l = locale.getlocale()[0]
+        l = get_locale_compat()
         if l and l.startswith("zh"):
             cmd.extend(["--localization", "zh-Hans"])
     subprocess.Popen(cmd)
-
 
 def launch():
     log.info("Starting SD-Trainer Mikazuki GUI...")
