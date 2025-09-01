@@ -11,18 +11,15 @@ Schema.intersect([
             Schema.object({
                 model_train_type: Schema.const("sd-lora"),
                 v2: Schema.boolean().default(false).description("底模为 sd2.0 以后的版本需要启用"),
-            }),
-            Schema.object({}),
-        ]),
-
-        Schema.union([
-            Schema.object({
-                model_train_type: Schema.const("sd-lora"),
-                v2: Schema.const(true).required(),
                 v_parameterization: Schema.boolean().default(false).description("v-parameterization 学习"),
                 scale_v_pred_loss_like_noise_pred: Schema.boolean().default(false).description("缩放 v-prediction 损失（与v-parameterization配合使用）"),
             }),
-            Schema.object({}),
+            Schema.object({
+                model_train_type: Schema.const("sdxl-lora"),
+                zero_terminal_snr: Schema.boolean().default(false).description("强制零终端SNR"),
+                v_parameterization: Schema.boolean().default(false).description("v-parameterization 学习"),
+                scale_v_pred_loss_like_noise_pred: Schema.boolean().default(false).description("缩放 v-prediction 损失（与v-parameterization配合使用）"),
+            }),
         ]),
     ]),
 
