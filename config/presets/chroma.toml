@@ -1,0 +1,13 @@
+[metadata]
+name = "Chroma LoRA 训练"
+version = "1.0"
+author = "秋叶"
+train_type = "flux-lora"
+description = "这是一个样例模板，用于使用 Chroma LoRA 训练。"
+
+[data]
+model_type = "chroma"
+apply_t5_attn_mask = true
+timestep_sampling = "sigmoid"
+model_prediction_type = "raw"
+guidance_scale = 0.0

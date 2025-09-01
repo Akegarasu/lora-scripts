@@ -1,6 +1,7 @@
 Schema.intersect([
     Schema.object({
         model_train_type: Schema.string().default("flux-lora").disabled().description("训练种类"),
+        model_type: Schema.union(["flux", "chroma"]).default("flux").description("FLUX 模型类型 (支持 Chroma)"),
         pretrained_model_name_or_path: Schema.string().role('filepicker', { type: "model-file" }).default("./sd-models/model.safetensors").description("Flux 模型路径"),
         ae: Schema.string().role('filepicker', { type: "model-file" }).description("AE 模型文件路径"),
         clip_l: Schema.string().role('filepicker', { type: "model-file" }).description("clip_l 模型文件路径"),
@@ -17,6 +18,8 @@ Schema.intersect([
         guidance_scale: Schema.number().step(0.01).default(1.0).description("CFG 引导缩放"),
         t5xxl_max_token_length: Schema.number().step(1).description("T5XXL 最大 token 长度（不填写使用自动）"),
         train_t5xxl: Schema.boolean().default(false).description("训练 T5XXL（不推荐）"),
+        // apply attention mask to T5-XXL encode and FLUX double blocks
+        apply_t5_attn_mask: Schema.boolean().default(true).description("对 T5-XXL 编码器和 FLUX double块 应用注意力掩码"),
     }).description("Flux 专用参数"),
 
     Schema.object(

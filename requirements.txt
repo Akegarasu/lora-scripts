@@ -6,10 +6,10 @@ ftfy==6.1.1
 opencv-python==4.8.1.78
 einops==0.7.0
 pytorch-lightning==1.9.0
-bitsandbytes==0.45.3
+bitsandbytes==0.46.0
 lion-pytorch==0.1.2
 schedulefree==1.4
-pytorch-optimizer==3.5.0
+pytorch-optimizer==3.7.0
 prodigy-plus-schedule-free==1.9.0
 prodigyopt==1.1.2
 tensorboard==2.10.1
@@ -40,5 +40,5 @@ wandb==0.16.2
 httpx==0.24.1
 # extra
 open-clip-torch==2.20.0
-lycoris-lora==2.1.0.post3
+lycoris-lora==3.2.0.post2
 dadaptation==3.1
