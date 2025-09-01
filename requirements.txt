@@ -40,5 +40,5 @@ wandb==0.16.2
 httpx==0.24.1
 # extra
 open-clip-torch==2.20.0
-lycoris-lora==2.1.0.post3
+lycoris-lora==3.2.0.post2
 dadaptation==3.1
