@@ -12,6 +12,13 @@ class TaggerInterrogateRequest(BaseModel):
         ge=0,
         le=1
     )
+    character_threshold: float = Field(
+        default=0.6,
+        ge=0,
+        le=1
+    )
+    add_rating_tag: bool = False
+    add_model_tag: bool = False
     additional_tags: str = ""
     exclude_tags: str = ""
     escape_tag: bool = True
