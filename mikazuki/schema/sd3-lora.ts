@@ -25,7 +25,7 @@ Schema.intersect([
 
     // 保存设置
     SHARED_SCHEMAS.SAVE_SETTINGS,
-
+    
     Schema.object({
         max_train_epochs: Schema.number().min(1).default(20).description("最大训练 epoch（轮数）"),
         train_batch_size: Schema.number().min(1).default(1).description("批量大小, 越高显存占用越高"),
@@ -46,6 +46,7 @@ Schema.intersect([
             network_alpha: Schema.number().min(1).default(1).description("常用值：等于 network_dim 或 network_dim*1/2 或 1。使用较小的 alpha 需要提升学习率"),
             network_args_custom: Schema.array(String).role('table').description('自定义 network_args，一行一个'),
             enable_base_weight: Schema.boolean().default(false).description('启用基础权重（差异炼丹）'),
+            network_scale: Schema.number().step(0.05).default(1.0).description('网络缩放系数,应该小于等于1.0'),
         }).description("网络设置"),
 
         // lycoris 参数
@@ -54,7 +55,47 @@ Schema.intersect([
 
         SHARED_SCHEMAS.NETWORK_OPTION_BASEWEIGHT,
     ]),
-
+    Schema.intersect([
+      // 对比学习主开关
+      Schema.object({
+        enable_contrastive: Schema.boolean()
+          .default(false)
+          .description('启用对比学习模块'),
+      }).description('对比学习配置'),
+    
+      // 当 enable_contrastive = true 时，才展示下面这些配置；否则只用空对象
+      Schema.union([
+        Schema.object({
+          enable_contrastive: Schema.const(true).required(),
+    
+          negative_sampling_method: Schema.union([
+            'Random-Noise', 'Permutation', 'Random-index', 'Circular', 'Hard-Negative',
+          ])
+            .default('Random-Noise')
+            .description('选择负样本生成策略'),
+    
+          noise_strength: Schema.number()
+            .step(0.5)
+            .min(0)
+            .max(10)
+            .default(1.0)
+            .description('噪音强度参数'),
+    
+          contrastive_weight: Schema.number()
+            .step(0.05)
+            .min(0)
+            .max(1)
+            .default(0.05)
+            .description('对比损失权重'),
+    
+          contrastive_warmup_steps: Schema.number()
+            .step(10)
+            .default(100)
+            .description('使用随机负样本的步数'),
+        }),
+        Schema.object({}),
+      ]),
+    ]),
     // 预览图设置
     SHARED_SCHEMAS.PREVIEW_IMAGE,
 

@@ -38,6 +38,11 @@ lowram = false
 clip_skip = 2
 mixed_precision = "fp16"
 save_precision = "fp16"
+enable_contrastive = false
+negative_sampling_method = "Random-Noise"
+noise_strength = 1.0
+contrastive_weight = 0.05
+contrastive_warmup_steps = 100
 
 [sample_prompt]
 sample_sampler = "euler_a"
