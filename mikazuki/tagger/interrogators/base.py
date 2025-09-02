@@ -58,7 +58,7 @@ class Interrogator:
             ok_tags = dict(sorted(ok_tags.items(), key=lambda item: item[1], reverse=True))
 
         new_tags = []
-        for tag in list(tags):
+        for tag in list(ok_tags):
             new_tag = tag
 
             if replace_underscore and tag not in replace_underscore_excludes:
@@ -68,12 +68,11 @@ class Interrogator:
                 new_tag = tag_escape_pattern.sub(r'\\\1', new_tag)
 
             if add_confident_as_weight:
-                new_tag = f'({new_tag}:{tags[tag]})'
+                new_tag = f'({new_tag}:{ok_tags[tag]})'
 
-            new_tags.append((new_tag, tags[tag]))
-        tags = dict(new_tags)
+            new_tags.append((new_tag, ok_tags[tag]))
 
-        return tags
+        return dict(new_tags)
 
     def __init__(self, name: str) -> None:
         self.name = name
