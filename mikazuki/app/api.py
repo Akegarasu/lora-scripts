@@ -134,7 +134,7 @@ async def create_toml_file(request: Request):
     trainer_file = trainer_mapping[model_train_type]
 
     if model_train_type != "sdxl-finetune":
-        if not train_utils.validate_data_dir(config["train_data_dir"]):
+        if not train_utils.validate_data_dir(config["train_data_dir"], config.pop('train_data_dir_repeat', None)):
             return APIResponseFail(message="训练数据集路径不存在或没有图片，请检查目录。")
 
     validated, message = train_utils.validate_model(config["pretrained_model_name_or_path"], model_train_type)
