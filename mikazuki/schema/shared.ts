@@ -171,6 +171,7 @@
             Schema.object({
                 optimizer_args_custom: Schema.array(String).role('table').description('自定义 optimizer_args，一行一个'),
             })
+            
         ]),
 
         PREVIEW_IMAGE: Schema.intersect([
