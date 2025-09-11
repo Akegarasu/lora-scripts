@@ -6,9 +6,10 @@
         RAW: {
             DATASET_SETTINGS: {
                 train_data_dir: Schema.string().role('filepicker', { type: "folder", internal: "train-dir" }).default("./train/aki").description("训练数据集路径"),
+                train_data_dir_repeat: Schema.number().min(1).description("训练数据集重复次数，可选。默认根据图片数量自动选择，如果训练集已指定重复次数则会忽略该参数"),
                 reg_data_dir: Schema.string().role('filepicker', { type: "folder", internal: "train-dir" }).description("正则化数据集路径。默认留空，不使用正则化图像"),
                 prior_loss_weight: Schema.number().step(0.1).default(1.0).description("正则化 - 先验损失权重"),
-                resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数。"),
+                resolution: Schema.string().default("512,512").description("训练图片分辨率，宽x高。支持非正方形，但必须是 64 倍数"),
                 enable_bucket: Schema.boolean().default(true).description("启用 arb 桶以允许非固定宽高比的图片"),
                 min_bucket_reso: Schema.number().default(256).description("arb 桶最小分辨率"),
                 max_bucket_reso: Schema.number().default(1024).description("arb 桶最大分辨率"),
