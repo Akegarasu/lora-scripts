@@ -55,4 +55,4 @@ def run_train(toml_path: str,
     coro = asyncio.to_thread(_run)
     asyncio.create_task(coro)
 
-    return APIResponse(status="success", message=f"Training started / 训练开始 ID: {task.task_id}")
+    return APIResponse(status="success", message=f"Training started / 训练开始 ID: {task.task_id}",data={"task_id": task.task_id})

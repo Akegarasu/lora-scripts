@@ -126,7 +126,6 @@ async def create_toml_file(request: Request):
 
     config: dict = json.loads(json_data.decode("utf-8"))
     train_utils.fix_config_types(config)
-
     gpu_ids = config.pop("gpu_ids", None)
 
     suggest_cpu_threads = 8 if len(train_utils.get_total_images(config["train_data_dir"])) > 200 else 2
@@ -163,7 +162,11 @@ async def create_toml_file(request: Request):
 
     with open(toml_file, "w", encoding="utf-8") as f:
         f.write(toml.dumps(config))
-
+    if not os.path.exists(config['output_dir']):
+        os.makedirs(config['output_dir'], exist_ok=True)
+    with open(os.path.join(config['output_dir'],"config.toml"),'w', encoding="utf-8") as f:
+        f.write(toml.dumps(config))
+      
     result = process.run_train(toml_file, trainer_file, gpu_ids, suggest_cpu_threads)
 
     return result
