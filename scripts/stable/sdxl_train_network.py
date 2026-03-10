@@ -164,6 +164,22 @@ class SdxlNetworkTrainer(train_network.NetworkTrainer):
         noise_pred = unet(noisy_latents, timesteps, text_embedding, vector_embedding)
         return noise_pred
 
+    def get_flow_pixel_counts(self, args, batch, latents):
+        """SDXL: 计算像素数用于分辨率依赖的RF时间步偏移 / Calculate pixel counts for resolution-dependent RF timestep shift."""
+        if (
+            getattr(args, "flow_model", False)
+            and getattr(args, "flow_uniform_shift", False)
+            and getattr(args, "flow_uniform_static_ratio", None) is None
+        ):
+            target_size = batch.get("target_sizes_hw")
+            if target_size is None:
+                raise ValueError(
+                    "分辨率依赖的Rectified Flow偏移需要batch中包含target size信息 / "
+                    "Resolution-dependent Rectified Flow shift requires target size information in the batch."
+                )
+            return (target_size[:, 0] * target_size[:, 1]).to(latents.device, torch.float32)
+        return None
+
     def sample_images(self, accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet):
         sdxl_train_util.sample_images(accelerator, args, epoch, global_step, device, vae, tokenizer, text_encoder, unet)
 

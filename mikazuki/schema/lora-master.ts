@@ -82,6 +82,40 @@ Schema.intersect([
     // 噪声设置
     SHARED_SCHEMAS.NOISE_SETTINGS,
 
+    // Rectified Flow 设置 (仅 SDXL LoRA)
+    Schema.union([
+        Schema.object({
+            model_train_type: Schema.const("sdxl-lora").required(),
+        }).extend(Schema.intersect([
+            Schema.object({
+                flow_model: Schema.boolean().default(false).description("启用 Rectified Flow 训练目标（用于 RF 模型微调）"),
+            }).description("Rectified Flow 设置"),
+
+            Schema.union([
+                Schema.object({
+                    flow_model: Schema.const(true).required(),
+                    flow_use_ot: Schema.boolean().default(false).description("使用余弦最优传输配对 latent 和噪声"),
+                    flow_timestep_distribution: Schema.union(["logit_normal", "uniform"]).default("logit_normal").description("时间步采样分布"),
+                    flow_uniform_static_ratio: Schema.number().step(0.1).description("固定的时间步偏移比率（例如 2），留空不使用"),
+                    contrastive_flow_matching: Schema.boolean().default(false).description("启用对比流匹配 (ΔFM) 目标"),
+                    cfm_lambda: Schema.number().step(0.01).default(0.05).description("ΔFM 损失中对比项的权重"),
+                }),
+                Schema.object({}),
+            ]),
+
+            Schema.union([
+                Schema.object({
+                    flow_model: Schema.const(true).required(),
+                    flow_timestep_distribution: Schema.const("logit_normal").required(),
+                    flow_logit_mean: Schema.number().step(0.1).default(0.0).description("logit-normal 分布的均值"),
+                    flow_logit_std: Schema.number().step(0.1).default(1.0).description("logit-normal 分布的标准差"),
+                }),
+                Schema.object({}),
+            ]),
+        ])),
+        Schema.object({}),
+    ]),
+
     // 数据增强
     SHARED_SCHEMAS.DATA_ENCHANCEMENT,
 

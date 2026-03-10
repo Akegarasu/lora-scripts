@@ -184,6 +184,40 @@ Schema.intersect([
         multires_noise_discount: Schema.number().step(0.1).description("多分辨率（金字塔）衰减率 推荐 0.3-0.8，须同时与上方参数 multires_noise_iterations 一同启用"),
     }).description("噪声设置"),
 
+    // Rectified Flow 设置 (仅 SDXL 微调)
+    Schema.union([
+        Schema.object({
+            model_train_type: Schema.const("sdxl-finetune").required(),
+        }).extend(Schema.intersect([
+            Schema.object({
+                flow_model: Schema.boolean().default(false).description("启用 Rectified Flow 训练目标（用于 RF 模型微调）"),
+            }).description("Rectified Flow 设置"),
+
+            Schema.union([
+                Schema.object({
+                    flow_model: Schema.const(true).required(),
+                    flow_use_ot: Schema.boolean().default(false).description("使用余弦最优传输配对 latent 和噪声"),
+                    flow_timestep_distribution: Schema.union(["logit_normal", "uniform"]).default("logit_normal").description("时间步采样分布"),
+                    flow_uniform_static_ratio: Schema.number().step(0.1).description("固定的时间步偏移比率（例如 2），留空不使用"),
+                    contrastive_flow_matching: Schema.boolean().default(false).description("启用对比流匹配 (ΔFM) 目标"),
+                    cfm_lambda: Schema.number().step(0.01).default(0.05).description("ΔFM 损失中对比项的权重"),
+                }),
+                Schema.object({}),
+            ]),
+
+            Schema.union([
+                Schema.object({
+                    flow_model: Schema.const(true).required(),
+                    flow_timestep_distribution: Schema.const("logit_normal").required(),
+                    flow_logit_mean: Schema.number().step(0.1).default(0.0).description("logit-normal 分布的均值"),
+                    flow_logit_std: Schema.number().step(0.1).default(1.0).description("logit-normal 分布的标准差"),
+                }),
+                Schema.object({}),
+            ]),
+        ])),
+        Schema.object({}),
+    ]),
+
     Schema.object({
         seed: Schema.number().default(1337).description("随机种子"),
         clip_skip: Schema.number().role("slider").min(0).max(12).step(1).default(2).description("CLIP 跳过层数 *玄学*"),

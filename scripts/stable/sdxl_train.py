@@ -110,6 +110,63 @@ def train(args):
         not args.train_text_encoder or not args.cache_text_encoder_outputs
     ), "cache_text_encoder_outputs is not supported when training text encoder / text encoderを学習するときはcache_text_encoder_outputsはサポートされていません"
 
+    if getattr(args, "flow_model", False):
+        logger.info("Using Rectified Flow training objective.")
+        if args.v_parameterization:
+            raise ValueError("`--flow_model` is incompatible with `--v_parameterization`; Rectified Flow already predicts velocity.")
+        if args.min_snr_gamma:
+            logger.warning("`--min_snr_gamma` is ignored when Rectified Flow is enabled.")
+            args.min_snr_gamma = None
+        if args.debiased_estimation_loss:
+            logger.warning("`--debiased_estimation_loss` is ignored when Rectified Flow is enabled.")
+            args.debiased_estimation_loss = False
+        if args.scale_v_pred_loss_like_noise_pred:
+            logger.warning("`--scale_v_pred_loss_like_noise_pred` is ignored when Rectified Flow is enabled.")
+            args.scale_v_pred_loss_like_noise_pred = False
+        if args.v_pred_like_loss:
+            logger.warning("`--v_pred_like_loss` is ignored when Rectified Flow is enabled.")
+            args.v_pred_like_loss = None
+        if getattr(args, "zero_terminal_snr", False):
+            logger.warning("`--zero_terminal_snr` is ignored when Rectified Flow is enabled (RF does not use the noise scheduler).")
+            args.zero_terminal_snr = False
+        if getattr(args, "ip_noise_gamma", None):
+            logger.warning("`--ip_noise_gamma` is ignored when Rectified Flow is enabled.")
+            args.ip_noise_gamma = None
+        if getattr(args, "noise_offset", None):
+            logger.warning("`--noise_offset` is ignored when Rectified Flow is enabled.")
+            args.noise_offset = None
+        if getattr(args, "multires_noise_iterations", None):
+            logger.warning("`--multires_noise_iterations` is ignored when Rectified Flow is enabled.")
+            args.multires_noise_iterations = None
+        if args.flow_use_ot:
+            logger.info("Using cosine optimal transport pairing for Rectified Flow batches.")
+        shift_enabled = args.flow_uniform_shift or args.flow_uniform_static_ratio is not None
+        if args.flow_timestep_distribution == "logit_normal":
+            if args.flow_logit_std <= 0:
+                raise ValueError("`--flow_logit_std` must be positive.")
+            logger.info(
+                "Rectified Flow timesteps sampled from logit-normal distribution with "
+                f"mean={args.flow_logit_mean}, std={args.flow_logit_std}."
+            )
+        elif args.flow_timestep_distribution == "uniform":
+            logger.info("Rectified Flow timesteps sampled uniformly in [0, 1].")
+        else:
+            raise ValueError(f"Unknown Rectified Flow timestep distribution: {args.flow_timestep_distribution}")
+        if shift_enabled:
+            if args.flow_uniform_static_ratio is not None:
+                if args.flow_uniform_static_ratio <= 0:
+                    raise ValueError("`--flow_uniform_static_ratio` must be positive.")
+                logger.info(
+                    f"Applying Rectified Flow timestep shift with static ratio={args.flow_uniform_static_ratio}."
+                )
+            else:
+                logger.info(
+                    f"Applying resolution-dependent Rectified Flow timestep shift with base pixels={args.flow_uniform_base_pixels}."
+                )
+
+    if getattr(args, "contrastive_flow_matching", False) and not (args.v_parameterization or getattr(args, "flow_model", False)):
+        raise ValueError("`--contrastive_flow_matching` requires either v-parameterization or Rectified Flow.")
+
     if args.block_lr:
         block_lrs = [float(lr) for lr in args.block_lr.split(",")]
         assert (
@@ -690,10 +747,24 @@ def train(args):
                 vector_embedding = torch.cat([pool2, embs], dim=1).to(weight_dtype)
                 text_embedding = torch.cat([encoder_hidden_states1, encoder_hidden_states2], dim=2).to(weight_dtype)
 
+                # Compute pixel counts for resolution-dependent RF shift
+                needs_dynamic_shift = (
+                    getattr(args, "flow_model", False) and getattr(args, "flow_uniform_shift", False)
+                    and getattr(args, "flow_uniform_static_ratio", None) is None
+                )
+                if needs_dynamic_shift:
+                    if target_size is None:
+                        raise ValueError(
+                            "Resolution-dependent Rectified Flow shift requires target size information in the batch."
+                        )
+                    pixel_counts = (target_size[:, 0] * target_size[:, 1]).to(latents.device, torch.float32)
+                else:
+                    pixel_counts = None
+
                 # Sample noise, sample a random timestep for each image, and add noise to the latents,
                 # with noise offset and/or multires noise if specified
                 noise, noisy_latents, timesteps, huber_c = train_util.get_noise_noisy_latents_and_timesteps(
-                    args, noise_scheduler, latents
+                    args, noise_scheduler, latents, pixel_counts=pixel_counts
                 )
 
                 noisy_latents = noisy_latents.to(weight_dtype)  # TODO check why noisy_latents is not weight_dtype
@@ -702,7 +773,9 @@ def train(args):
                 with accelerator.autocast():
                     noise_pred = unet(noisy_latents, timesteps, text_embedding, vector_embedding)
 
-                if args.v_parameterization:
+                if getattr(args, "flow_model", False):
+                    target = noise - latents
+                elif args.v_parameterization:
                     # v-parameterization training
                     target = noise_scheduler.get_velocity(latents, noise, timesteps)
                 else:
@@ -719,6 +792,18 @@ def train(args):
                     loss = train_util.conditional_loss(
                         noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c
                     )
+                    if getattr(args, "contrastive_flow_matching", False) and latents.size(0) > 1:
+                        negative_latents = latents.roll(1, 0)
+                        negative_noise = noise.roll(1, 0)
+                        with torch.no_grad():
+                            if getattr(args, "flow_model", False):
+                                target_negative = negative_noise - negative_latents
+                            else:
+                                target_negative = noise_scheduler.get_velocity(negative_latents, negative_noise, timesteps)
+                        loss_contrastive = torch.nn.functional.mse_loss(
+                            noise_pred.float(), target_negative.float(), reduction="none"
+                        )
+                        loss = loss - args.cfm_lambda * loss_contrastive
                     if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
                         loss = apply_masked_loss(loss, batch)
                     loss = loss.mean([1, 2, 3])
@@ -734,9 +819,22 @@ def train(args):
 
                     loss = loss.mean()  # mean over batch dimension
                 else:
-                    loss = train_util.conditional_loss(
-                        noise_pred.float(), target.float(), reduction="mean", loss_type=args.loss_type, huber_c=huber_c
+                    per_pixel_loss = train_util.conditional_loss(
+                        noise_pred.float(), target.float(), reduction="none", loss_type=args.loss_type, huber_c=huber_c
                     )
+                    if getattr(args, "contrastive_flow_matching", False) and latents.size(0) > 1:
+                        negative_latents = latents.roll(1, 0)
+                        negative_noise = noise.roll(1, 0)
+                        with torch.no_grad():
+                            if getattr(args, "flow_model", False):
+                                target_negative = negative_noise - negative_latents
+                            else:
+                                target_negative = noise_scheduler.get_velocity(negative_latents, negative_noise, timesteps)
+                        loss_contrastive = torch.nn.functional.mse_loss(
+                            noise_pred.float(), target_negative.float(), reduction="none"
+                        )
+                        per_pixel_loss = per_pixel_loss - args.cfm_lambda * loss_contrastive
+                    loss = per_pixel_loss.mean()
 
                 accelerator.backward(loss)
 
@@ -938,6 +1036,63 @@ def setup_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="number of optimizers for fused backward pass and optimizer step / fused backward passとoptimizer stepのためのoptimizer数",
+    )
+    parser.add_argument(
+        "--flow_model",
+        action="store_true",
+        help="enable Rectified Flow training objective / 启用 Rectified Flow 训练目标",
+    )
+    parser.add_argument(
+        "--flow_use_ot",
+        action="store_true",
+        help="pair latents and noise with cosine optimal transport / 使用余弦最优传输配对 latent 和噪声",
+    )
+    parser.add_argument(
+        "--flow_timestep_distribution",
+        type=str,
+        default="logit_normal",
+        choices=["logit_normal", "uniform"],
+        help="sampling distribution over Rectified Flow sigmas / Rectified Flow 时间步采样分布",
+    )
+    parser.add_argument(
+        "--flow_logit_mean",
+        type=float,
+        default=0.0,
+        help="mean of the logit-normal distribution / logit-normal 分布的均值",
+    )
+    parser.add_argument(
+        "--flow_logit_std",
+        type=float,
+        default=1.0,
+        help="stddev of the logit-normal distribution / logit-normal 分布的标准差",
+    )
+    parser.add_argument(
+        "--flow_uniform_shift",
+        action="store_true",
+        help="apply resolution-dependent shift to RF timesteps / 对 RF 时间步应用分辨率依赖偏移",
+    )
+    parser.add_argument(
+        "--flow_uniform_base_pixels",
+        type=float,
+        default=1024.0 * 1024.0,
+        help="reference pixel count for resolution-dependent shift / 分辨率依赖偏移的基准像素数",
+    )
+    parser.add_argument(
+        "--flow_uniform_static_ratio",
+        type=float,
+        default=None,
+        help="fixed shift ratio for RF timesteps (e.g. 2); overrides resolution-based shift / 固定的时间步偏移比率",
+    )
+    parser.add_argument(
+        "--contrastive_flow_matching",
+        action="store_true",
+        help="enable Contrastive Flow Matching (ΔFM) objective / 启用对比流匹配目标",
+    )
+    parser.add_argument(
+        "--cfm_lambda",
+        type=float,
+        default=0.05,
+        help="lambda weight for the contrastive term in ΔFM loss / ΔFM 损失中对比项的权重",
     )
     return parser
 
