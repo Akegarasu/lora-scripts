@@ -20,7 +20,15 @@ init_ipex()
 from accelerate.utils import set_seed
 from diffusers import DDPMScheduler
 
-import library.train_util as train_util
+import library.accelerator_setup as accelerator_setup
+import library.args as args_util
+import library.dataset as dataset_util
+import library.model_io as model_io
+import library.optimizer as optimizer_util
+import library.logging_util as logging_util
+import library.loss as loss_util
+import library.checkpoint_io as checkpoint_io
+import library.sampling as sampling
 import library.config_util as config_util
 import library.sai_model_spec as sai_model_spec
 from library.config_util import (
@@ -50,8 +58,8 @@ logger = logging.getLogger(__name__)
 
 
 def train(args):
-    train_util.verify_training_args(args)
-    train_util.prepare_dataset_args(args, False)
+    args_util.verify_training_args(args)
+    accelerator_setup.prepare_dataset_args(args, False)
     deepspeed_utils.prepare_deepspeed_args(args)
     setup_logging(args, reset=True)
 
@@ -92,13 +100,13 @@ def train(args):
         blueprint = blueprint_generator.generate(user_config, args)
         train_dataset_group, val_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
     else:
-        train_dataset_group = train_util.load_arbitrary_dataset(args)
+        train_dataset_group = dataset_util.load_arbitrary_dataset(args)
         val_dataset_group = None
 
     current_epoch = Value("i", 0)
     current_step = Value("i", 0)
     ds_for_collator = train_dataset_group if args.max_data_loader_n_workers == 0 else None
-    collator = train_util.collator_class(current_epoch, current_step, ds_for_collator)
+    collator = dataset_util.collator_class(current_epoch, current_step, ds_for_collator)
 
     if args.no_token_padding:
         train_dataset_group.disable_token_padding()
@@ -106,7 +114,7 @@ def train(args):
     train_dataset_group.verify_bucket_reso_steps(64)
 
     if args.debug_dataset:
-        train_util.debug_dataset(train_dataset_group)
+        dataset_util.debug_dataset(train_dataset_group)
         return
 
     if cache_latents:
@@ -125,14 +133,14 @@ def train(args):
             f"gradient_accumulation_stepsが{args.gradient_accumulation_steps}に設定されています。accelerateは複数モデル（U-NetおよびText Encoder）の学習時にgradient_accumulation_stepsをサポートしていないため結果は未知数です"
         )
 
-    accelerator = train_util.prepare_accelerator(args)
+    accelerator = accelerator_setup.prepare_accelerator(args)
 
     # mixed precisionに対応した型を用意しておき適宜castする
-    weight_dtype, save_dtype = train_util.prepare_dtype(args)
+    weight_dtype, save_dtype = accelerator_setup.prepare_dtype(args)
     vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
 
     # モデルを読み込む
-    text_encoder, vae, unet, load_stable_diffusion_format = train_util.load_target_model(args, weight_dtype, accelerator)
+    text_encoder, vae, unet, load_stable_diffusion_format = model_io.load_target_model(args, weight_dtype, accelerator)
 
     # verify load/save model formats
     if load_stable_diffusion_format:
@@ -150,7 +158,7 @@ def train(args):
         use_safetensors = args.use_safetensors or ("safetensors" in args.save_model_as.lower())
 
     # モデルに xformers とか memory efficient attention を組み込む
-    train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
+    model_io.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
 
     # 学習を準備する
     if cache_latents:
@@ -198,7 +206,7 @@ def train(args):
     else:
         trainable_params = unet.parameters()
 
-    _, _, optimizer = train_util.get_optimizer(args, trainable_params)
+    _, _, optimizer = optimizer_util.get_optimizer(args, trainable_params)
 
     # prepare dataloader
     # strategies are set here because they cannot be referenced in another process. Copy them with the dataset
@@ -231,7 +239,7 @@ def train(args):
         args.stop_text_encoder_training = args.max_train_steps + 1  # do not stop until end
 
     # lr schedulerを用意する TODO gradient_accumulation_stepsの扱いが何かおかしいかもしれない。後で確認する
-    lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
+    lr_scheduler = optimizer_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
     # 実験的機能：勾配も含めたfp16学習を行う　モデル全体をfp16にする
     if args.full_fp16:
@@ -268,10 +276,10 @@ def train(args):
 
     # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
     if args.full_fp16:
-        train_util.patch_accelerator_for_fp16_training(accelerator)
+        accelerator_setup.patch_accelerator_for_fp16_training(accelerator)
 
     # resumeする
-    train_util.resume_from_local_or_hf_if_specified(accelerator, args)
+    args_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
     # epoch数を計算する
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
@@ -311,19 +319,19 @@ def train(args):
             init_kwargs = toml.load(args.log_tracker_config)
         accelerator.init_trackers(
             "dreambooth" if args.log_tracker_name is None else args.log_tracker_name,
-            config=train_util.get_sanitized_config_or_none(args),
+            config=args_util.get_sanitized_config_or_none(args),
             init_kwargs=init_kwargs,
         )
 
     # For --sample_at_first
-    train_util.sample_images(
+    sampling.sample_images(
         accelerator, args, 0, global_step, accelerator.device, vae, tokenize_strategy.tokenizer, text_encoder, unet
     )
     if len(accelerator.trackers) > 0:
         # log empty object to commit the sample images to wandb
         accelerator.log({}, step=0)
 
-    loss_recorder = train_util.LossRecorder()
+    loss_recorder = logging_util.LossRecorder()
     for epoch in range(num_train_epochs):
         accelerator.print(f"\nepoch {epoch+1}/{num_train_epochs}")
         current_epoch.value = epoch + 1
@@ -353,6 +361,19 @@ def train(args):
                     else:
                         latents = vae.encode(batch["images"].to(dtype=weight_dtype)).latent_dist.sample()
                     latents = latents * 0.18215
+                    
+                    if batch["masks"] is not None:
+                      masked_latents = vae.encode(
+                          batch["masked_images"].to(dtype=weight_dtype)
+                      ).latent_dist.sample()
+                      masked_latents = masked_latents * 0.18215
+
+                      # Resize the mask to latents shape as we concatenate the mask to the latents
+                      mask = torch.nn.functional.interpolate(
+                          batch["masks"].to(weight_dtype), size=latents.shape[2:]
+                      )
+
+
                 b_size = latents.shape[0]
 
                 # Get the text embedding for conditioning
@@ -372,7 +393,11 @@ def train(args):
 
                 # Sample noise, sample a random timestep for each image, and add noise to the latents,
                 # with noise offset and/or multires noise if specified
-                noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+                noise, noisy_latents, timesteps = loss_util.get_noise_noisy_latents_and_timesteps(args, noise_scheduler, latents)
+
+                if batch["masks"] is not None:
+                  # Concatenate the noised latents with the mask and the masked latents
+                  noisy_latents = torch.cat([noisy_latents, mask, masked_latents], dim=1)
 
                 # Predict the noise residual
                 with accelerator.autocast():
@@ -384,8 +409,8 @@ def train(args):
                 else:
                     target = noise
 
-                huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
-                loss = train_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
+                huber_c = loss_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
+                loss = loss_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
                 if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
                     loss = apply_masked_loss(loss, batch)
                 loss = loss.mean([1, 2, 3])
@@ -419,7 +444,7 @@ def train(args):
                 progress_bar.update(1)
                 global_step += 1
 
-                train_util.sample_images(
+                sampling.sample_images(
                     accelerator, args, None, global_step, accelerator.device, vae, tokenize_strategy.tokenizer, text_encoder, unet
                 )
 
@@ -428,7 +453,7 @@ def train(args):
                     accelerator.wait_for_everyone()
                     if accelerator.is_main_process:
                         src_path = src_stable_diffusion_ckpt if save_stable_diffusion_format else src_diffusers_model_path
-                        train_util.save_sd_model_on_epoch_end_or_stepwise(
+                        checkpoint_io.save_sd_model_on_epoch_end_or_stepwise(
                             args,
                             False,
                             accelerator,
@@ -447,7 +472,7 @@ def train(args):
             current_loss = loss.detach().item()
             if len(accelerator.trackers) > 0:
                 logs = {"loss": current_loss}
-                train_util.append_lr_to_logs(logs, lr_scheduler, args.optimizer_type, including_unet=True)
+                optimizer_util.append_lr_to_logs(logs, lr_scheduler, args.optimizer_type, including_unet=True)
                 accelerator.log(logs, step=global_step)
 
             loss_recorder.add(epoch=epoch, step=step, loss=current_loss)
@@ -468,7 +493,7 @@ def train(args):
             if accelerator.is_main_process:
                 # checking for saving is in util
                 src_path = src_stable_diffusion_ckpt if save_stable_diffusion_format else src_diffusers_model_path
-                train_util.save_sd_model_on_epoch_end_or_stepwise(
+                checkpoint_io.save_sd_model_on_epoch_end_or_stepwise(
                     args,
                     True,
                     accelerator,
@@ -484,7 +509,7 @@ def train(args):
                     vae,
                 )
 
-        train_util.sample_images(
+        sampling.sample_images(
             accelerator, args, epoch + 1, global_step, accelerator.device, vae, tokenize_strategy.tokenizer, text_encoder, unet
         )
 
@@ -496,13 +521,13 @@ def train(args):
     accelerator.end_training()
 
     if is_main_process and (args.save_state or args.save_state_on_train_end):
-        train_util.save_state_on_train_end(args, accelerator)
+        checkpoint_io.save_state_on_train_end(args, accelerator)
 
     del accelerator  # この後メモリを使うのでこれは消す
 
     if is_main_process:
         src_path = src_stable_diffusion_ckpt if save_stable_diffusion_format else src_diffusers_model_path
-        train_util.save_sd_model_on_train_end(
+        checkpoint_io.save_sd_model_on_train_end(
             args, src_path, save_stable_diffusion_format, use_safetensors, save_dtype, epoch, global_step, text_encoder, unet, vae
         )
         logger.info("model saved.")
@@ -512,14 +537,14 @@ def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     add_logging_arguments(parser)
-    train_util.add_sd_models_arguments(parser)
+    args_util.add_sd_models_arguments(parser)
     sai_model_spec.add_model_spec_arguments(parser)
-    train_util.add_dataset_arguments(parser, True, False, True)
-    train_util.add_training_arguments(parser, True)
-    train_util.add_masked_loss_arguments(parser)
+    args_util.add_dataset_arguments(parser, True, False, True)
+    args_util.add_training_arguments(parser, True)
+    args_util.add_masked_loss_arguments(parser)
     deepspeed_utils.add_deepspeed_arguments(parser)
-    train_util.add_sd_saving_arguments(parser)
-    train_util.add_optimizer_arguments(parser)
+    args_util.add_sd_saving_arguments(parser)
+    args_util.add_optimizer_arguments(parser)
     config_util.add_config_arguments(parser)
     custom_train_functions.add_custom_train_arguments(parser)
 
@@ -553,7 +578,7 @@ if __name__ == "__main__":
     parser = setup_parser()
 
     args = parser.parse_args()
-    train_util.verify_command_line_training_args(args)
-    args = train_util.read_config_from_file(args, parser)
+    args_util.verify_command_line_training_args(args)
+    args = args_util.read_config_from_file(args, parser)
 
     train(args)

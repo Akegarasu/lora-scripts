@@ -27,6 +27,7 @@ def run_train(toml_path: str,
     customize_env["ACCELERATE_DISABLE_RICH"] = "1"
     customize_env["PYTHONUNBUFFERED"] = "1"
     customize_env["PYTHONWARNINGS"] = "ignore::FutureWarning,ignore::UserWarning"
+    # customize_env["PYTHONPATH"] = os.pathsep.join([str(base_dir_path() / "mikazuki" / "hook"), customize_env.get("PYTHONPATH", "")])
 
     if gpu_ids:
         customize_env["CUDA_VISIBLE_DEVICES"] = ",".join(gpu_ids)

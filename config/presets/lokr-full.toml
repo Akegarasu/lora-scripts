@@ -1,0 +1,14 @@
+[metadata]
+name = "LoKr 训练"
+version = "0.0.1"
+author = "秋叶"
+# train_type = "lora-master"
+description = "这是一个样例模板，用于使用 LoKr 算法训练。"
+
+[data]
+network_module = "lycoris.kohya"
+lycoris_algo = "lokr"
+conv_dim = 10000
+conv_alpha = 10000
+train_norm = true
+lokr_factor = 8

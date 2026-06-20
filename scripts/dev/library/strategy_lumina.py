@@ -1,10 +1,12 @@
-import glob
+﻿import glob
 import os
 from typing import Any, List, Optional, Tuple, Union
 
 import torch
 from transformers import AutoTokenizer, AutoModel, Gemma2Model, GemmaTokenizerFast
-from library import train_util
+from library import accelerator_setup
+import library.device_utils as device_utils
+from library.dataset import ImageInfo
 from library.strategy_base import (
     LatentsCachingStrategy,
     TokenizeStrategy,
@@ -215,7 +217,7 @@ class LuminaTextEncoderOutputsCachingStrategy(TextEncoderOutputsCachingStrategy)
         tokenize_strategy: TokenizeStrategy,
         models: List[Any],
         text_encoding_strategy: TextEncodingStrategy,
-        batch: List[train_util.ImageInfo],
+        batch: List[ImageInfo],
     ) -> None:
         """
         Args:
@@ -371,5 +373,5 @@ class LuminaLatentsCachingStrategy(LatentsCachingStrategy):
             multi_resolution=True,
         )
 
-        if not train_util.HIGH_VRAM:
-            train_util.clean_memory_on_device(model.device)
+        if not accelerator_setup.HIGH_VRAM:
+            device_utils.clean_memory_on_device(model.device)

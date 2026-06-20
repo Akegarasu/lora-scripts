@@ -20,8 +20,10 @@ from library import (
     sd3_train_utils,
     strategy_base,
     strategy_lumina,
-    train_util,
+    sampling,
 )
+import library.args as args_util
+import library.model_io as model_io
 from library.utils import setup_logging
 
 setup_logging()
@@ -43,9 +45,9 @@ class LuminaNetworkTrainer(train_network.NetworkTrainer):
             logger.warning("Enabling cache_text_encoder_outputs due to disk caching")
             args.cache_text_encoder_outputs = True
 
-        train_dataset_group.verify_bucket_reso_steps(32)
+        train_dataset_group.verify_bucket_reso_steps(16)
         if val_dataset_group is not None:
-            val_dataset_group.verify_bucket_reso_steps(32)
+            val_dataset_group.verify_bucket_reso_steps(16)
 
         self.train_gemma2 = not args.network_train_unet_only
 
@@ -134,13 +136,16 @@ class LuminaNetworkTrainer(train_network.NetworkTrainer):
 
             # When TE is not be trained, it will not be prepared so we need to use explicit autocast
             logger.info("move text encoders to gpu")
-            text_encoders[0].to(accelerator.device, dtype=weight_dtype)  # always not fp8
+            # Lumina uses a single text encoder (Gemma2) at index 0.
+            # Check original dtype BEFORE casting to preserve fp8 detection.
+            gemma2_original_dtype = text_encoders[0].dtype
+            text_encoders[0].to(accelerator.device)
 
-            if text_encoders[0].dtype == torch.float8_e4m3fn:
-                # if we load fp8 weights, the model is already fp8, so we use it as is
-                self.prepare_text_encoder_fp8(1, text_encoders[1], text_encoders[1].dtype, weight_dtype)
+            if gemma2_original_dtype == torch.float8_e4m3fn:
+                # Model was loaded as fp8 — apply fp8 optimization
+                self.prepare_text_encoder_fp8(0, text_encoders[0], gemma2_original_dtype, weight_dtype)
             else:
-                # otherwise, we need to convert it to target dtype
+                # Otherwise, cast to target dtype
                 text_encoders[0].to(weight_dtype)
 
             with accelerator.autocast():
@@ -156,7 +161,7 @@ class LuminaNetworkTrainer(train_network.NetworkTrainer):
                 assert isinstance(tokenize_strategy, strategy_lumina.LuminaTokenizeStrategy)
                 assert isinstance(text_encoding_strategy, strategy_lumina.LuminaTextEncodingStrategy)
 
-                sample_prompts = train_util.load_prompts(args.sample_prompts)
+                sample_prompts = sampling.load_prompts(args.sample_prompts)
                 sample_prompts_te_outputs = {}  # key: prompt, value: text encoder outputs
                 with accelerator.autocast(), torch.no_grad():
                     for prompt_dict in sample_prompts:
@@ -268,7 +273,7 @@ class LuminaNetworkTrainer(train_network.NetworkTrainer):
                 # NextDiT forward expects (x, t, cap_feats, cap_mask)
                 model_pred = dit(
                     x=img,  # image latents (B, C, H, W)
-                    t=timesteps / 1000,  # timesteps需要除以1000来匹配模型预期
+                    t=1 - timesteps / 1000,  # timesteps需要除以1000来匹配模型预期
                     cap_feats=gemma2_hidden_states,  # Gemma2的hidden states作为caption features
                     cap_mask=gemma2_attn_mask.to(dtype=torch.int32),  # Gemma2的attention mask
                 )
@@ -322,7 +327,7 @@ class LuminaNetworkTrainer(train_network.NetworkTrainer):
         return loss
 
     def get_sai_model_spec(self, args):
-        return train_util.get_sai_model_spec(None, args, False, True, False, lumina="lumina2")
+        return model_io.get_sai_model_spec(None, args, False, True, False, lumina="lumina2")
 
     def update_metadata(self, metadata, args):
         metadata["ss_weighting_scheme"] = args.weighting_scheme
@@ -368,7 +373,7 @@ class LuminaNetworkTrainer(train_network.NetworkTrainer):
 
 def setup_parser() -> argparse.ArgumentParser:
     parser = train_network.setup_parser()
-    train_util.add_dit_training_arguments(parser)
+    args_util.add_dit_training_arguments(parser)
     lumina_train_util.add_lumina_train_arguments(parser)
     return parser
 
@@ -376,8 +381,8 @@ def setup_parser() -> argparse.ArgumentParser:
 if __name__ == "__main__":
     parser = setup_parser()
     args = parser.parse_args()
-    train_util.verify_command_line_training_args(args)
-    args = train_util.read_config_from_file(args, parser)
+    args_util.verify_command_line_training_args(args)
+    args = args_util.read_config_from_file(args, parser)
 
     trainer = LuminaNetworkTrainer()
     trainer.train(args)

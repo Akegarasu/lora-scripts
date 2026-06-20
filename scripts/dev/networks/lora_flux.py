@@ -141,10 +141,13 @@ class LoRAModule(torch.nn.Module):
             # rank dropout
             if self.rank_dropout is not None and self.training:
                 mask = torch.rand((lx.size(0), self.lora_dim), device=lx.device) > self.rank_dropout
-                if len(lx.size()) == 3:
-                    mask = mask.unsqueeze(1)  # for Text Encoder
-                elif len(lx.size()) == 4:
-                    mask = mask.unsqueeze(-1).unsqueeze(-1)  # for Conv2d
+                if isinstance(self.lora_down, torch.nn.Conv2d):
+                    # Conv2d: lora_dim is at dim 1 → [B, dim, 1, 1]
+                    mask = mask.unsqueeze(-1).unsqueeze(-1)
+                else:
+                    # Linear: lora_dim is at last dim → [B, 1, ..., 1, dim]
+                    for _ in range(len(lx.size()) - 2):
+                        mask = mask.unsqueeze(1)
                 lx = lx * mask
 
                 # scaling for rank dropout: treat as if the rank is changed
@@ -337,12 +340,13 @@ class LoRAInfModule(LoRAModule):
         weight = org_sd["weight"]
         org_dtype = weight.dtype
         org_device = weight.device
-        weight = weight.to(torch.float)  # calc in float
 
         if dtype is None:
             dtype = org_dtype
         if device is None:
             device = org_device
+
+        weight = weight.to(torch.float).to(device)  # calc in float
 
         if self.split_dims is None:
             # get up/down weight
@@ -713,6 +717,10 @@ class LoRANetwork(torch.nn.Module):
     LORA_PREFIX_TEXT_ENCODER_CLIP = "lora_te1"
     LORA_PREFIX_TEXT_ENCODER_T5 = "lora_te3"  # make ComfyUI compatible
 
+    @classmethod
+    def get_qkv_mlp_split_dims(cls) -> List[int]:
+        return [3072] * 3 + [12288]
+
     def __init__(
         self,
         text_encoders: Union[List[CLIPTextModel], CLIPTextModel],
@@ -842,7 +850,7 @@ class LoRANetwork(torch.nn.Module):
                                         break
 
                             # if modules_dim is None, we use default lora_dim. if modules_dim is not None, we use the specified dim (no default)
-                            if dim is None and modules_dim is None: 
+                            if dim is None and modules_dim is None:
                                 if is_linear or is_conv2d_1x1:
                                     dim = default_dim if default_dim is not None else self.lora_dim
                                     alpha = self.alpha
@@ -901,9 +909,9 @@ class LoRANetwork(torch.nn.Module):
                             split_dims = None
                             if is_flux and split_qkv:
                                 if "double" in lora_name and "qkv" in lora_name:
-                                    split_dims = [3072] * 3
+                                    (split_dims,) = self.get_qkv_mlp_split_dims()[:3]  # qkv only
                                 elif "single" in lora_name and "linear1" in lora_name:
-                                    split_dims = [3072] * 3 + [12288]
+                                    split_dims = self.get_qkv_mlp_split_dims()  # qkv + mlp
 
                             lora = module_class(
                                 lora_name,
@@ -1036,9 +1044,9 @@ class LoRANetwork(torch.nn.Module):
         # split qkv
         for key in list(state_dict.keys()):
             if "double" in key and "qkv" in key:
-                split_dims = [3072] * 3
+                split_dims = self.get_qkv_mlp_split_dims()[:3]  # qkv only
             elif "single" in key and "linear1" in key:
-                split_dims = [3072] * 3 + [12288]
+                split_dims = self.get_qkv_mlp_split_dims()  # qkv + mlp
             else:
                 continue
 
@@ -1092,9 +1100,9 @@ class LoRANetwork(torch.nn.Module):
         new_state_dict = {}
         for key in list(state_dict.keys()):
             if "double" in key and "qkv" in key:
-                split_dims = [3072] * 3
+                split_dims = self.get_qkv_mlp_split_dims()[:3]  # qkv only
             elif "single" in key and "linear1" in key:
-                split_dims = [3072] * 3 + [12288]
+                split_dims = self.get_qkv_mlp_split_dims()  # qkv + mlp
             else:
                 new_state_dict[key] = state_dict[key]
                 continue
@@ -1350,12 +1358,12 @@ class LoRANetwork(torch.nn.Module):
 
         if os.path.splitext(file)[1] == ".safetensors":
             from safetensors.torch import save_file
-            from library import train_util
+            import library.model_io as model_io
 
             # Precalculate model hashes to save time on indexing
             if metadata is None:
                 metadata = {}
-            model_hash, legacy_hash = train_util.precalculate_safetensors_hashes(state_dict, metadata)
+            model_hash, legacy_hash = model_io.precalculate_safetensors_hashes(state_dict, metadata)
             metadata["sshs_model_hash"] = model_hash
             metadata["sshs_legacy_hash"] = legacy_hash
 

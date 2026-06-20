@@ -28,7 +28,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from library import sd3_models, sd3_utils, strategy_base, train_util
+from library import sd3_models, sd3_utils, strategy_base, checkpoint_io, sampling
+import library.model_io as model_io
 
 
 def save_models(
@@ -97,12 +98,12 @@ def save_sd3_model_on_train_end(
     vae: sd3_models.SDVAE,
 ):
     def sd_saver(ckpt_file, epoch_no, global_step):
-        sai_metadata = train_util.get_sai_model_spec(
+        sai_metadata = model_io.get_sai_model_spec(
             None, args, False, False, False, is_stable_diffusion_ckpt=True, sd3=mmdit.model_type
         )
         save_models(ckpt_file, mmdit, vae, clip_l, clip_g, t5xxl, sai_metadata, save_dtype)
 
-    train_util.save_sd_model_on_train_end_common(args, True, True, epoch, global_step, sd_saver, None)
+    checkpoint_io.save_sd_model_on_train_end_common(args, True, True, epoch, global_step, sd_saver, None)
 
 
 # epochとstepの保存、メタデータにepoch/stepが含まれ引数が同じになるため、統合している
@@ -122,12 +123,12 @@ def save_sd3_model_on_epoch_end_or_stepwise(
     vae: sd3_models.SDVAE,
 ):
     def sd_saver(ckpt_file, epoch_no, global_step):
-        sai_metadata = train_util.get_sai_model_spec(
+        sai_metadata = model_io.get_sai_model_spec(
             None, args, False, False, False, is_stable_diffusion_ckpt=True, sd3=mmdit.model_type
         )
         save_models(ckpt_file, mmdit, vae, clip_l, clip_g, t5xxl, sai_metadata, save_dtype)
 
-    train_util.save_sd_model_on_epoch_end_or_stepwise_common(
+    checkpoint_io.save_sd_model_on_epoch_end_or_stepwise_common(
         args,
         on_epoch_end,
         accelerator,
@@ -409,7 +410,7 @@ def sample_images(
     text_encoders = None if text_encoders is None else [accelerator.unwrap_model(te) for te in text_encoders]
     # print([(te.parameters().__next__().device if te is not None else None) for te in text_encoders])
 
-    prompts = train_util.load_prompts(args.sample_prompts)
+    prompts = sampling.load_prompts(args.sample_prompts)
 
     save_dir = args.output_dir + "/sample"
     os.makedirs(save_dir, exist_ok=True)

@@ -12,7 +12,7 @@ import toml
 from tqdm import tqdm
 
 import torch
-from library import deepspeed_utils
+from library import deepspeed_utils, strategy_base, strategy_sd
 from library.device_utils import init_ipex, clean_memory_on_device
 
 init_ipex()
@@ -23,7 +23,16 @@ from diffusers import DDPMScheduler, ControlNetModel
 from safetensors.torch import load_file
 
 import library.model_util as model_util
-import library.train_util as train_util
+import library.accelerator_setup as accelerator_setup
+import library.args as args_util
+import library.dataset as dataset_util
+from library.hidden_states import get_hidden_states
+import library.model_io as model_io
+import library.optimizer as optimizer_util
+import library.logging_util as logging_util
+import library.loss as loss_util
+import library.checkpoint_io as checkpoint_io
+import library.sampling as sampling
 import library.config_util as config_util
 import library.sai_model_spec as sai_model_spec
 from library.config_util import (
@@ -62,8 +71,8 @@ def generate_step_logs(args: argparse.Namespace, current_loss, avr_loss, lr_sche
 def train(args):
     # session_id = random.randint(0, 2**32)
     # training_started_at = time.time()
-    train_util.verify_training_args(args)
-    train_util.prepare_dataset_args(args, True)
+    args_util.verify_training_args(args)
+    accelerator_setup.prepare_dataset_args(args, True)
     setup_logging(args, reset=True)
 
     cache_latents = args.cache_latents
@@ -73,7 +82,14 @@ def train(args):
         args.seed = random.randint(0, 2**32)
     set_seed(args.seed)
 
-    tokenizer = train_util.load_tokenizer(args)
+    tokenize_strategy = strategy_sd.SdTokenizeStrategy(args.v2, args.max_token_length, args.tokenizer_cache_dir)
+    strategy_base.TokenizeStrategy.set_strategy(tokenize_strategy)
+    tokenizer = tokenize_strategy.tokenizer
+    # prepare caching strategy: this must be set before preparing dataset. because dataset may use this strategy for initialization.
+    latents_caching_strategy = strategy_sd.SdSdxlLatentsCachingStrategy(
+        True, args.cache_latents_to_disk, args.vae_batch_size, False
+    )
+    strategy_base.LatentsCachingStrategy.set_strategy(latents_caching_strategy)
 
     # データセットを準備する
     blueprint_generator = BlueprintGenerator(ConfigSanitizer(False, False, True, True))
@@ -100,18 +116,18 @@ def train(args):
             ]
         }
 
-    blueprint = blueprint_generator.generate(user_config, args, tokenizer=tokenizer)
+    blueprint = blueprint_generator.generate(user_config, args)
     train_dataset_group, val_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
 
     current_epoch = Value("i", 0)
     current_step = Value("i", 0)
     ds_for_collator = train_dataset_group if args.max_data_loader_n_workers == 0 else None
-    collator = train_util.collator_class(current_epoch, current_step, ds_for_collator)
+    collator = dataset_util.collator_class(current_epoch, current_step, ds_for_collator)
 
     train_dataset_group.verify_bucket_reso_steps(64)
 
     if args.debug_dataset:
-        train_util.debug_dataset(train_dataset_group)
+        dataset_util.debug_dataset(train_dataset_group)
         return
     if len(train_dataset_group) == 0:
         logger.error(
@@ -126,14 +142,14 @@ def train(args):
 
     # acceleratorを準備する
     logger.info("prepare accelerator")
-    accelerator = train_util.prepare_accelerator(args)
+    accelerator = accelerator_setup.prepare_accelerator(args)
     is_main_process = accelerator.is_main_process
 
     # mixed precisionに対応した型を用意しておき適宜castする
-    weight_dtype, save_dtype = train_util.prepare_dtype(args)
+    weight_dtype, save_dtype = accelerator_setup.prepare_dtype(args)
 
     # モデルを読み込む
-    text_encoder, vae, unet, _ = train_util.load_target_model(
+    text_encoder, vae, unet, _ = model_io.load_target_model(
         args, weight_dtype, accelerator, unet_use_linear_projection_in_v2=True
     )
 
@@ -235,7 +251,7 @@ def train(args):
             controlnet = ControlNetModel.from_pretrained(filename)
 
     # モデルに xformers とか memory efficient attention を組み込む
-    train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
+    model_io.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
 
     # 学習を準備する
     if cache_latents:
@@ -243,12 +259,7 @@ def train(args):
         vae.requires_grad_(False)
         vae.eval()
         with torch.no_grad():
-            train_dataset_group.cache_latents(
-                vae,
-                args.vae_batch_size,
-                args.cache_latents_to_disk,
-                accelerator.is_main_process,
-            )
+            train_dataset_group.new_cache_latents(vae, accelerator)
         vae.to("cpu")
         clean_memory_on_device(accelerator.device)
 
@@ -263,10 +274,11 @@ def train(args):
 
     trainable_params = list(controlnet.parameters())
 
-    _, _, optimizer = train_util.get_optimizer(args, trainable_params)
+    _, _, optimizer = optimizer_util.get_optimizer(args, trainable_params)
 
     # dataloaderを準備する
     # DataLoaderのプロセス数：0 は persistent_workers が使えないので注意
+    train_dataset_group.set_current_strategies()
     n_workers = min(args.max_data_loader_n_workers, os.cpu_count())  # cpu_count or max_data_loader_n_workers
 
     train_dataloader = torch.utils.data.DataLoader(
@@ -291,7 +303,7 @@ def train(args):
     train_dataset_group.set_max_train_steps(args.max_train_steps)
 
     # lr schedulerを用意する
-    lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
+    lr_scheduler = optimizer_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
     # 実験的機能：勾配も含めたfp16学習を行う　モデル全体をfp16にする
     if args.full_fp16:
@@ -339,10 +351,10 @@ def train(args):
 
     # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
     if args.full_fp16:
-        train_util.patch_accelerator_for_fp16_training(accelerator)
+        accelerator_setup.patch_accelerator_for_fp16_training(accelerator)
 
     # resumeする
-    train_util.resume_from_local_or_hf_if_specified(accelerator, args)
+    args_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
     # epoch数を計算する
     num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
@@ -387,11 +399,11 @@ def train(args):
             init_kwargs = toml.load(args.log_tracker_config)
         accelerator.init_trackers(
             "controlnet_train" if args.log_tracker_name is None else args.log_tracker_name,
-            config=train_util.get_sanitized_config_or_none(args),
+            config=args_util.get_sanitized_config_or_none(args),
             init_kwargs=init_kwargs,
         )
 
-    loss_recorder = train_util.LossRecorder()
+    loss_recorder = logging_util.LossRecorder()
     del train_dataset_group
 
     # function for saving/removing
@@ -426,7 +438,7 @@ def train(args):
             os.remove(old_ckpt_file)
 
     # For --sample_at_first
-    train_util.sample_images(
+    sampling.sample_images(
         accelerator, args, 0, global_step, accelerator.device, vae, tokenizer, text_encoder, unet, controlnet=controlnet
     )
     if len(accelerator.trackers) > 0:
@@ -451,8 +463,8 @@ def train(args):
                     latents = latents * 0.18215
                 b_size = latents.shape[0]
 
-                input_ids = batch["input_ids"].to(accelerator.device)
-                encoder_hidden_states = train_util.get_hidden_states(args, input_ids, tokenizer, text_encoder, weight_dtype)
+                input_ids = batch["input_ids_list"][0].to(accelerator.device)
+                encoder_hidden_states = get_hidden_states(args, input_ids, tokenizer, text_encoder, weight_dtype)
 
                 # Sample noise that we'll add to the latents
                 noise = torch.randn_like(latents, device=latents.device)
@@ -467,7 +479,7 @@ def train(args):
                     )
 
                 # Sample a random timestep for each image
-                timesteps = train_util.get_timesteps(0, noise_scheduler.config.num_train_timesteps, b_size, latents.device)
+                timesteps = loss_util.get_timesteps(0, noise_scheduler.config.num_train_timesteps, b_size, latents.device)
 
                 # Add noise to the latents according to the noise magnitude at each timestep
                 # (this is the forward diffusion process)
@@ -499,8 +511,8 @@ def train(args):
                 else:
                     target = noise
 
-                huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
-                loss = train_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
+                huber_c = loss_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
+                loss = loss_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
                 loss = loss.mean([1, 2, 3])
 
                 loss_weights = batch["loss_weights"]  # 各sampleごとのweight
@@ -529,7 +541,7 @@ def train(args):
                 progress_bar.update(1)
                 global_step += 1
 
-                train_util.sample_images(
+                sampling.sample_images(
                     accelerator,
                     args,
                     None,
@@ -546,18 +558,18 @@ def train(args):
                 if args.save_every_n_steps is not None and global_step % args.save_every_n_steps == 0:
                     accelerator.wait_for_everyone()
                     if accelerator.is_main_process:
-                        ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                        ckpt_name = checkpoint_io.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
                         save_model(
                             ckpt_name,
                             accelerator.unwrap_model(controlnet),
                         )
 
                         if args.save_state:
-                            train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                            checkpoint_io.save_and_remove_state_stepwise(args, accelerator, global_step)
 
-                        remove_step_no = train_util.get_remove_step_no(args, global_step)
+                        remove_step_no = checkpoint_io.get_remove_step_no(args, global_step)
                         if remove_step_no is not None:
-                            remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
+                            remove_ckpt_name = checkpoint_io.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
                             remove_model(remove_ckpt_name)
 
             current_loss = loss.detach().item()
@@ -583,18 +595,18 @@ def train(args):
         if args.save_every_n_epochs is not None:
             saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
             if is_main_process and saving:
-                ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
+                ckpt_name = checkpoint_io.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
                 save_model(ckpt_name, accelerator.unwrap_model(controlnet))
 
-                remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
+                remove_epoch_no = checkpoint_io.get_remove_epoch_no(args, epoch + 1)
                 if remove_epoch_no is not None:
-                    remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, remove_epoch_no)
+                    remove_ckpt_name = checkpoint_io.get_epoch_ckpt_name(args, "." + args.save_model_as, remove_epoch_no)
                     remove_model(remove_ckpt_name)
 
                 if args.save_state:
-                    train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
+                    checkpoint_io.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
-        train_util.sample_images(
+        sampling.sample_images(
             accelerator,
             args,
             epoch + 1,
@@ -614,12 +626,12 @@ def train(args):
     accelerator.end_training()
 
     if is_main_process and (args.save_state or args.save_state_on_train_end):
-        train_util.save_state_on_train_end(args, accelerator)
+        checkpoint_io.save_state_on_train_end(args, accelerator)
 
     # del accelerator  # この後メモリを使うのでこれは消す→printで使うので消さずにおく
 
     if is_main_process:
-        ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
+        ckpt_name = checkpoint_io.get_last_ckpt_name(args, "." + args.save_model_as)
         save_model(ckpt_name, controlnet, force_sync_upload=True)
 
         logger.info("model saved.")
@@ -629,11 +641,11 @@ def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     add_logging_arguments(parser)
-    train_util.add_sd_models_arguments(parser)
-    train_util.add_dataset_arguments(parser, False, True, True)
-    train_util.add_training_arguments(parser, False)
+    args_util.add_sd_models_arguments(parser)
+    args_util.add_dataset_arguments(parser, False, True, True)
+    args_util.add_training_arguments(parser, False)
     deepspeed_utils.add_deepspeed_arguments(parser)
-    train_util.add_optimizer_arguments(parser)
+    args_util.add_optimizer_arguments(parser)
     config_util.add_config_arguments(parser)
     custom_train_functions.add_custom_train_arguments(parser)
 
@@ -664,7 +676,7 @@ if __name__ == "__main__":
     parser = setup_parser()
 
     args = parser.parse_args()
-    train_util.verify_command_line_training_args(args)
-    args = train_util.read_config_from_file(args, parser)
+    args_util.verify_command_line_training_args(args)
+    args = args_util.read_config_from_file(args, parser)
 
     train(args)

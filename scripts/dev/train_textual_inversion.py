@@ -18,7 +18,15 @@ from diffusers import DDPMScheduler
 from transformers import CLIPTokenizer
 from library import deepspeed_utils, model_util, strategy_base, strategy_sd, sai_model_spec
 
-import library.train_util as train_util
+import library.accelerator_setup as accelerator_setup
+import library.args as args_util
+import library.dataset as dataset_util
+import library.model_io as model_io
+import library.optimizer as optimizer_util
+from library.dataset import DatasetGroup, MinimalDataset
+import library.loss as loss_util
+import library.checkpoint_io as checkpoint_io
+import library.sampling as sampling
 import library.huggingface_util as huggingface_util
 import library.config_util as config_util
 from library.config_util import (
@@ -99,14 +107,14 @@ class TextualInversionTrainer:
         self.vae_scale_factor = 0.18215
         self.is_sdxl = False
 
-    def assert_extra_args(self, args, train_dataset_group: Union[train_util.DatasetGroup, train_util.MinimalDataset], val_dataset_group: Optional[train_util.DatasetGroup]):
+    def assert_extra_args(self, args, train_dataset_group: Union[DatasetGroup, MinimalDataset], val_dataset_group: Optional[DatasetGroup]):
         train_dataset_group.verify_bucket_reso_steps(64)
 
         if val_dataset_group is not None:
             val_dataset_group.verify_bucket_reso_steps(64)
 
     def load_target_model(self, args, weight_dtype, accelerator):
-        text_encoder, vae, unet, _ = train_util.load_target_model(args, weight_dtype, accelerator)
+        text_encoder, vae, unet, _ = model_io.load_target_model(args, weight_dtype, accelerator)
         return model_util.get_model_version_str_for_sd1_sd2(args.v2, args.v_parameterization), [text_encoder], vae, unet
 
     def get_tokenize_strategy(self, args):
@@ -137,7 +145,7 @@ class TextualInversionTrainer:
     def sample_images(
         self, accelerator, args, epoch, global_step, device, vae, tokenizers, text_encoders, unet, prompt_replacement
     ):
-        train_util.sample_images(
+        sampling.sample_images(
             accelerator, args, epoch, global_step, device, vae, tokenizers[0], text_encoders[0], unet, prompt_replacement
         )
 
@@ -187,8 +195,8 @@ class TextualInversionTrainer:
             args.output_name = args.token_string
         use_template = args.use_object_template or args.use_style_template
 
-        train_util.verify_training_args(args)
-        train_util.prepare_dataset_args(args, True)
+        args_util.verify_training_args(args)
+        accelerator_setup.prepare_dataset_args(args, True)
         setup_logging(args, reset=True)
 
         cache_latents = args.cache_latents
@@ -206,10 +214,10 @@ class TextualInversionTrainer:
 
         # acceleratorを準備する
         logger.info("prepare accelerator")
-        accelerator = train_util.prepare_accelerator(args)
+        accelerator = accelerator_setup.prepare_accelerator(args)
 
         # mixed precisionに対応した型を用意しておき適宜castする
-        weight_dtype, save_dtype = train_util.prepare_dtype(args)
+        weight_dtype, save_dtype = accelerator_setup.prepare_dtype(args)
         vae_dtype = torch.float32 if args.no_half_vae else weight_dtype
 
         # モデルを読み込む
@@ -325,7 +333,7 @@ class TextualInversionTrainer:
             blueprint = blueprint_generator.generate(user_config, args)
             train_dataset_group, val_dataset_group = config_util.generate_dataset_group_by_blueprint(blueprint.dataset_group)
         else:
-            train_dataset_group = train_util.load_arbitrary_dataset(args)
+            train_dataset_group = dataset_util.load_arbitrary_dataset(args)
             val_dataset_group = None
 
         self.assert_extra_args(args, train_dataset_group, val_dataset_group)
@@ -333,7 +341,7 @@ class TextualInversionTrainer:
         current_epoch = Value("i", 0)
         current_step = Value("i", 0)
         ds_for_collator = train_dataset_group if args.max_data_loader_n_workers == 0 else None
-        collator = train_util.collator_class(current_epoch, current_step, ds_for_collator)
+        collator = dataset_util.collator_class(current_epoch, current_step, ds_for_collator)
 
         # make captions: tokenstring tokenstring1 tokenstring2 ...tokenstringn という文字列に書き換える超乱暴な実装
         if use_template:
@@ -360,7 +368,7 @@ class TextualInversionTrainer:
                 prompt_replacement = None
 
         if args.debug_dataset:
-            train_util.debug_dataset(train_dataset_group, show_input_ids=True)
+            dataset_util.debug_dataset(train_dataset_group, show_input_ids=True)
             return
         if len(train_dataset_group) == 0:
             accelerator.print("No data found. Please verify arguments / 画像がありません。引数指定を確認してください")
@@ -372,7 +380,7 @@ class TextualInversionTrainer:
             ), "when caching latents, either color_aug or random_crop cannot be used / latentをキャッシュするときはcolor_augとrandom_cropは使えません"
 
         # モデルに xformers とか memory efficient attention を組み込む
-        train_util.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
+        model_io.replace_unet_modules(unet, args.mem_eff_attn, args.xformers, args.sdpa)
         if torch.__version__ >= "2.0.0":  # PyTorch 2.0.0 以上対応のxformersなら以下が使える
             vae.set_use_memory_efficient_attention_xformers(args.xformers)
 
@@ -397,7 +405,7 @@ class TextualInversionTrainer:
         trainable_params = []
         for text_encoder in text_encoders:
             trainable_params += text_encoder.get_input_embeddings().parameters()
-        _, _, optimizer = train_util.get_optimizer(args, trainable_params)
+        _, _, optimizer = optimizer_util.get_optimizer(args, trainable_params)
 
         # prepare dataloader
         # strategies are set here because they cannot be referenced in another process. Copy them with the dataset
@@ -428,7 +436,7 @@ class TextualInversionTrainer:
         train_dataset_group.set_max_train_steps(args.max_train_steps)
 
         # lr schedulerを用意する
-        lr_scheduler = train_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
+        lr_scheduler = optimizer_util.get_scheduler_fix(args, optimizer, accelerator.num_processes)
 
         # acceleratorがなんかよろしくやってくれるらしい
         optimizer, train_dataloader, lr_scheduler = accelerator.prepare(optimizer, train_dataloader, lr_scheduler)
@@ -470,7 +478,7 @@ class TextualInversionTrainer:
 
         # 実験的機能：勾配も含めたfp16学習を行う　PyTorchにパッチを当ててfp16でのgrad scaleを有効にする
         if args.full_fp16:
-            train_util.patch_accelerator_for_fp16_training(accelerator)
+            accelerator_setup.patch_accelerator_for_fp16_training(accelerator)
             for text_encoder in text_encoders:
                 text_encoder.to(weight_dtype)
         if args.full_bf16:
@@ -478,7 +486,7 @@ class TextualInversionTrainer:
                 text_encoder.to(weight_dtype)
 
         # resumeする
-        train_util.resume_from_local_or_hf_if_specified(accelerator, args)
+        args_util.resume_from_local_or_hf_if_specified(accelerator, args)
 
         # epoch数を計算する
         num_update_steps_per_epoch = math.ceil(len(train_dataloader) / args.gradient_accumulation_steps)
@@ -518,7 +526,7 @@ class TextualInversionTrainer:
                 init_kwargs = toml.load(args.log_tracker_config)
             accelerator.init_trackers(
                 "textual_inversion" if args.log_tracker_name is None else args.log_tracker_name,
-                config=train_util.get_sanitized_config_or_none(args),
+                config=args_util.get_sanitized_config_or_none(args),
                 init_kwargs=init_kwargs,
             )
 
@@ -529,7 +537,7 @@ class TextualInversionTrainer:
 
             accelerator.print(f"\nsaving checkpoint: {ckpt_file}")
 
-            sai_metadata = train_util.get_sai_model_spec(None, args, self.is_sdxl, False, True)
+            sai_metadata = model_io.get_sai_model_spec(None, args, self.is_sdxl, False, True)
 
             self.save_weights(ckpt_file, embs_list, save_dtype, sai_metadata)
             if args.huggingface_repo_id is not None:
@@ -579,6 +587,17 @@ class TextualInversionTrainer:
                             latents = vae.encode(batch["images"].to(dtype=vae_dtype)).latent_dist.sample().to(dtype=weight_dtype)
                         latents = latents * self.vae_scale_factor
 
+                        if batch["masks"] is not None:
+                            masked_latents = vae.encode(
+                                batch["masked_images"].to(dtype=vae_dtype)
+                            ).latent_dist.sample().to(dtype=weight_dtype)
+                            masked_latents = masked_latents * self.vae_scale_factor
+
+                            # Resize the mask to latents shape as we concatenate the mask to the latents
+                            mask = torch.nn.functional.interpolate(
+                                batch["masks"].to(weight_dtype), size=latents.shape[2:]
+                            )
+
                     # Get the text embedding for conditioning
                     input_ids = [ids.to(accelerator.device) for ids in batch["input_ids_list"]]
                     text_encoder_conds = text_encoding_strategy.encode_tokens(
@@ -589,9 +608,12 @@ class TextualInversionTrainer:
 
                     # Sample noise, sample a random timestep for each image, and add noise to the latents,
                     # with noise offset and/or multires noise if specified
-                    noise, noisy_latents, timesteps = train_util.get_noise_noisy_latents_and_timesteps(
+                    noise, noisy_latents, timesteps = loss_util.get_noise_noisy_latents_and_timesteps(
                         args, noise_scheduler, latents
                     )
+                    if batch["masks"] is not None:
+                      # Concatenate the noised latents with the mask and the masked latents
+                      noisy_latents = torch.cat([noisy_latents, mask, masked_latents], dim=1)
 
                     # Predict the noise residual
                     with accelerator.autocast():
@@ -605,8 +627,8 @@ class TextualInversionTrainer:
                     else:
                         target = noise
 
-                    huber_c = train_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
-                    loss = train_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
+                    huber_c = loss_util.get_huber_threshold_if_needed(args, timesteps, noise_scheduler)
+                    loss = loss_util.conditional_loss(noise_pred.float(), target.float(), args.loss_type, "none", huber_c)
                     if args.masked_loss or ("alpha_masks" in batch and batch["alpha_masks"] is not None):
                         loss = apply_masked_loss(loss, batch)
                     loss = loss.mean([1, 2, 3])
@@ -678,15 +700,15 @@ class TextualInversionTrainer:
                                 )
                                 updated_embs_list.append(updated_embs)
 
-                            ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
+                            ckpt_name = checkpoint_io.get_step_ckpt_name(args, "." + args.save_model_as, global_step)
                             save_model(ckpt_name, updated_embs_list, global_step, epoch)
 
                             if args.save_state:
-                                train_util.save_and_remove_state_stepwise(args, accelerator, global_step)
+                                checkpoint_io.save_and_remove_state_stepwise(args, accelerator, global_step)
 
-                            remove_step_no = train_util.get_remove_step_no(args, global_step)
+                            remove_step_no = checkpoint_io.get_remove_step_no(args, global_step)
                             if remove_step_no is not None:
-                                remove_ckpt_name = train_util.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
+                                remove_ckpt_name = checkpoint_io.get_step_ckpt_name(args, "." + args.save_model_as, remove_step_no)
                                 remove_model(remove_ckpt_name)
 
                 current_loss = loss.detach().item()
@@ -722,16 +744,16 @@ class TextualInversionTrainer:
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
                 if accelerator.is_main_process and saving:
-                    ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
+                    ckpt_name = checkpoint_io.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
                     save_model(ckpt_name, updated_embs_list, epoch + 1, global_step)
 
-                    remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
+                    remove_epoch_no = checkpoint_io.get_remove_epoch_no(args, epoch + 1)
                     if remove_epoch_no is not None:
-                        remove_ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, remove_epoch_no)
+                        remove_ckpt_name = checkpoint_io.get_epoch_ckpt_name(args, "." + args.save_model_as, remove_epoch_no)
                         remove_model(remove_ckpt_name)
 
                     if args.save_state:
-                        train_util.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
+                        checkpoint_io.save_and_remove_state_on_epoch_end(args, accelerator, epoch + 1)
 
             self.sample_images(
                 accelerator,
@@ -757,10 +779,10 @@ class TextualInversionTrainer:
         accelerator.end_training()
 
         if is_main_process and (args.save_state or args.save_state_on_train_end):
-            train_util.save_state_on_train_end(args, accelerator)
+            checkpoint_io.save_state_on_train_end(args, accelerator)
 
         if is_main_process:
-            ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
+            ckpt_name = checkpoint_io.get_last_ckpt_name(args, "." + args.save_model_as)
             save_model(ckpt_name, updated_embs_list, global_step, num_train_epochs, force_sync_upload=True)
 
             logger.info("model saved.")
@@ -770,13 +792,13 @@ def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
 
     add_logging_arguments(parser)
-    train_util.add_sd_models_arguments(parser)
+    args_util.add_sd_models_arguments(parser)
     sai_model_spec.add_model_spec_arguments(parser)
-    train_util.add_dataset_arguments(parser, True, True, False)
-    train_util.add_training_arguments(parser, True)
-    train_util.add_masked_loss_arguments(parser)
+    args_util.add_dataset_arguments(parser, True, True, False)
+    args_util.add_training_arguments(parser, True)
+    args_util.add_masked_loss_arguments(parser)
     deepspeed_utils.add_deepspeed_arguments(parser)
-    train_util.add_optimizer_arguments(parser)
+    args_util.add_optimizer_arguments(parser)
     config_util.add_config_arguments(parser)
     custom_train_functions.add_custom_train_arguments(parser, False)
 
@@ -826,8 +848,8 @@ if __name__ == "__main__":
     parser = setup_parser()
 
     args = parser.parse_args()
-    train_util.verify_command_line_training_args(args)
-    args = train_util.read_config_from_file(args, parser)
+    args_util.verify_command_line_training_args(args)
+    args = args_util.read_config_from_file(args, parser)
 
     trainer = TextualInversionTrainer()
     trainer.train(args)
