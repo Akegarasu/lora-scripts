@@ -26,6 +26,14 @@
 - 行为改进：旧训练页终止操作只取第一个运行任务；新任务页对每个运行任务显示明确 task id 和独立终止按钮。后端当前并发上限仍为 1，因此不改变实际并发语义。
 - 验证：Node 22.17.1 下 `npm run typecheck` 与 `npm run build`。
 
+### 2026-07-28：设置与脚本工具
+
+- `/other/settings.html` 恢复旧 `ui-configs` storage key，可保存或重置自定义 TensorBoard URL。
+- TensorBoard 页面优先使用自定义 URL，留空时保持 `/proxy/tensorboard/` 同源代理。
+- `/lora/tools.html` 接入后端四个白名单脚本，支持参数键值录入和同源 `/api/run_script` 提交。
+- 行为修正：删除旧版硬编码 `http://127.0.0.1:28000/api/run_script`，远程访问和自定义端口继续使用当前 origin。
+- 安全边界：前端不提供任意脚本路径或 shell 命令，只能选择与后端一致的白名单。
+
 ## 已完成
 
 - [x] 旧前端完整备份到 `frontendbak/`
@@ -39,6 +47,9 @@
 - [x] 统一 API client 和基础响应类型
 - [x] 后端版本读取与侧栏展示
 - [x] 真实任务列表、轮询、日志入口和按 task id 终止
+- [x] 设置页与旧 `ui-configs` 兼容
+- [x] TensorBoard 自定义 URL
+- [x] 白名单脚本工具与同源 API
 
 ## 行为差异与待办
 
@@ -50,7 +61,7 @@
 - [ ] **Tagger**：迁移受控表单、模型预下载、状态轮询、双进度、取消与重置。
 - [ ] **数据集编辑器**：迁移扫描、筛选、图库、caption、批量操作、快捷 tag、undo/redo 和会话历史。
 - [x] **任务页基础流程**：已实现任务列表、状态、轮询、日志入口与终止；任务详情、日志内嵌和时间信息受后端现有字段限制，后续再增强。
-- [ ] **工具页**：迁移 `/api/run_script`，并修复旧版硬编码 `127.0.0.1:28000` 的行为，改用同源 `/api/run_script`。
+- [x] **工具页基础流程**：已迁移后端白名单脚本与同源 `/api/run_script`；具体脚本参数仍由用户按后端脚本 CLI 填写，后续可按脚本补专用表单。
 - [ ] **配置导出**：旧版直接在浏览器生成 TOML；新版应优先调用后端已有 `/api/config/normalize-for-export`。这是有意行为修正，需验证所有训练类型。
 - [ ] **深链部署**：确认 FastAPI `SPAStaticFiles` 对所有 Vue Router history URL 的生产刷新均返回 `index.html`。
 - [ ] **现有 Python 静态测试迁移**：旧测试直接断言 `frontend/dist/assets/app.547295de.js` 等 VuePress hash 文件，改名后必然失效。应替换为 Vue 构建、路由和 E2E 测试，不复制旧产物到新 dist 来欺骗测试。
@@ -61,7 +72,7 @@
 - [ ] 精确迁移训练页字段分组、按钮顺序、提示文案和参数预览。
 - [ ] 迁移首页品牌图片或确定新版视觉资产；当前首页保持相同工具型气质，但不是旧首页逐像素复制。
 - [ ] 迁移新手指南、参数说明、更新日志和关于页面正文。
-- [ ] 迁移设置页的 `ui-configs` 与 TensorBoard 自定义 URL；当前 iframe 固定使用同源代理。
+- [x] 迁移设置页的 `ui-configs` 与 TensorBoard 自定义 URL。
 - [ ] 核对 Dreambooth 页面是否继续在导航显示。
 - [ ] 核对旧外部 tageditor WebSocket `/proxy/tageditor/queue/join` 的端到端行为。
 

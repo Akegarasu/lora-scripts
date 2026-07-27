@@ -1,0 +1,21 @@
+.simple-page { max-width: 860px; margin: 0 auto; padding: 60px clamp(24px, 6vw, 80px); }
+.simple-page header h1 { margin: 10px 0 8px; font-size: 38px; letter-spacing: -.04em; }
+.simple-page header p { color: var(--text-soft); line-height: 1.7; }
+.settings-card { display: grid; gap: 10px; margin-top: 30px; padding: 26px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.settings-card label, .argument-heading strong { font-size: 12px; font-weight: 750; }
+.settings-card small { color: var(--text-faint); line-height: 1.5; }
+.settings-card input, .settings-card select { width: 100%; min-height: 40px; padding: 0 12px; color: var(--text); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 9px; outline: none; }
+.settings-card input:focus, .settings-card select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.form-actions { display: flex; gap: 10px; margin-top: 16px; }
+.form-actions button { border: 0; cursor: pointer; }
+.form-actions .secondary-action { border: 1px solid var(--border); }
+.argument-heading { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; }
+.argument-heading button { padding: 6px 10px; color: var(--accent-dark); background: var(--accent-soft); border: 0; border-radius: 7px; cursor: pointer; }
+.argument-row { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 8px; }
+.argument-row button { color: #b42318; background: transparent; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+
+@media (max-width: 520px) {
+  .simple-page { padding: 34px 18px; }
+  .argument-row { grid-template-columns: 1fr 1fr; }
+  .argument-row button { grid-column: 1 / -1; min-height: 34px; }
+}

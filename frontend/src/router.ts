@@ -3,6 +3,8 @@ import HomePage from "./pages/HomePage.vue"
 import IntegrationPage from "./pages/IntegrationPage.vue"
 import MigrationPage from "./pages/MigrationPage.vue"
 import TasksPage from "./pages/TasksPage.vue"
+import SettingsPage from "./pages/SettingsPage.vue"
+import ToolsPage from "./pages/ToolsPage.vue"
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "basic"],
@@ -44,7 +46,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/tensorboard.html",
     component: IntegrationPage,
-    props: { title: "TensorBoard", src: "/proxy/tensorboard/" },
+    props: { title: "TensorBoard", src: "/proxy/tensorboard/", configurable: true },
     meta: { title: "TensorBoard" },
   },
   {
@@ -54,10 +56,10 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "旧版标签编辑器" },
   },
   { path: "/task.html", component: TasksPage, meta: { title: "训练任务" } },
+  { path: "/lora/tools.html", component: ToolsPage, meta: { title: "LoRA 脚本工具" } },
+  { path: "/other/settings.html", component: SettingsPage, meta: { title: "训练 UI 设置" } },
   ...[
-    ["/lora/tools.html", "LoRA 脚本工具", "脚本工具"],
     ["/lora/params.html", "训练参数调节", "参数说明"],
-    ["/other/settings.html", "训练 UI 设置", "本地设置"],
     ["/other/about.html", "关于 Next Trainer", "项目信息"],
     ["/other/changelog.html", "更新日志", "版本记录"],
     ["/help/guide.html", "新手上路", "使用指南"],
