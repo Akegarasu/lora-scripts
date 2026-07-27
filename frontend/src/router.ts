@@ -6,6 +6,7 @@ import TasksPage from "./pages/TasksPage.vue"
 import SettingsPage from "./pages/SettingsPage.vue"
 import ToolsPage from "./pages/ToolsPage.vue"
 import TaggerPage from "./pages/TaggerPage.vue"
+import DatasetEditorPage from "./pages/DatasetEditorPage.vue"
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "basic"],
@@ -39,8 +40,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/native-tageditor.html",
     alias: "/dataset-editor.html",
-    component: MigrationPage,
-    props: { title: "数据集标签编辑器", area: "Caption 与 Tag 编辑" },
+    component: DatasetEditorPage,
     meta: { title: "数据集标签编辑器" },
   },
   {
