@@ -1,0 +1,18 @@
+.fast-page { display: grid; grid-template-columns: minmax(380px,.8fr) minmax(460px,1.2fr); min-height: 100vh; }
+.fast-intro { align-self: center; padding: 70px clamp(30px,6vw,90px); }
+.fast-intro h1 { margin: 14px 0 10px; font-size: clamp(42px,6vw,72px); line-height: 1; letter-spacing: -.055em; }
+.fast-intro > p { color: var(--text-soft); font-size: 16px; }
+.fast-state { display: flex; align-items: center; justify-content: space-between; margin: 35px 0; padding: 18px; background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 10px; }
+.fast-state span { font-weight: 700; }
+.fast-state strong { color: var(--text-faint); font: 10px/1 ui-monospace,monospace; text-transform: uppercase; }
+.fast-state[data-state=broken] { border-left-color: #dc2626; }
+.audit-errors { padding: 17px; color: #b42318; background: rgba(220,38,38,.06); border-radius: 10px; }
+.audit-errors p { margin: 8px 0; font-size: 11px; }
+.fast-actions { display: flex; gap: 10px; margin-top: 24px; }
+.fast-actions button { border: 1px solid var(--border); }
+.install-console { display: flex; flex-direction: column; min-width: 0; margin: 32px; padding: 24px; background: #101820; border: 1px solid #263746; border-radius: 18px; box-shadow: var(--shadow); }
+.install-console > header { display: flex; justify-content: space-between; color: #b8ddea; font-size: 12px; }
+.install-progress { height: 7px; margin: 15px 0; overflow: hidden; background: #24343f; border-radius: 99px; }
+.install-progress i { display: block; height: 100%; background: #22a5c2; }
+.install-console pre { flex: 1; overflow: auto; margin: 0; padding: 18px; color: #afc7d1; background: #0b1117; border-radius: 10px; font: 11px/1.65 ui-monospace,monospace; white-space: pre-wrap; }
+@media (max-width: 900px) { .fast-page { grid-template-columns: 1fr; } .install-console { min-height: 500px; margin: 18px; } }

@@ -7,6 +7,7 @@ import SettingsPage from "./pages/SettingsPage.vue"
 import ToolsPage from "./pages/ToolsPage.vue"
 import TaggerPage from "./pages/TaggerPage.vue"
 import DatasetEditorPage from "./pages/DatasetEditorPage.vue"
+import AnimaFastPage from "./pages/AnimaFastPage.vue"
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "basic"],
@@ -28,7 +29,7 @@ const routes: RouteRecordRaw[] = [
   },
   ...trainingRoutes.map(([path, title, area]) => ({
     path,
-    component: MigrationPage,
+    component: path === "/lora/anima-fast.html" ? AnimaFastPage : MigrationPage,
     props: { title, area, training: true },
     meta: { title },
   })),
