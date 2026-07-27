@@ -5,6 +5,7 @@ import MigrationPage from "./pages/MigrationPage.vue"
 import TasksPage from "./pages/TasksPage.vue"
 import SettingsPage from "./pages/SettingsPage.vue"
 import ToolsPage from "./pages/ToolsPage.vue"
+import TaggerPage from "./pages/TaggerPage.vue"
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "basic"],
@@ -32,8 +33,7 @@ const routes: RouteRecordRaw[] = [
   })),
   {
     path: "/tagger.html",
-    component: MigrationPage,
-    props: { title: "Tagger 标注工具", area: "数据集自动打标" },
+    component: TaggerPage,
     meta: { title: "Tagger 标注工具" },
   },
   {

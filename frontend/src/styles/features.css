@@ -13,9 +13,39 @@
 .argument-heading button { padding: 6px 10px; color: var(--accent-dark); background: var(--accent-soft); border: 0; border-radius: 7px; cursor: pointer; }
 .argument-row { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 8px; }
 .argument-row button { color: #b42318; background: transparent; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.tagger-page { display: grid; grid-template-columns: minmax(0, 1fr) 360px; min-height: 100vh; }
+.tagger-form { padding: 50px clamp(24px, 5vw, 70px); }
+.tagger-form header h1 { margin: 10px 0 8px; font-size: 36px; }
+.tagger-form header p { color: var(--text-soft); }
+.tagger-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 30px; padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; }
+.tagger-grid label { display: grid; gap: 7px; color: var(--text-soft); font-size: 12px; }
+.tagger-grid input, .tagger-grid select { min-height: 39px; padding: 0 11px; color: var(--text); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 8px; }
+.check-row { display: flex; flex-wrap: wrap; gap: 12px 22px; margin-top: 15px; padding: 18px 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.check-row label { display: flex; align-items: center; gap: 7px; color: var(--text-soft); font-size: 12px; }
+.tagger-status { position: sticky; top: 0; height: 100vh; padding: 46px 28px; background: var(--surface); border-left: 1px solid var(--border); }
+.tagger-status h2 { min-height: 52px; margin: 16px 0 8px; font-size: 19px; line-height: 1.4; }
+.tagger-status > p { color: #dc2626; font-size: 12px; }
+.meter { margin-top: 28px; }
+.meter header { display: flex; justify-content: space-between; margin-bottom: 9px; color: var(--text-soft); font-size: 11px; }
+.meter > div { height: 7px; overflow: hidden; background: var(--surface-inset); border-radius: 99px; }
+.meter i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .25s ease; }
+.meter small { display: block; min-height: 17px; margin-top: 7px; overflow: hidden; color: var(--text-faint); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.tagger-actions { position: absolute; right: 28px; bottom: 32px; left: 28px; display: grid; gap: 9px; }
+.tagger-actions button { border: 1px solid var(--border); cursor: pointer; }
+.danger-action { min-height: 42px; color: #b42318; background: rgba(220, 38, 38, .07); border-color: rgba(220, 38, 38, .25) !important; border-radius: 10px; font-weight: 700; }
 
 @media (max-width: 520px) {
   .simple-page { padding: 34px 18px; }
   .argument-row { grid-template-columns: 1fr 1fr; }
   .argument-row button { grid-column: 1 / -1; min-height: 34px; }
+}
+
+@media (max-width: 900px) {
+  .tagger-page { grid-template-columns: 1fr; }
+  .tagger-status { position: relative; height: auto; min-height: 480px; border-top: 1px solid var(--border); border-left: 0; }
+}
+
+@media (max-width: 600px) {
+  .tagger-form { padding: 30px 16px; }
+  .tagger-grid { grid-template-columns: 1fr; padding: 18px; }
 }
