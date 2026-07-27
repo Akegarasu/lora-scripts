@@ -17,6 +17,15 @@
 - TensorBoard 与旧 tageditor 继续使用现有后端代理，当前页面已可实际加载 iframe。
 - 尚未核对完成的业务页面显示迁移状态，危险按钮保持禁用，不用伪实现替代旧行为。
 
+### 2026-07-28：基础 API 与任务页
+
+- 新增统一同源 API client，处理 HTTP、网络、JSON、`success/fail/pending/error` 和缺失 data。
+- 为版本与任务接口建立 TypeScript 类型和领域 API，不在组件内直接拼装 fetch。
+- 侧栏品牌通过 `/api/version` 显示真实后端版本；请求失败时静默回退，不阻塞主界面。
+- `/task.html` 已替换为真实任务页：读取 `/api/tasks`、每 2 秒轮询、展示状态/returncode/metadata、打开 `/train-log`，并兼容后端现有 GET 终止接口。
+- 行为改进：旧训练页终止操作只取第一个运行任务；新任务页对每个运行任务显示明确 task id 和独立终止按钮。后端当前并发上限仍为 1，因此不改变实际并发语义。
+- 验证：Node 22.17.1 下 `npm run typecheck` 与 `npm run build`。
+
 ## 已完成
 
 - [x] 旧前端完整备份到 `frontendbak/`
@@ -27,6 +36,9 @@
 - [x] 旧页面 URL 基线
 - [x] TensorBoard `/proxy/tensorboard/` iframe
 - [x] 旧 tageditor `/proxy/tageditor/` iframe
+- [x] 统一 API client 和基础响应类型
+- [x] 后端版本读取与侧栏展示
+- [x] 真实任务列表、轮询、日志入口和按 task id 终止
 
 ## 行为差异与待办
 
@@ -37,7 +49,7 @@
 - [ ] **Anima Fast**：迁移安装状态、安装确认、日志 SSE、进度 SSE、刷新恢复、audit 限制和训练 gate。
 - [ ] **Tagger**：迁移受控表单、模型预下载、状态轮询、双进度、取消与重置。
 - [ ] **数据集编辑器**：迁移扫描、筛选、图库、caption、批量操作、快捷 tag、undo/redo 和会话历史。
-- [ ] **任务页**：核对旧 `/task.html` 实际信息后实现任务列表、状态和日志入口。
+- [x] **任务页基础流程**：已实现任务列表、状态、轮询、日志入口与终止；任务详情、日志内嵌和时间信息受后端现有字段限制，后续再增强。
 - [ ] **工具页**：迁移 `/api/run_script`，并修复旧版硬编码 `127.0.0.1:28000` 的行为，改用同源 `/api/run_script`。
 - [ ] **配置导出**：旧版直接在浏览器生成 TOML；新版应优先调用后端已有 `/api/config/normalize-for-export`。这是有意行为修正，需验证所有训练类型。
 - [ ] **深链部署**：确认 FastAPI `SPAStaticFiles` 对所有 Vue Router history URL 的生产刷新均返回 `index.html`。
@@ -58,7 +70,7 @@
 - [ ] 增加 Vitest、Vue Test Utils 和 API client 单元测试。
 - [ ] 增加 Playwright 路由、训练 mock、Tagger、数据集编辑和 iframe smoke 测试。
 - [ ] 增加 ESLint/Prettier，并根据仓库规范固定格式。
-- [ ] 为 API 响应、任务、Schema、Anima Fast、Tagger 和数据集定义完整 TypeScript 类型。
+- [ ] 为 Schema、Anima Fast、Tagger 和数据集定义完整 TypeScript 类型；API 基础响应与任务类型已完成。
 - [ ] 将当前 CSS 拆分为 token、layout 和 feature 样式；基线阶段暂保持一个文件以减少过早抽象。
 - [ ] 增加前端构建到发布/整合包流程，确保干净 clone 可复现。
 - [ ] 将 Element Plus 改为按需引入并按页面拆包；当前基线全量引入，生产 JS 约 1 MB，Vite 会给出 chunk size warning。

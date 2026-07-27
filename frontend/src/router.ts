@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import HomePage from "./pages/HomePage.vue"
 import IntegrationPage from "./pages/IntegrationPage.vue"
 import MigrationPage from "./pages/MigrationPage.vue"
+import TasksPage from "./pages/TasksPage.vue"
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "basic"],
@@ -52,8 +53,8 @@ const routes: RouteRecordRaw[] = [
     props: { title: "旧版标签编辑器", src: "/proxy/tageditor/" },
     meta: { title: "旧版标签编辑器" },
   },
+  { path: "/task.html", component: TasksPage, meta: { title: "训练任务" } },
   ...[
-    ["/task.html", "训练任务", "任务列表与日志"],
     ["/lora/tools.html", "LoRA 脚本工具", "脚本工具"],
     ["/lora/params.html", "训练参数调节", "参数说明"],
     ["/other/settings.html", "训练 UI 设置", "本地设置"],
