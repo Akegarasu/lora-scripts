@@ -5,7 +5,7 @@ from scripts import patch_config_import_layout
 
 
 class TrainSubmitLoadingStaticTests(unittest.TestCase):
-    def test_standard_train_button_shows_immediate_submit_feedback(self):
+    def test_standard_train_submit_uses_writable_notice_and_restores_state(self):
         layout = Path("frontend/dist/assets/layout.96d49288.js").read_text(
             encoding="utf-8"
         )
@@ -14,20 +14,28 @@ class TrainSubmitLoadingStaticTests(unittest.TestCase):
         self.assertIn("setSubmitButtonLoading=", layout)
         self.assertIn("trainSubmitButton", layout)
         self.assertIn("if(submitLoading.value)return", layout)
-        self.assertIn("submitLoading=ref(!1),submitNotice=null", layout)
+        self.assertIn("submitLoading=ref(!1),submitNotice=ref(null)", layout)
         self.assertIn(
-            "submitLoading.value=!0,setSubmitButtonLoading(!0),submitNotice=ElMessage(",
+            "submitLoading.value=!0,setSubmitButtonLoading(!0),0;try{submitNotice.value=ElMessage(",
             layout,
         )
         self.assertNotIn("const submitNotice=ElMessage(", layout)
+        self.assertNotIn("submitNotice=null,setSubmitButtonLoading=", layout)
         self.assertIn("任务正在提交中，请稍等", layout)
         self.assertIn('duration:0,type:"info"', layout)
-        self.assertIn("submitNotice.close()", layout)
+        self.assertIn("submitNotice.value&&submitNotice.value.close()", layout)
+        self.assertIn("submitNotice.value=null", layout)
         self.assertIn('ElMessage.success("训练已开始")', layout)
         self.assertNotIn('message:"正在提交训练任务...",duration:2e3', layout)
         self.assertIn("setSubmitButtonLoading(!1)", layout)
-        self.assertIn('try{const _=parseParams(n.value(a.value),t);', layout)
-        self.assertIn("finally{submitNotice.close(),submitLoading.value=!1", layout)
+        self.assertIn(
+            'try{submitNotice.value=ElMessage({message:"任务正在提交中，请稍等",duration:0,type:"info"});const _=parseParams(n.value(a.value),t);',
+            layout,
+        )
+        self.assertIn(
+            "finally{submitNotice.value&&submitNotice.value.close(),submitNotice.value=null,submitLoading.value=!1",
+            layout,
+        )
         self.assertIn("loading:submitLoading.value", layout)
         self.assertIn("disabled:submitLoading.value", layout)
 
