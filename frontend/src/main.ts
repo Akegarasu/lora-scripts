@@ -8,5 +8,6 @@ import "./styles/main.css"
 import "./styles/features.css"
 import "./styles/anima-fast.css"
 import "./styles/training-index.css"
+import "./styles/content-pages.css"
 
 createApp(App).use(createPinia()).use(router).use(ElementPlus).mount("#app")

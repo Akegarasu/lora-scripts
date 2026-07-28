@@ -15,13 +15,13 @@ const portals = [
         <p>Next Trainer 将训练配置、数据集准备与运行监控集中在本地界面中。</p>
         <div class="hero-actions"><RouterLink class="primary-action" to="/lora/index.html">开始配置训练</RouterLink><RouterLink class="secondary-action" to="/help/guide.html">阅读使用指南</RouterLink></div>
       </div>
-      <div class="hero-visual" aria-hidden="true"><div class="visual-grid" /><div class="orbit orbit-one" /><div class="orbit orbit-two" /><div class="core">N</div></div>
+      <div class="hero-visual"><div class="visual-grid" /><div class="orbit orbit-one" /><div class="orbit orbit-two" /><img src="/assets/home-logo.webp" alt="Next Trainer"></div>
     </section>
     <section class="portal-grid" aria-label="功能入口">
       <RouterLink v-for="(portal, index) in portals" :key="portal.to" :to="portal.to" class="portal-card" :data-tone="portal.tone">
         <span class="portal-index">0{{ index + 1 }}</span><h2>{{ portal.title }}</h2><p>{{ portal.text }}</p><span class="portal-link">进入工作区 <b>→</b></span>
       </RouterLink>
     </section>
-    <section class="status-strip"><span><i class="status-dot" /> 本地服务架构</span><span>Vue 3 重构进行中</span><span>旧前端已完整备份</span></section>
+    <section class="status-strip"><span><i class="status-dot" /> 本地服务架构</span><span>Vue 3 训练工作区</span><span>Stable Diffusion · Flux · Anima</span></section>
   </div>
 </template>

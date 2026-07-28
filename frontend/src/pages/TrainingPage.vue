@@ -175,14 +175,14 @@ onBeforeUnmount(() => localStorage.setItem(autosaveKey(), JSON.stringify(model.v
 <template>
   <div class="training-layout schema-training-layout">
     <section class="form-canvas">
-      <div class="section-heading"><span>{{ area }}</span><h1>{{ title }}</h1><p>表单由后端 Schema 动态生成，提交前执行参数转换、冲突检查和后端训练约束。</p></div>
-      <div class="training-toolbar"><button @click="saveHistory">保存参数</button><button @click="historyOpen = true">历史记录</button><button @click="openPresets">训练预设</button><label>导入配置<input type="file" accept=".toml,.json" @change="importFile"></label><button @click="exportConfig">导出 TOML</button></div>
+      <div class="section-heading"><span>{{ area }}</span><h1>{{ title }}</h1><p>依次填写模型、数据集与训练参数。提交前会执行参数转换、冲突检查和后端训练约束。</p></div>
+      <div class="training-toolbar"><button @click="openPresets">训练预设</button><label>导入配置<input type="file" accept=".toml,.json" @change="importFile"></label><button @click="saveHistory">保存参数</button><button @click="historyOpen = true">历史记录</button><button @click="exportConfig">导出 TOML</button></div>
       <div v-if="loading" class="schema-state"><strong>正在加载训练 Schema</strong><span>检查缓存与后端版本…</span></div>
       <div v-else-if="error" class="schema-state schema-error"><strong>Schema 无法加载</strong><span>{{ error }}</span><button @click="load">重试</button></div>
       <DynamicSchemaForm v-else-if="schema" v-model="model" :schema="schema" :errors="errors" />
     </section>
     <aside class="control-panel">
-      <div class="panel-copy"><span class="eyebrow">TRAINING CONTROL</span><h2>{{ title }}</h2><p>参数预览为提交给后端的规范化训练配置。</p></div>
+      <div class="panel-copy"><span class="eyebrow">TRAINING CONTROL</span><h2>{{ title }}</h2><p>右侧为实际提交的 TOML。建议先校验参数，再开始后台训练任务。</p></div>
       <div v-if="diagnostics.errors.length || diagnostics.warnings.length" class="param-diagnostics"><p v-for="item in diagnostics.errors" :key="item" class="error">{{ item }}</p><p v-for="item in diagnostics.warnings" :key="item">{{ item }}</p></div>
       <div v-if="started" class="started-task"><strong>任务已启动</strong><code>{{ started.task_id }}</code><a :href="trainLogHref" target="_blank" rel="noreferrer">打开训练日志</a><RouterLink to="/task.html">查看任务页</RouterLink></div>
       <section class="preview-panel"><header><span>TOML 参数预览</span><b>{{ Object.keys(output).length }} 项</b></header><pre>{{ outputText }}</pre></section>

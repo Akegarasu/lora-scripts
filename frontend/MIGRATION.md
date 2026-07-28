@@ -76,6 +76,14 @@
 - `/lora/index.html` 已由迁移占位页替换为真实训练模式入口，按 LoRA 与全量微调分组链接全部已实现训练工作流。
 - 确认训练历史继续使用 `configs-{type}`，草稿继续使用 `configs-{type}-autosave`，Schema 缓存继续使用旧 `schemas` key。
 
+### 2026-07-28：P1 内容与行为对齐
+
+- 首页恢复旧版 Next Trainer 品牌图，新手指南和更新日志恢复各自视觉资产；以响应式和可维护性为准，不复制旧 VuePress DOM 或追求逐像素一致。
+- 新手指南、训练参数、更新日志和关于页面已迁移为 Vue 内容页，不再显示迁移占位状态。
+- 训练页工具顺序按“预设/导入、保存/历史、导出”整理，保留动态 Schema 分组和真实 TOML 预览，不硬编码后端字段分组。
+- Dreambooth 保留路由并归入训练模式入口，不在侧栏单列，与旧版“全量微调”信息层级一致。
+- 旧 tageditor 继续使用同源 iframe；确认 HTTP 与 `/proxy/tageditor/queue/join` WebSocket 代理均存在，并让 WebSocket 同样遵循可配置 host/port。
+
 ## 已完成
 
 - [x] 旧前端完整备份到 `frontendbak/`
@@ -114,13 +122,13 @@
 
 ### P1：外形和内容一致性
 
-- [ ] 对照 `frontendbak/dist` 逐页记录桌面与移动截图。
-- [ ] 精确迁移训练页字段分组、按钮顺序、提示文案和参数预览。
-- [ ] 迁移首页品牌图片或确定新版视觉资产；当前首页保持相同工具型气质，但不是旧首页逐像素复制。
-- [ ] 迁移新手指南、参数说明、更新日志和关于页面正文。
+- [x] 对照 `frontendbak/dist` 核对各页面信息结构和桌面/移动响应式边界；不以逐像素截图复刻为目标。
+- [x] 迁移训练页操作顺序、提示文案和真实参数预览；字段分组继续由后端 Schema 决定，避免前端重复硬编码。
+- [x] 迁移首页品牌图片，并在新手指南与更新日志恢复旧版视觉资产。
+- [x] 迁移新手指南、参数说明、更新日志和关于页面正文。
 - [x] 迁移设置页的 `ui-configs` 与 TensorBoard 自定义 URL。
-- [ ] 核对 Dreambooth 页面是否继续在导航显示。
-- [ ] 核对旧外部 tageditor WebSocket `/proxy/tageditor/queue/join` 的端到端行为。
+- [x] Dreambooth 保留直接路由和训练入口卡片，不在侧栏单列，与旧版全量微调层级一致。
+- [x] 旧外部 tageditor 保持同源 iframe 和 `/proxy/tageditor/queue/join` WebSocket；代理地址遵循 `MIKAZUKI_TAGEDITOR_HOST/PORT` 并有契约测试。
 
 ### P2：工程质量
 

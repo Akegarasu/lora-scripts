@@ -1,0 +1,8 @@
+<template>
+  <article class="content-page">
+    <header class="content-hero content-hero-split"><div><span class="eyebrow">ABOUT</span><h1>Next Trainer</h1><p>面向 Stable Diffusion、Flux 与 Anima 的本地训练 WebUI。</p></div><img class="about-logo" src="/assets/home-logo.webp" alt="Next Trainer"></header>
+    <section><h2>关于项目</h2><p>Next Trainer 基于 lora-scripts 生态，集中提供训练配置、数据集准备、任务管理和训练监控。动态表单由 <a href="https://github.com/shigma/schemastery" target="_blank" rel="noreferrer">Schemastery</a> 驱动。</p></section>
+    <section><h2>反馈</h2><p>遇到问题时，请附上版本号、训练类型、复现步骤和相关日志，前往 <a href="https://github.com/wochenlong/lora-scripts-next/issues" target="_blank" rel="noreferrer">GitHub Issues</a> 提交。</p></section>
+    <section><h2>项目链接</h2><div class="content-links"><a href="https://github.com/wochenlong/lora-scripts-next" target="_blank" rel="noreferrer">源代码</a><a href="https://github.com/wochenlong/lora-scripts-next/releases" target="_blank" rel="noreferrer">发行版本</a><a href="https://github.com/wochenlong/lora-scripts-next/issues" target="_blank" rel="noreferrer">问题反馈</a></div></section>
+  </article>
+</template>

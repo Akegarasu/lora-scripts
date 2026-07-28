@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import HomePage from "./pages/HomePage.vue"
 import IntegrationPage from "./pages/IntegrationPage.vue"
-import MigrationPage from "./pages/MigrationPage.vue"
+import NotFoundPage from "./pages/NotFoundPage.vue"
 import TasksPage from "./pages/TasksPage.vue"
 import SettingsPage from "./pages/SettingsPage.vue"
 import ToolsPage from "./pages/ToolsPage.vue"
@@ -10,6 +10,10 @@ import DatasetEditorPage from "./pages/DatasetEditorPage.vue"
 import AnimaFastPage from "./pages/AnimaFastPage.vue"
 import TrainingPage from "./pages/TrainingPage.vue"
 import TrainingIndexPage from "./pages/TrainingIndexPage.vue"
+import GuidePage from "./pages/GuidePage.vue"
+import ParamsPage from "./pages/ParamsPage.vue"
+import AboutPage from "./pages/AboutPage.vue"
+import ChangelogPage from "./pages/ChangelogPage.vue"
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "新手模式", "lora-basic"],
@@ -60,20 +64,13 @@ const routes: RouteRecordRaw[] = [
   { path: "/task.html", component: TasksPage, meta: { title: "训练任务" } },
   { path: "/lora/tools.html", component: ToolsPage, meta: { title: "LoRA 脚本工具" } },
   { path: "/other/settings.html", component: SettingsPage, meta: { title: "训练 UI 设置" } },
-  ...[
-    ["/lora/params.html", "训练参数调节", "参数说明"],
-    ["/other/about.html", "关于 Next Trainer", "项目信息"],
-    ["/other/changelog.html", "更新日志", "版本记录"],
-    ["/help/guide.html", "新手上路", "使用指南"],
-  ].map(([path, title, area]) => ({
-    path,
-    component: MigrationPage,
-    props: { title, area },
-    meta: { title },
-  })),
+  { path: "/lora/params.html", component: ParamsPage, meta: { title: "训练参数调节" } },
+  { path: "/other/about.html", component: AboutPage, meta: { title: "关于 Next Trainer" } },
+  { path: "/other/changelog.html", component: ChangelogPage, meta: { title: "更新日志" } },
+  { path: "/help/guide.html", component: GuidePage, meta: { title: "新手上路" } },
   { path: "/lora/sdxl.html", redirect: "/lora/master.html" },
   { path: "/lora/anima-fast", redirect: "/lora/anima-fast.html" },
-  { path: "/:pathMatch(.*)*", component: MigrationPage, props: { title: "页面不存在", area: "404" } },
+  { path: "/:pathMatch(.*)*", component: NotFoundPage, meta: { title: "页面不存在" } },
 ]
 
 const router = createRouter({
