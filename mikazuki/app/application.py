@@ -19,6 +19,7 @@ from mikazuki.app.api import router as api_router
 # from mikazuki.app.ipc import router as ipc_router
 from mikazuki.app.proxy import router as proxy_router
 from mikazuki.utils.devices import check_torch_gpu
+from mikazuki.spa import should_fallback_to_spa
 
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
@@ -47,7 +48,7 @@ class SPAStaticFiles(StaticFiles):
         try:
             return await super().get_response(path, scope)
         except HTTPException as ex:
-            if ex.status_code == 404:
+            if should_fallback_to_spa(path, ex.status_code):
                 return await super().get_response("index.html", scope)
             else:
                 raise ex
@@ -171,7 +172,7 @@ async def add_cache_control_header(request, call_next):
         or path.endswith("/assets/dataset-editor-entry.js")
     ):
         response.headers["Cache-Control"] = "no-cache, must-revalidate"
-    elif re.search(r"\.[a-f0-9]{8}\.(js|css|webp)$", path):
+    elif re.search(r"-[A-Za-z0-9_-]{8}\.(js|css|webp)$", path):
         response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     else:
         response.headers["Cache-Control"] = "max-age=0"

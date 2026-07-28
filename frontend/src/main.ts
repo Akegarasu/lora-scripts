@@ -1,13 +1,27 @@
 import { createApp } from "vue"
 import { createPinia } from "pinia"
-import ElementPlus from "element-plus"
-import "element-plus/dist/index.css"
+import { ElButton, ElDialog, ElIcon, ElInput, ElInputNumber, ElOption, ElSelect, ElSwitch, vLoading } from "element-plus"
+import "element-plus/theme-chalk/base.css"
+import "element-plus/es/components/button/style/css"
+import "element-plus/es/components/dialog/style/css"
+import "element-plus/es/components/icon/style/css"
+import "element-plus/es/components/input/style/css"
+import "element-plus/es/components/input-number/style/css"
+import "element-plus/es/components/message/style/css"
+import "element-plus/es/components/message-box/style/css"
+import "element-plus/es/components/option/style/css"
+import "element-plus/es/components/select/style/css"
+import "element-plus/es/components/switch/style/css"
+import "element-plus/es/components/loading/style/css"
 import App from "./App.vue"
 import router from "./router"
-import "./styles/main.css"
+import "./styles/tokens.css"
+import "./styles/layout.css"
 import "./styles/features.css"
 import "./styles/anima-fast.css"
 import "./styles/training-index.css"
 import "./styles/content-pages.css"
 
-createApp(App).use(createPinia()).use(router).use(ElementPlus).mount("#app")
+const app = createApp(App)
+for (const component of [ElButton, ElDialog, ElIcon, ElInput, ElInputNumber, ElOption, ElSelect, ElSwitch]) app.component(component.name!, component)
+app.directive("loading", vLoading).use(createPinia()).use(router).mount("#app")

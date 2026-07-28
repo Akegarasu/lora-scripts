@@ -1,4 +1,4 @@
-import type { FormModel, FormValue } from "../schema/adapter"
+import { cloneFormModel, type FormModel, type FormValue } from "../schema/adapter"
 import { parse } from "smol-toml"
 
 const FLOAT_PARAMS = ["learning_rate", "unet_lr", "text_encoder_lr", "learning_rate_te", "learning_rate_te1", "learning_rate_te2", "sigmoid_scale", "guidance_scale"]
@@ -31,7 +31,7 @@ function remove(config: FormModel, keys: string[]) {
 }
 
 export function buildTrainingConfig(source: FormModel, schemaName: string) {
-  const config: FormModel = schemaName === "lora-basic" ? { ...BASIC_DEFAULTS, ...structuredClone(source) } : structuredClone(source)
+  const config: FormModel = schemaName === "lora-basic" ? { ...BASIC_DEFAULTS, ...cloneFormModel(source) } : cloneFormModel(source)
   let networkArgs: string[] = []
   let optimizerArgs: string[] = []
 
@@ -106,7 +106,7 @@ export function buildTrainingConfig(source: FormModel, schemaName: string) {
 }
 
 export function hydrateImportedConfig(source: FormModel) {
-  const config = structuredClone(source)
+  const config = cloneFormModel(source)
   for (const key of FLOAT_PARAMS) {
     const value = config[key]
     if (typeof value !== "number") continue

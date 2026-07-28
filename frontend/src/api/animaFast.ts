@@ -1,11 +1,31 @@
 import { apiData } from "./client"
 
+export type AnimaFastState = "unknown" | "installing" | "auditing" | "ready" | "broken" | "installed_unverified" | "disabled"
+
+export interface AnimaFastAudit {
+  ok?: boolean
+  errors?: string[]
+  warnings?: string[]
+}
+
+export interface AnimaFastFacts {
+  task_id?: string
+  audit?: AnimaFastAudit
+}
+
+export interface AnimaFastRuntime {
+  python?: string
+  environment_path?: string
+  version?: string
+  cuda?: string
+}
+
 export interface AnimaFastStatus {
-  state: string
+  state: AnimaFastState
   feature_enabled: boolean
   message?: string
-  facts?: { task_id?: string; audit?: { ok?: boolean; errors?: string[] } }
-  runtime?: Record<string, unknown>
+  facts?: AnimaFastFacts
+  runtime?: AnimaFastRuntime
 }
 
 export interface InstallResult {

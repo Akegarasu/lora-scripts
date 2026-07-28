@@ -6,7 +6,7 @@ import { parse, stringify } from "smol-toml"
 import DynamicSchemaForm from "../components/DynamicSchemaForm.vue"
 import { schemasApi } from "../api/schemas"
 import { trainingApi, type TrainingPreset, type TrainingStart } from "../api/training"
-import { createDefaultModel, serializeModel, validateModel, type AdaptedSchema, type FormField, type FormModel } from "../schema/adapter"
+import { cloneFormModel, createDefaultModel, serializeModel, validateModel, type AdaptedSchema, type FormField, type FormModel } from "../schema/adapter"
 import { loadTrainingSchema } from "../schema/loader"
 import { buildTrainingConfig, checkTrainingConfig, hydrateImportedConfig } from "../training/params"
 
@@ -92,7 +92,7 @@ function validate() {
 }
 
 function saveHistory() {
-  const row: HistoryRow = { time: new Date().toLocaleString(), value: structuredClone(model.value) }
+  const row: HistoryRow = { time: new Date().toLocaleString(), value: cloneFormModel(model.value) }
   if (typeof model.value.output_name === "string") row.name = model.value.output_name
   history.value.push(row)
   localStorage.setItem(historyKey(), JSON.stringify(history.value))

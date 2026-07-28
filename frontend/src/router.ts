@@ -1,19 +1,19 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
-import HomePage from "./pages/HomePage.vue"
-import IntegrationPage from "./pages/IntegrationPage.vue"
-import NotFoundPage from "./pages/NotFoundPage.vue"
-import TasksPage from "./pages/TasksPage.vue"
-import SettingsPage from "./pages/SettingsPage.vue"
-import ToolsPage from "./pages/ToolsPage.vue"
-import TaggerPage from "./pages/TaggerPage.vue"
-import DatasetEditorPage from "./pages/DatasetEditorPage.vue"
-import AnimaFastPage from "./pages/AnimaFastPage.vue"
-import TrainingPage from "./pages/TrainingPage.vue"
-import TrainingIndexPage from "./pages/TrainingIndexPage.vue"
-import GuidePage from "./pages/GuidePage.vue"
-import ParamsPage from "./pages/ParamsPage.vue"
-import AboutPage from "./pages/AboutPage.vue"
-import ChangelogPage from "./pages/ChangelogPage.vue"
+const HomePage = () => import("./pages/HomePage.vue")
+const IntegrationPage = () => import("./pages/IntegrationPage.vue")
+const NotFoundPage = () => import("./pages/NotFoundPage.vue")
+const TasksPage = () => import("./pages/TasksPage.vue")
+const SettingsPage = () => import("./pages/SettingsPage.vue")
+const ToolsPage = () => import("./pages/ToolsPage.vue")
+const TaggerPage = () => import("./pages/TaggerPage.vue")
+const DatasetEditorPage = () => import("./pages/DatasetEditorPage.vue")
+const AnimaFastPage = () => import("./pages/AnimaFastPage.vue")
+const TrainingPage = () => import("./pages/TrainingPage.vue")
+const TrainingIndexPage = () => import("./pages/TrainingIndexPage.vue")
+const GuidePage = () => import("./pages/GuidePage.vue")
+const ParamsPage = () => import("./pages/ParamsPage.vue")
+const AboutPage = () => import("./pages/AboutPage.vue")
+const ChangelogPage = () => import("./pages/ChangelogPage.vue")
 
 const trainingRoutes = [
   ["/lora/basic.html", "LoRA 训练 新手模式", "新手模式", "lora-basic"],

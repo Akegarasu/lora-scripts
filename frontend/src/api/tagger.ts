@@ -1,12 +1,13 @@
 import { apiData, apiRequest } from "./client"
 
 export type TaggerPhase = "idle" | "downloading" | "tagging" | "done" | "error" | "pending" | "cancelling"
+export type CaptionConflictAction = "ignore" | "copy" | "prepend"
 export interface TaggerStep { current: number; total: number; filename: string; bytes_current: number; bytes_total: number; percent: number }
 export interface TaggerStatus { phase: TaggerPhase; message: string; model: string; download: TaggerStep; tagging: TaggerStep; error?: string | null; updated_at: number }
 export interface TaggerRequest {
   path: string; interrogator_model: string; threshold: number; character_threshold: number
   add_rating_tag: boolean; add_model_tag: boolean; additional_tags: string; exclude_tags: string
-  escape_tag: boolean; batch_input_recursive: boolean; batch_output_action_on_conflict: string
+  escape_tag: boolean; batch_input_recursive: boolean; batch_output_action_on_conflict: CaptionConflictAction
   replace_underscore: boolean; download_endpoint: string; replace_underscore_excludes: string
 }
 

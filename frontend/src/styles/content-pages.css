@@ -4,11 +4,11 @@
 .content-hero img { width: min(240px, 32vw); max-height: 220px; object-fit: contain; }
 .content-hero img.about-logo { width: min(180px, 28vw); }
 .content-hero h1 { margin: 12px 0 10px; font-size: clamp(38px, 6vw, 60px); letter-spacing: -.045em; }
-.content-hero p { max-width: 650px; margin: 0; color: var(--text-soft); font-size: 16px; line-height: 1.75; }
+.content-hero p { max-width: 650px; margin: 0; color: var(--text-soft); font-size: 16px; line-height: 1.6; }
 .content-page > section { margin: 34px 0; }
 .content-page h2 { margin: 0 0 14px; font-size: 22px; }
 .content-page h3 { margin: 22px 0 8px; font-size: 15px; }
-.content-page p, .content-page li { color: var(--text-soft); font-size: 14px; line-height: 1.8; }
+.content-page p, .content-page li { color: var(--text-soft); font-size: 15px; line-height: 1.65; }
 .content-page :is(p, li) a { color: var(--accent-dark); font-weight: 650; }
 .content-page code { padding: 2px 5px; color: var(--accent-dark); background: var(--accent-soft); border-radius: 4px; }
 .content-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

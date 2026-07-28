@@ -71,6 +71,14 @@
 - 参数面板显示实际提交 TOML，提交前执行 Schema 校验、旧参数冲突检查和确认；成功后展示 task id、同源日志入口和任务页入口。
 - Anima Fast 提交前额外调用 `/api/anima-fast/preflight`，后端 `/api/run` 继续执行 feature flag、ready、audit 漂移和最终 preflight gate。
 
+### 2026-07-28：数据集增强与生产托管测试
+
+- 数据集编辑器补齐 Ctrl/Command 多选、Shift 范围选择、本页选择、筛选目标批处理、快捷 tag、替换、清理、排序和分页设置。
+- 接入 `/api/dataset-editor/history`，展示最近 20 次会话编辑及逐文件 before/after 明细，并依据服务端状态启用撤回/重做。
+- 新增 Vue history 深链测试，覆盖全部训练、工具、设置和帮助 URL；不存在的 `/assets/*` 保持 404，不再错误返回 SPA HTML。
+- 缓存中间件改为识别 Vite 的大小写/URL-safe 8 位 hash；迁移训练、数据集和 dist 测试，不再断言旧 VuePress hash bundle。
+- 深链回退判定提取为无 Web 框架依赖的纯函数，在最小 Python 环境中完成全部 URL、静态资源 404 和非 404 状态回归测试。
+
 ### 2026-07-28：训练入口与兼容契约收尾
 
 - `/lora/index.html` 已由迁移占位页替换为真实训练模式入口，按 LoRA 与全量微调分组链接全部已实现训练工作流。
@@ -83,6 +91,16 @@
 - 训练页工具顺序按“预设/导入、保存/历史、导出”整理，保留动态 Schema 分组和真实 TOML 预览，不硬编码后端字段分组。
 - Dreambooth 保留路由并归入训练模式入口，不在侧栏单列，与旧版“全量微调”信息层级一致。
 - 旧 tageditor 继续使用同源 iframe；确认 HTTP 与 `/proxy/tageditor/queue/join` WebSocket 代理均存在，并让 WebSocket 同样遵循可配置 host/port。
+
+### 2026-07-28：P2 离线工程质量
+
+- 增加 Vue Test Utils 组件测试和 API client 成功、pending、网络、HTTP、JSON 与缺失 data 单元测试。
+- 接入 ESLint flat config、Prettier 配置及 `lint`、`format`、`check` 脚本；不为统一格式批量改写仍在迁移的业务页面。
+- 收紧 Anima Fast、Tagger、数据集 mutation 和 Schema 图形卡片类型。
+- CSS 基础层拆为 `tokens.css` 与 `layout.css`，功能样式继续按训练入口、内容页、Anima Fast 和共享 feature 组织。
+- Element Plus 改为显式按需组件注册，全部页面改为路由动态导入；公共 JS 从约 1.1 MB 降至约 318 KB，并移除 Vite chunk size warning。
+- 新增 Node 22 锁定的 `00-build-frontend.ps1`，两个 Windows 便携构建入口均在复制项目之前执行 `npm ci` 和完整前端检查/构建。
+- Playwright 业务流程需要后端或稳定 mock 服务联调，本阶段暂不实施。
 
 ## 已完成
 
@@ -109,16 +127,16 @@
 
 ### P0：必须在替换旧版前完成
 
-- [x] **动态 Schema 表单适配器**：已完成 Schema 缓存、执行、AST、条件分支、字段渲染、路径选择、GPU 注入和基础校验；训练提交仍受参数转换流程阻塞。
+- [x] **动态 Schema 表单适配器**：已完成 Schema 缓存、执行、AST、条件分支、字段渲染、路径选择、GPU 注入和基础校验，并已接入完整训练提交流程。
 - [x] **训练完整流程**：已恢复 GPU、草稿、历史、预设、导入/导出、参数预览、提交、任务 ID、日志入口和任务页终止行为。
 - [x] **Anima Fast 训练约束**：安装 ready 后加载专用 Schema，提交前执行 preflight，最终提交继续受后端 feature flag、audit 和环境漂移 gate 保护。
 - [x] **Tagger**：已迁移受控表单、模型预下载、状态轮询、双进度、取消与重置。
-- [ ] **数据集编辑器增强**：核心流程已完成；待迁移快捷 tag、多选范围、清理/替换、分页设置和会话历史明细。
+- [x] **数据集编辑器增强**：已迁移快捷 tag、多选范围、清理/替换、分页设置和会话历史明细。
 - [x] **任务页基础流程**：已实现任务列表、状态、轮询、日志入口与终止；任务详情、日志内嵌和时间信息受后端现有字段限制，后续再增强。
 - [x] **工具页基础流程**：已迁移后端白名单脚本与同源 `/api/run_script`；具体脚本参数仍由用户按后端脚本 CLI 填写，后续可按脚本补专用表单。
 - [x] **配置导出**：通过后端 `/api/config/normalize-for-export` 规范化后生成可再次导入的 TOML，并由后端现有测试覆盖训练类型适配。
-- [ ] **深链部署**：确认 FastAPI `SPAStaticFiles` 对所有 Vue Router history URL 的生产刷新均返回 `index.html`。
-- [ ] **现有 Python 静态测试迁移**：旧测试直接断言 `frontend/dist/assets/app.547295de.js` 等 VuePress hash 文件，改名后必然失效。应替换为 Vue 构建、路由和 E2E 测试，不复制旧产物到新 dist 来欺骗测试。
+- [x] **深链部署**：`SPAStaticFiles` 已对全部 Vue Router history URL 做生产回退测试，且静态资源缺失保持 404。
+- [x] **现有 Python 静态测试迁移**：训练、数据集、Anima LoKr 和 dist cache 测试已改为 Vue 源码、Vite 产物与路由契约，不再依赖 VuePress hash 文件。
 
 ### P1：外形和内容一致性
 
@@ -132,13 +150,13 @@
 
 ### P2：工程质量
 
-- [ ] 增加 Vue Test Utils 和 API client 单元测试；Vitest 与 Schema/训练参数转换单元测试已完成。
+- [x] 增加 Vue Test Utils 和 API client 单元测试；Vitest 已覆盖 Schema、训练参数转换、动态表单和 API 错误边界。
 - [ ] 增加 Playwright 路由、训练 mock、Tagger、数据集编辑和 iframe smoke 测试。
-- [ ] 增加 ESLint/Prettier，并根据仓库规范固定格式。
-- [ ] 为 Schema、Anima Fast、Tagger 和数据集定义完整 TypeScript 类型；API 基础响应与任务类型已完成。
-- [ ] 将当前 CSS 拆分为 token、layout 和 feature 样式；基线阶段暂保持一个文件以减少过早抽象。
-- [ ] 增加前端构建到发布/整合包流程，确保干净 clone 可复现。
-- [ ] 将 Element Plus 改为按需引入并按页面拆包；当前基线全量引入，生产 JS 约 1 MB，Vite 会给出 chunk size warning。
+- [x] 增加 ESLint flat config、Prettier 配置和统一检查脚本。
+- [x] 为 Schema、Anima Fast、Tagger 和数据集定义明确 TypeScript API 类型。
+- [x] 将 CSS 拆分为 token、layout 和 feature 样式，并保留按页面加载的独立样式文件。
+- [x] 增加前端构建到 Windows 发布/整合包流程，以 Node 22、lockfile 和 `npm ci` 确保干净 clone 可复现。
+- [x] Element Plus 改为显式按需注册并按页面拆包，生产公共 JS 降至约 318 KB。
 
 ## 暂定兼容契约
 

@@ -48,6 +48,24 @@ describe("dynamic schema adapter", () => {
     expect(enabledFields[0].type).toBe("boolean")
   })
 
+  it("treats non-required const fields as union discriminators", () => {
+    const conditionalSources = [{
+      name: "conditional",
+      hash: "conditional",
+      schema: `Schema.intersect([
+        Schema.object({ mode: Schema.union(['sd-lora', 'sdxl-lora']).default('sdxl-lora') }),
+        Schema.union([
+          Schema.object({ mode: Schema.const('sd-lora'), v2: Schema.boolean().default(false) }),
+          Schema.object({}),
+        ]),
+      ])`,
+    }]
+    const schema = executeSchemaSources(conditionalSources, "conditional")
+    const modeFields = schema.sections.flatMap((section) => section.fields).filter((field) => field.key === "mode")
+    expect(modeFields).toHaveLength(1)
+    expect(modeFields[0].options).toEqual(["sd-lora", "sdxl-lora"])
+  })
+
   it("executes every backend training schema", () => {
     const schemaDir = resolve(process.cwd(), "../mikazuki/schema")
     const realSources = readdirSync(schemaDir).filter((name) => name.endsWith(".ts")).map((file) => ({
@@ -60,5 +78,10 @@ describe("dynamic schema adapter", () => {
       expect(schema.sections.length, source.name).toBeGreaterThan(0)
       expect(Object.keys(createDefaultModel(schema)).length, source.name).toBeGreaterThan(0)
     }
+
+    const master = executeSchemaSources(realSources, "lora-master")
+    const trainTypeFields = master.sections.flatMap((section) => section.fields).filter((field) => field.key === "model_train_type")
+    expect(trainTypeFields).toHaveLength(1)
+    expect(trainTypeFields[0].options).toEqual(["sd-lora", "sdxl-lora"])
   })
 })

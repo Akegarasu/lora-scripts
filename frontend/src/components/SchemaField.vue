@@ -44,7 +44,7 @@ async function openCatalog() {
     <span v-if="field.description" class="field-description">{{ field.description }}</span>
     <el-switch v-if="field.type === 'boolean'" :model-value="Boolean(modelValue)" :disabled="field.disabled" @update:model-value="emit('update:modelValue', $event)" />
     <el-select v-else-if="field.options" :model-value="modelValue" :disabled="field.disabled" :multiple="field.type === 'array'" clearable @update:model-value="emit('update:modelValue', $event)">
-      <el-option v-for="option in field.options" :key="String(option)" :label="String(option) || '（空）'" :value="option" />
+      <el-option v-for="option in field.options" :key="String(option)" :label="String(option) || '（空）'" :value="option ?? ''" />
     </el-select>
     <el-input-number v-else-if="field.type === 'number'" :model-value="modelValue as number | undefined" :disabled="field.disabled" :min="field.min" :max="field.max" :step="field.step || 1" controls-position="right" @update:model-value="emit('update:modelValue', $event ?? undefined)" />
     <el-input v-else-if="field.type === 'array' || field.role === 'table'" v-model="arrayText" type="textarea" :rows="4" :disabled="field.disabled" placeholder="每行一项" />

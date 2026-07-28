@@ -14,7 +14,8 @@ export interface SchemaHash {
 export interface GraphicCard {
   label?: string
   value?: string | number
-  [key: string]: unknown
+  name?: string
+  memory?: string
 }
 
 export interface PickerFile {

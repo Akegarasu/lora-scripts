@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest"
+import { reactive } from "vue"
 import { buildTrainingConfig, checkTrainingConfig, hydrateImportedConfig } from "./params"
 
 describe("training parameter conversion", () => {
@@ -15,6 +16,14 @@ describe("training parameter conversion", () => {
       train_data_dir: "D:/train",
       gpu_ids: ["1", "2"],
     })
+  })
+
+  it("converts Vue reactive form models", () => {
+    const result = buildTrainingConfig(reactive({
+      model_train_type: "sdxl-lora",
+      gpu_ids: ["GPU 0: RTX"],
+    }), "lora-master")
+    expect(result.gpu_ids).toEqual(["0"])
   })
 
   it("converts LyCORIS fields and custom arguments", () => {

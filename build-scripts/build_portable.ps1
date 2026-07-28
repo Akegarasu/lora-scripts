@@ -28,6 +28,9 @@ Write-Host ""
 Write-Host "  SD-Trainer Portable Package Builder  v$Version" -ForegroundColor Cyan
 Write-Host ""
 
+& (Join-Path $ProjectRoot "build-scripts\00-build-frontend.ps1") -ProjectRoot $ProjectRoot
+if ($LASTEXITCODE -ne 0) { throw "Frontend build failed" }
+
 # ---- Clean ----
 
 if ($Clean -and (Test-Path $portableDir)) {

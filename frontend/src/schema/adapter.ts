@@ -4,6 +4,14 @@ import type { SchemaSource } from "../api/schemas"
 export type FormValue = string | number | boolean | Array<string | number> | undefined
 export type FormModel = Record<string, FormValue>
 
+export function cloneFormValue(value: FormValue): FormValue {
+  return Array.isArray(value) ? [...value] : value
+}
+
+export function cloneFormModel(model: FormModel): FormModel {
+  return Object.fromEntries(Object.entries(model).map(([key, value]) => [key, cloneFormValue(value)]))
+}
+
 export interface FormCondition {
   key: string
   value: unknown
@@ -94,7 +102,7 @@ function description(meta: Schema["meta"] | undefined) {
 function conditionsFrom(schema: SchemaRecord): FormCondition[] {
   if (schema.type === "object") {
     return Object.entries(schema.dict ?? {})
-      .filter(([, field]) => field.type === "const" && field.meta.required)
+      .filter(([, field]) => field.type === "const")
       .map(([key, field]) => ({ key, value: field.value }))
   }
   if (schema.type === "intersect") return (schema.list ?? []).flatMap(conditionsFrom)
@@ -178,7 +186,7 @@ export function createDefaultModel(schema: AdaptedSchema): FormModel {
   const model: FormModel = {}
   for (const field of schema.sections.flatMap((section) => section.fields)) {
     const value = field.defaultValue ?? field.constValue
-    if (value !== undefined && model[field.key] === undefined) model[field.key] = structuredClone(value)
+    if (value !== undefined && model[field.key] === undefined) model[field.key] = cloneFormValue(value)
   }
   return model
 }
@@ -189,7 +197,7 @@ export function serializeModel(schema: AdaptedSchema, model: FormModel) {
     if (!isFieldActive(field, model)) continue
     const value = field.type === "const" ? field.constValue : model[field.key]
     if (value === undefined || value === "" || (Array.isArray(value) && !value.length)) continue
-    output[field.key] = structuredClone(value)
+    output[field.key] = cloneFormValue(value)
   }
   return output
 }

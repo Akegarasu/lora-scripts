@@ -1,0 +1,4 @@
+dist
+node_modules
+src/components.d.ts
+src/auto-imports.d.ts
