@@ -10,12 +10,15 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "typecheck": "vue-tsc -b",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "element-plus": "^2.11.1",
     "pinia": "^3.0.3",
+    "schemastery": "^3.18.0",
+    "smol-toml": "^1.7.1",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1"
   },
@@ -24,6 +27,7 @@
     "@vitejs/plugin-vue": "^6.0.1",
     "typescript": "~5.8.3",
     "vite": "^7.1.2",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.0.5"
   }
 }

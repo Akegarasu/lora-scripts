@@ -8,15 +8,16 @@ import ToolsPage from "./pages/ToolsPage.vue"
 import TaggerPage from "./pages/TaggerPage.vue"
 import DatasetEditorPage from "./pages/DatasetEditorPage.vue"
 import AnimaFastPage from "./pages/AnimaFastPage.vue"
+import TrainingPage from "./pages/TrainingPage.vue"
 
 const trainingRoutes = [
-  ["/lora/basic.html", "LoRA 训练 新手模式", "basic"],
-  ["/lora/master.html", "Stable Diffusion LoRA", "master"],
-  ["/lora/flux.html", "Flux LoRA 训练", "flux-lora"],
-  ["/lora/sd3.html", "Anima LoRA 训练 专家模式", "sd3-lora"],
-  ["/lora/anima-fast.html", "Anima LoRA Fast", "anima-lora-fast"],
-  ["/lora/anima-finetune.html", "Anima Finetune", "anima-finetune"],
-  ["/dreambooth/index.html", "Dreambooth 训练 专家模式", "dreambooth"],
+  ["/lora/basic.html", "LoRA 训练 新手模式", "新手模式", "lora-basic"],
+  ["/lora/master.html", "Stable Diffusion LoRA", "专家模式", "lora-master"],
+  ["/lora/flux.html", "Flux LoRA 训练", "Flux LoRA", "flux-lora"],
+  ["/lora/sd3.html", "Anima LoRA 训练 专家模式", "Anima LoRA", "sd3-lora"],
+  ["/lora/anima-fast.html", "Anima LoRA Fast", "Anima Fast", "anima-lora-fast"],
+  ["/lora/anima-finetune.html", "Anima Finetune", "全量微调", "anima-finetune"],
+  ["/dreambooth/index.html", "Dreambooth 训练 专家模式", "Dreambooth", "dreambooth"],
 ] as const
 
 const routes: RouteRecordRaw[] = [
@@ -27,10 +28,10 @@ const routes: RouteRecordRaw[] = [
     props: { title: "LoRA 训练", area: "训练模式入口" },
     meta: { title: "LoRA 训练" },
   },
-  ...trainingRoutes.map(([path, title, area]) => ({
+  ...trainingRoutes.map(([path, title, area, schemaName]) => ({
     path,
-    component: path === "/lora/anima-fast.html" ? AnimaFastPage : MigrationPage,
-    props: { title, area, training: true },
+    component: path === "/lora/anima-fast.html" ? AnimaFastPage : TrainingPage,
+    props: { title, area, schemaName },
     meta: { title },
   })),
   {

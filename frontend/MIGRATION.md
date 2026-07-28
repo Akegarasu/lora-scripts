@@ -55,6 +55,22 @@
 - ready 前不提供训练提交，ready 后仅导航到训练配置页；训练表单仍受动态 Schema 适配阻塞。
 - 保留安装前 NVIDIA GPU、磁盘和独立环境确认，不自动触发大体积下载。
 
+### 2026-07-28：动态 Schema 表单第一阶段
+
+- 接入 `/api/schemas/hashes` 与 `/api/schemas/all`，兼容旧 `schemas` 缓存并按 hash 更新。
+- 使用 Schemastery 执行现有 schema，转换为独立表单 AST，支持 object/intersect/union/const、默认值、条件分支和基础约束。
+- 训练页已可动态渲染文本、数字、布尔、枚举、数组、textarea、隐藏和禁用字段，并接入系统文件选择、常用路径及多 GPU 字段。
+- 恢复旧 `configs-{type}-autosave` 草稿 key，右侧实时显示活动字段序列化后的配置对象。
+- 本阶段不启用训练提交；旧 `parseParams` 领域转换、服务端导出规范化和完整训练流程仍是后续 P0。
+
+### 2026-07-28：训练配置与提交闭环
+
+- 迁移旧 `parseParams` 核心转换：基础模式补全、LyCORIS/DyLoRA、DAdapt/Prodigy、分层权重、基础权重、预览参数、浮点值、路径和 GPU id。
+- 恢复 `configs-{type}` 历史与 `configs-{type}-autosave` 草稿，接入后端 `/api/presets` 训练预设。
+- TOML/JSON 导入先调用 `/api/config/validate-import`，支持训练类型识别和跨页面跳转；导出调用 `/api/config/normalize-for-export` 后生成 TOML。
+- 参数面板显示实际提交 TOML，提交前执行 Schema 校验、旧参数冲突检查和确认；成功后展示 task id、同源日志入口和任务页入口。
+- Anima Fast 提交前额外调用 `/api/anima-fast/preflight`，后端 `/api/run` 继续执行 feature flag、ready、audit 漂移和最终 preflight gate。
+
 ## 已完成
 
 - [x] 旧前端完整备份到 `frontendbak/`
@@ -79,14 +95,14 @@
 
 ### P0：必须在替换旧版前完成
 
-- [ ] **动态 Schema**：旧版从 `/api/schemas/*` 读取可执行 schema 并通过 Koishi Schema 渲染。新前端尚未实现适配器，所有训练按钮因此保持禁用。
-- [ ] **训练完整流程**：恢复 GPU、草稿、历史、预设、导入/导出、参数预览、提交、任务 ID、日志入口和终止行为。
-- [ ] **Anima Fast 训练约束**：安装状态、确认、日志/进度 SSE 和刷新恢复已完成；audit 字段级限制与训练 gate 待动态 Schema 表单完成后接入。
+- [x] **动态 Schema 表单适配器**：已完成 Schema 缓存、执行、AST、条件分支、字段渲染、路径选择、GPU 注入和基础校验；训练提交仍受参数转换流程阻塞。
+- [x] **训练完整流程**：已恢复 GPU、草稿、历史、预设、导入/导出、参数预览、提交、任务 ID、日志入口和任务页终止行为。
+- [x] **Anima Fast 训练约束**：安装 ready 后加载专用 Schema，提交前执行 preflight，最终提交继续受后端 feature flag、audit 和环境漂移 gate 保护。
 - [x] **Tagger**：已迁移受控表单、模型预下载、状态轮询、双进度、取消与重置。
 - [ ] **数据集编辑器增强**：核心流程已完成；待迁移快捷 tag、多选范围、清理/替换、分页设置和会话历史明细。
 - [x] **任务页基础流程**：已实现任务列表、状态、轮询、日志入口与终止；任务详情、日志内嵌和时间信息受后端现有字段限制，后续再增强。
 - [x] **工具页基础流程**：已迁移后端白名单脚本与同源 `/api/run_script`；具体脚本参数仍由用户按后端脚本 CLI 填写，后续可按脚本补专用表单。
-- [ ] **配置导出**：旧版直接在浏览器生成 TOML；新版应优先调用后端已有 `/api/config/normalize-for-export`。这是有意行为修正，需验证所有训练类型。
+- [x] **配置导出**：通过后端 `/api/config/normalize-for-export` 规范化后生成可再次导入的 TOML，并由后端现有测试覆盖训练类型适配。
 - [ ] **深链部署**：确认 FastAPI `SPAStaticFiles` 对所有 Vue Router history URL 的生产刷新均返回 `index.html`。
 - [ ] **现有 Python 静态测试迁移**：旧测试直接断言 `frontend/dist/assets/app.547295de.js` 等 VuePress hash 文件，改名后必然失效。应替换为 Vue 构建、路由和 E2E 测试，不复制旧产物到新 dist 来欺骗测试。
 
@@ -102,7 +118,7 @@
 
 ### P2：工程质量
 
-- [ ] 增加 Vitest、Vue Test Utils 和 API client 单元测试。
+- [ ] 增加 Vue Test Utils 和 API client 单元测试；Vitest 与 Schema/训练参数转换单元测试已完成。
 - [ ] 增加 Playwright 路由、训练 mock、Tagger、数据集编辑和 iframe smoke 测试。
 - [ ] 增加 ESLint/Prettier，并根据仓库规范固定格式。
 - [ ] 为 Schema、Anima Fast、Tagger 和数据集定义完整 TypeScript 类型；API 基础响应与任务类型已完成。
