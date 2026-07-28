@@ -1,1 +1,0 @@
-const e=JSON.parse('{"key":"v-3e43d6e2","path":"/lora/basic.html","title":"LoRA \u8BAD\u7EC3 \u65B0\u624B\u6A21\u5F0F","lang":"en-US","frontmatter":{"example":true,"trainType":"lora-basic"},"excerpt":"","headers":[],"filePathRelative":"lora/basic.md"}');export{e as data};

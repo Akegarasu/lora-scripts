@@ -1,1 +1,0 @@
-const e=JSON.parse('{"key":"v-33a23463","path":"/dreambooth/","title":"Dreambooth \u8BAD\u7EC3 \u4E13\u5BB6\u6A21\u5F0F","lang":"en-US","frontmatter":{"example":true,"trainType":"dreambooth"},"excerpt":"","headers":[],"filePathRelative":"dreambooth/index.md"}');export{e as data};

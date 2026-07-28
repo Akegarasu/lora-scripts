@@ -1,1 +1,0 @@
-const e=JSON.parse('{"key":"v-51615306","path":"/tagger.html","title":"Tagger \u6807\u6CE8\u5DE5\u5177","lang":"en-US","frontmatter":{"type":"tagger"},"excerpt":"","headers":[],"filePathRelative":"tagger.md"}');export{e as data};

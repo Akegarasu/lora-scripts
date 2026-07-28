@@ -1,1 +1,0 @@
-const a=JSON.parse('{"key":"v-0f9e746f","path":"/lora/params.html","title":"\u8BAD\u7EC3\u53C2\u6570\u8C03\u8282","lang":"en-US","frontmatter":{},"excerpt":"","headers":[],"filePathRelative":"lora/params.md"}');export{a as data};

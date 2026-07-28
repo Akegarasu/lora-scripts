@@ -1,1 +1,0 @@
-const e=JSON.parse("{\"key\": \"v-a1f1ne2e\", \"path\": \"/lora/anima-finetune.html\", \"title\": \"Anima Finetune \u4e13\u5bb6\u6a21\u5f0f\", \"lang\": \"en-US\", \"frontmatter\": {\"example\": true, \"trainType\": \"anima-finetune\"}, \"excerpt\": \"\", \"headers\": [], \"filePathRelative\": \"lora/anima-finetune.md\"}");export{e as data};

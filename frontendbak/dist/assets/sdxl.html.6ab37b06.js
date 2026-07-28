@@ -1,1 +1,0 @@
-const e=JSON.parse('{"key":"v-53c99f50","path":"/lora/sdxl.html","title":"SDXL LoRA \u8BAD\u7EC3 \u4E13\u5BB6\u6A21\u5F0F","lang":"en-US","frontmatter":{"example":true,"trainType":"sdxl-lora"},"excerpt":"","headers":[],"filePathRelative":"lora/sdxl.md"}');export{e as data};

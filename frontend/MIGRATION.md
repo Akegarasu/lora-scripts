@@ -8,7 +8,7 @@
 
 - 创建分支 `refactor/vue3-frontend`。
 - 完成 API、页面模块、执行时序和用户工作流调研，见 `docs/vue3-frontend-rewrite-research-and-plan.md`。
-- 将旧 `frontend/` 完整移动到 `frontendbak/`，保留原 HTML、CSS、JS bundle、恢复源码和来源说明。
+- 重写期间曾将旧 `frontend/` 移至 `frontendbak/` 作为迁移参考；重写完成后该临时备份已删除。
 - 在原路径创建 Vue 3 + TypeScript + Vite 工程。
 - 引入 Vue Router、Pinia、Element Plus；所有开发 API 使用同源路径并由 Vite 代理。
 - 安装并固定 Node `22.17.1`，使用 Vite 7 工具链；类型检查和生产构建通过。
@@ -104,7 +104,7 @@
 
 ## 已完成
 
-- [x] 旧前端完整备份到 `frontendbak/`
+- [x] 重写期间保留旧前端作为迁移参考，完成后删除临时备份
 - [x] Vue 3/TypeScript/Vite 工程与生产构建目录
 - [x] Vue Router、Pinia、Element Plus
 - [x] 桌面侧栏和移动端导航
@@ -140,7 +140,7 @@
 
 ### P1：外形和内容一致性
 
-- [x] 对照 `frontendbak/dist` 核对各页面信息结构和桌面/移动响应式边界；不以逐像素截图复刻为目标。
+- [x] 对照旧版核对各页面信息结构和桌面/移动响应式边界；不以逐像素截图复刻为目标。
 - [x] 迁移训练页操作顺序、提示文案和真实参数预览；字段分组继续由后端 Schema 决定，避免前端重复硬编码。
 - [x] 迁移首页品牌图片，并在新手指南与更新日志恢复旧版视觉资产。
 - [x] 迁移新手指南、参数说明、更新日志和关于页面正文。
@@ -161,7 +161,6 @@
 ## 暂定兼容契约
 
 - 生产构建输出：`frontend/dist/`
-- 旧版备份：`frontendbak/`
 - 后端 API：同源 `/api/*`
 - 代理服务：同源 `/proxy/*`
 - 主题 storage：`vuepress-color-scheme`
@@ -175,6 +174,6 @@
 
 1. 迁移的页面或工作流。
 2. 对应 API 和 storage key。
-3. 与 `frontendbak` 的已知行为差异。
+3. 与旧版的已知行为差异。
 4. 自动化及手工验证结果。
 5. 尚未解决的问题和优先级。
