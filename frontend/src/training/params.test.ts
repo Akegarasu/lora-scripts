@@ -18,6 +18,26 @@ describe("training parameter conversion", () => {
     })
   })
 
+  it("preserves expert and Flux page identity fields", () => {
+    expect(buildTrainingConfig({
+      model_train_type: "sdxl-lora",
+      network_module: "networks.lora",
+    }, "lora-master")).toMatchObject({
+      model_train_type: "sdxl-lora",
+      network_module: "networks.lora",
+    })
+
+    expect(buildTrainingConfig({
+      model_train_type: "flux-lora",
+      model_type: "flux",
+      network_module: "networks.lora_flux",
+    }, "flux-lora")).toMatchObject({
+      model_train_type: "flux-lora",
+      model_type: "flux",
+      network_module: "networks.lora_flux",
+    })
+  })
+
   it("converts Vue reactive form models", () => {
     const result = buildTrainingConfig(reactive({
       model_train_type: "sdxl-lora",

@@ -55,6 +55,25 @@ class ConfigExportTests(unittest.TestCase):
         self.assertEqual(exported.get("lora_type"), "lokr")
         self.assertFalse(_looks_like_sd_scripts_toml(exported))
 
+    def test_export_does_not_warn_for_preserved_gui_fields(self):
+        config = {
+            "model_train_type": "anima-lora",
+            "lora_type": "lora",
+            "enable_preview": True,
+            "positive_prompts": "portrait",
+            "custom_gui_field": "preserved for re-import",
+        }
+
+        exported, warnings = normalize_config_for_export(
+            config,
+            page_train_type="sd3-lora",
+        )
+
+        self.assertEqual(exported["custom_gui_field"], "preserved for re-import")
+        self.assertFalse(
+            any(warning.startswith("Unknown field passed through") for warning in warnings)
+        )
+
     def test_gui_export_reimports_on_anima_page(self):
         config = {
             "model_train_type": "anima-lora",

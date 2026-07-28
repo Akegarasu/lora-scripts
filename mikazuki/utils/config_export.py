@@ -17,6 +17,7 @@ from mikazuki.utils.train_utils import ensure_enable_preview_flag, fix_config_ty
 
 ANIMA_EXPORT_TRAIN_TYPES = frozenset({"anima-lora", "sd3-lora"})
 ANIMA_FINETUNE_TRAIN_TYPES = frozenset({"anima-finetune"})
+_ADAPTER_UNKNOWN_FIELD_WARNING = "Unknown field passed through to sd-scripts: "
 
 _GUI_STRIP_KEYS = frozenset({
     "gpu_ids",
@@ -70,6 +71,15 @@ def _ensure_gui_identity_fields(config: dict, *, page_train_type: str) -> None:
                 return
 
 
+def _export_warnings(warnings: list[str]) -> list[str]:
+    # GUI exports intentionally retain fields that are not direct sd-scripts args.
+    return [
+        warning
+        for warning in warnings
+        if not warning.startswith(_ADAPTER_UNKNOWN_FIELD_WARNING)
+    ]
+
+
 def normalize_config_for_export(
     config: dict,
     *,
@@ -102,7 +112,7 @@ def normalize_config_for_export(
             cfg["network_args"] = adapted["network_args"]
         _hydrate_lycoris_ui_fields_from_network_args(cfg)
         _ensure_gui_identity_fields(cfg, page_train_type=model_train_type)
-        return cfg, warnings
+        return cfg, _export_warnings(warnings)
 
     if model_train_type in ANIMA_EXPORT_TRAIN_TYPES:
         adapted, warnings = adapt_anima_config(deepcopy(cfg), finetune=False)
@@ -112,7 +122,7 @@ def normalize_config_for_export(
             cfg.pop("network_args", None)
         _hydrate_lycoris_ui_fields_from_network_args(cfg)
         _ensure_gui_identity_fields(cfg, page_train_type=model_train_type)
-        return cfg, warnings
+        return cfg, _export_warnings(warnings)
 
     _sanitize_generic_export(cfg)
     cfg["model_train_type"] = model_train_type

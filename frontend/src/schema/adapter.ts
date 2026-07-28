@@ -102,7 +102,7 @@ function description(meta: Schema["meta"] | undefined) {
 function conditionsFrom(schema: SchemaRecord): FormCondition[] {
   if (schema.type === "object") {
     return Object.entries(schema.dict ?? {})
-      .filter(([, field]) => field.type === "const")
+      .filter(([, field]) => field.type === "const" && !field.meta.hidden)
       .map(([key, field]) => ({ key, value: field.value }))
   }
   if (schema.type === "intersect") return (schema.list ?? []).flatMap(conditionsFrom)
