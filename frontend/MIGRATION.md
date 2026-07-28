@@ -71,6 +71,11 @@
 - 参数面板显示实际提交 TOML，提交前执行 Schema 校验、旧参数冲突检查和确认；成功后展示 task id、同源日志入口和任务页入口。
 - Anima Fast 提交前额外调用 `/api/anima-fast/preflight`，后端 `/api/run` 继续执行 feature flag、ready、audit 漂移和最终 preflight gate。
 
+### 2026-07-28：训练入口与兼容契约收尾
+
+- `/lora/index.html` 已由迁移占位页替换为真实训练模式入口，按 LoRA 与全量微调分组链接全部已实现训练工作流。
+- 确认训练历史继续使用 `configs-{type}`，草稿继续使用 `configs-{type}-autosave`，Schema 缓存继续使用旧 `schemas` key。
+
 ## 已完成
 
 - [x] 旧前端完整备份到 `frontendbak/`
@@ -90,6 +95,7 @@
 - [x] Tagger 受控表单、预下载、轮询、双进度、取消与重置
 - [x] 数据集编辑器扫描、筛选、图库、保存、基础批量与撤回/重做
 - [x] Anima Fast 状态、安装/修复、轮询与双 SSE
+- [x] LoRA 与全量微调训练模式入口
 
 ## 行为差异与待办
 
@@ -133,9 +139,9 @@
 - 后端 API：同源 `/api/*`
 - 代理服务：同源 `/proxy/*`
 - 主题 storage：`vuepress-color-scheme`
-- 训练历史 storage：后续继续兼容 `configs-{type}`
-- 训练草稿 storage：后续继续兼容 `configs-{type}-autosave`
-- Schema 缓存 storage：待适配器确定后决定是否沿用 `schemas`
+- 训练历史 storage：`configs-{type}`
+- 训练草稿 storage：`configs-{type}-autosave`
+- Schema 缓存 storage：`schemas`
 
 ## 变更记录规范
 
