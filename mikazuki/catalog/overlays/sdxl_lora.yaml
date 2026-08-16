@@ -1,0 +1,63 @@
+trainer:
+  defaultNetworkModule: networks.lora
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 32
+params:
+  pretrained_model_name_or_path:
+    description: 指定 SDXL 底模；支持本地 .ckpt/.safetensors 文件、本地 Diffusers 目录或 Hugging Face 模型仓库 ID。
+    control: modelSource
+    fileKind: null
+  vae:
+    description: 替换 SDXL 底模内置 VAE；支持本地 checkpoint、本地 Diffusers 目录或 Hugging Face 模型仓库 ID，留空使用底模 VAE。
+    control: modelSource
+    fileKind: null
+  network_module:
+    effectiveDefault: networks.lora
+  network_dim:
+    effectiveDefault: 32
+  network_alpha:
+    effectiveDefault: 16
+  learning_rate:
+    effectiveDefault: 0.0001
+  unet_lr:
+    effectiveDefault: 0.0001
+  text_encoder_lr:
+    description: 设置 SDXL 两个文本编码器 LoRA 的学习率；当前默认 networks.lora 模块把数组第一项用于两者，附加值仅供支持多文本编码器学习率的自定义网络模块使用。
+    effectiveDefault:
+      - 0.00001
+      - 0.00001
+  mixed_precision:
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    description: 反向传播时重算部分激活，以较小的速度开销显著降低 SDXL 训练显存；官方训练指南建议开启。
+    effectiveDefault: true
+  cache_latents:
+    description: 缓存 SDXL VAE 编码后的潜变量以降低显存并加快训练；启用后不能使用 Color Aug 或 Random Crop，脚本仍支持水平翻转缓存。
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 SDXL 两个文本编码器的输出以降低显存并加快训练；启用后不能训练文本编码器 LoRA，也不能使用 Caption 增强。
+    effectiveDefault: false
+  sdpa:
+    effectiveDefault: true
+  no_half_vae:
+    description: 即使训练使用 fp16/bf16，也强制 SDXL VAE 以 float32 运行；使用 fp16 时可避免部分 VAE 数值不稳定问题，但会增加显存。
+  v2:
+    description: SD1.x/2.x 模型类型开关，SDXL 训练器已经固定使用 SDXL 架构，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: SD1.x/2.x 的 v-parameterization 开关，SDXL 训练通常不使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: SD1.x/2.x 的 CLIP 层跳过参数，SDXL 训练器通常不使用，请保持为空。
+    priority: dangerous
+  max_token_length:
+    label: CLIP 最大 Token 长度
+    description: 设置 SDXL 两个 CLIP tokenizer 的最大长度；留空使用 75，长 Caption 可选 150 或 225，但会增加文本编码计算与显存占用。
+    group: model_specific
+    priority: advanced
+  noise_offset:
+    description: SDXL 底模训练使用过 Noise Offset，官方高级指南建议启用并以 0.0357 为示例；可按数据集亮暗分布调整或关闭。
+    effectiveDefault: 0.0357

@@ -1,5 +1,6 @@
 .vscode
 .idea
+.agent-docs/
 
 venv
 __pycache__
@@ -8,6 +9,10 @@ output/*
 !output/.keep
 
 assets/config.json
+assets/app-v2.db*
+config/app-v2.db*
+config/caption-jobs.db*
+config/sqlite-smoke.db*
 
 py310
 python
@@ -19,6 +24,7 @@ logs/*
 sd-models/*
 toml/autosave/*
 config/autosave/*
+config/runs/*
 config/presets/test*.toml
 
 !sd-models/put stable diffusion model here.txt
@@ -30,3 +36,5 @@ huggingface/hub/models*
 huggingface/hub/version_diffusers_cache.txt
 
 frontend-old/*
+frontend/node_modules/
+frontend/dist/

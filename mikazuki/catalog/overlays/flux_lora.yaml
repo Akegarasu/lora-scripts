@@ -1,0 +1,128 @@
+trainer:
+  defaultNetworkModule: networks.lora_flux
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 32
+params:
+  pretrained_model_name_or_path:
+    description: 指定本地 FLUX.1 .sft/.safetensors 权重文件或 Diffusers 模型目录；目录内需包含 transformer 的三分片权重，不支持 Hugging Face 仓库 ID。
+    control: fileOrFolder
+    fileKind: null
+    placeholder: 选择 FLUX.1 权重文件或 Diffusers 模型目录
+  clip_l:
+    description: 指定 FLUX.1 使用的本地 CLIP-L 文本编码器权重文件；Chroma 才可以省略此项。
+  t5xxl:
+    description: 指定 FLUX.1 使用的本地 T5-XXL 文本编码器权重文件。
+  ae:
+    description: 指定 FLUX.1 使用的本地自动编码器权重文件。
+  network_module:
+    effectiveDefault: networks.lora_flux
+  network_dim:
+    effectiveDefault: 16
+  network_alpha:
+    effectiveDefault: 1
+  learning_rate:
+    effectiveDefault: 0.0001
+  mixed_precision:
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    effectiveDefault: true
+  network_train_unet_only:
+    description: 只训练 FLUX.1 Transformer 的 LoRA，不训练 CLIP-L 或 T5-XXL 文本编码器 LoRA。
+    effectiveDefault: true
+  cache_latents:
+    effectiveDefault: true
+  cache_latents_to_disk:
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 CLIP-L 与 T5-XXL 的编码结果以降低训练显存与计算量；缓存后不能训练相应文本编码器 LoRA。
+    effectiveDefault: true
+  cache_text_encoder_outputs_to_disk:
+    effectiveDefault: true
+  sdpa:
+    description: FLUX 当前模型实现内部固定使用 Torch SDPA，此通用开关不会改变 Attention 实现。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: FLUX 当前模型实现不读取通用 xFormers 开关。
+    priority: hidden
+    hidden: true
+  model_type:
+    label: FLUX 模型类型
+    description: 固定为 flux，用于选择 FLUX.1 模型结构；界面会自动写入，无需手动修改。
+    group: model
+    priority: hidden
+    control: select
+    choices: [flux]
+    required: true
+    hidden: true
+    effectiveDefault: flux
+  guidance_scale:
+    label: 嵌入式 Guidance
+    description: 写入 FLUX.1 dev 的蒸馏 Guidance 条件；训练时设为 1.0 表示关闭其影响，Schnell 通常会忽略该值。
+    group: model_specific
+    priority: recommended
+    control: number
+    effectiveDefault: 1.0
+  timestep_sampling:
+    label: 时间步采样
+    description: 选择 FLUX.1 训练噪声时间步的分布；flux_shift 会按分辨率偏移，shift 才会使用离散 Flow Shift。
+    group: model_specific
+    priority: recommended
+    control: select
+    effectiveDefault: flux_shift
+  model_prediction_type:
+    label: 预测类型
+    description: 选择如何处理 FLUX.1 模型输出；推荐 raw 直接使用预测值，additive 会加回带噪输入，sigma_scaled 会按 Sigma 缩放。
+    group: model_specific
+    priority: recommended
+    control: select
+    effectiveDefault: raw
+  discrete_flow_shift:
+    label: 离散 Flow Shift
+    description: 设置 Flow Matching 调度器的离散偏移；仅在时间步采样选择 shift 时生效，flux_shift 等模式会忽略。
+    group: model_specific
+    priority: advanced
+    control: number
+    effectiveDefault: 3.0
+  t5xxl_max_token_length:
+    label: T5 最大 Token 长度
+    description: T5-XXL tokenizer 对每条 Caption 保留的最大 Token 数；留空时 Schnell 使用 256，FLUX.1 dev 使用 512。
+    group: model_specific
+    priority: advanced
+    control: number
+  apply_t5_attn_mask:
+    label: T5 注意力掩码
+    description: 对 T5-XXL 编码结果和 FLUX Double Block 应用 Padding Attention Mask；普通 FLUX.1 可选，但部分推理环境不支持对应输出。
+    group: model_specific
+    priority: advanced
+  controlnet_model_name_or_path:
+    label: ControlNet 模型
+    description: 加载本地 .sft 或 .safetensors ControlNet 权重；普通 FLUX LoRA 训练无需设置。
+    group: model
+    priority: advanced
+    control: file
+    fileKind: model
+  v2:
+    description: Stable Diffusion 2.x 专用开关，FLUX.1 训练不会使用，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: Stable Diffusion 的 v-parameterization 开关，FLUX.1 的 Flow Matching 训练不会使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: Stable Diffusion CLIP 专用层跳过参数，FLUX.1 训练不会使用。
+    priority: dangerous
+  max_token_length:
+    description: Stable Diffusion tokenizer 的旧参数，FLUX.1 不使用；请设置 T5 最大 Token 长度。
+    priority: dangerous
+  split_mode:
+    label: Split Mode（已弃用）
+    description: 已弃用；请改用 Block Swap 数量（blocks_to_swap）。
+    group: memory
+    priority: dangerous
+    control: switch
+    deprecated: true
+    extra:
+      replacement: blocks_to_swap

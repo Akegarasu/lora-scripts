@@ -1,0 +1,1545 @@
+groups:
+  - id: model
+    title: 模型
+    order: 10
+  - id: dataset
+    title: 数据集
+    order: 20
+  - id: save
+    title: 保存
+    order: 30
+  - id: training
+    title: 训练
+    order: 40
+  - id: network
+    title: 网络
+    order: 50
+  - id: optimizer
+    title: 优化器
+    order: 60
+  - id: memory
+    title: 显存与性能
+    order: 70
+  - id: sampling
+    title: 采样预览
+    order: 80
+  - id: logging
+    title: 日志
+    order: 90
+  - id: model_specific
+    title: 模型专属
+    order: 100
+  - id: caption
+    title: Caption
+    order: 110
+  - id: advanced
+    title: 高级
+    order: 900
+  - id: raw
+    title: 未分类参数
+    order: 999
+
+params:
+  pretrained_model_name_or_path:
+    label: 底模
+    description: 当前模型族使用的本地底模 checkpoint。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+    required: true
+  vae:
+    label: VAE 模型
+    description: 指定替换底模内置 VAE 的 checkpoint 文件或模型目录；留空时使用底模自带 VAE。
+    group: model
+    priority: advanced
+    control: file
+    fileKind: model
+  clip_l:
+    label: CLIP-L 模型
+    description: CLIP-L 文本编码器模型路径；是否可留空以及回退来源取决于当前模型族。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  clip_g:
+    label: CLIP-G 模型
+    description: CLIP-G 文本编码器模型路径；未单独指定时，支持的训练器会尝试从底模 checkpoint 读取。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  t5xxl:
+    label: T5-XXL 模型
+    description: T5-XXL 文本编码器模型路径；具体精度要求和可否从底模读取由当前模型族决定。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  ae:
+    label: 自动编码器（AE）
+    description: 指定模型使用的自动编码器权重，支持 .sft 或 .safetensors 文件。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  gemma2:
+    label: Gemma2 模型
+    description: 指定 Gemma2 文本编码器权重；Lumina 训练要求使用 float16 模型文件。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  text_encoder:
+    label: 文本编码器
+    description: 指定当前模型族使用的独立文本编码器权重。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  byt5:
+    label: ByT5 模型
+    description: 指定 ByT5 文本编码器权重；HunyuanImage 训练要求使用 float16 模型文件。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  qwen3:
+    label: Qwen3 模型
+    description: 指定 Anima 使用的 Qwen3 文本编码器模型文件或模型目录。
+    group: model
+    priority: required
+    control: file
+    fileKind: model
+  llm_adapter_path:
+    label: LLM Adapter 权重
+    description: 指定独立的 LLM Adapter 权重；留空时，Anima 会在 DiT 文件中存在对应权重的情况下从中加载。
+    group: model
+    priority: advanced
+    control: file
+    fileKind: model
+  t5_tokenizer_path:
+    label: T5 Tokenizer 目录
+    description: 指定 T5 tokenizer 目录；留空时 Anima 使用 scripts/dev/configs/t5_old/ 中的默认配置。
+    group: model
+    priority: advanced
+    control: folder
+    fileKind: folder
+  dataset_config:
+    label: 数据集配置
+    group: dataset
+    priority: hidden
+    hidden: true
+    control: file
+  train_data_dir:
+    group: dataset
+    priority: hidden
+    hidden: true
+  reg_data_dir:
+    group: dataset
+    priority: hidden
+    hidden: true
+  in_json:
+    group: dataset
+    priority: hidden
+    hidden: true
+  resolution:
+    group: dataset
+    priority: hidden
+    hidden: true
+  caption_extension:
+    group: dataset
+    priority: hidden
+    hidden: true
+  caption_extention:
+    group: dataset
+    priority: hidden
+    hidden: true
+  dataset_repeats:
+    group: dataset
+    priority: hidden
+    hidden: true
+  enable_bucket:
+    group: dataset
+    priority: hidden
+    hidden: true
+  bucket_no_upscale:
+    group: dataset
+    priority: hidden
+    hidden: true
+  keep_tokens:
+    group: dataset
+    priority: hidden
+    hidden: true
+  output_dir:
+    label: 输出目录
+    description: 训练模型、状态文件与采样结果的输出目录；目录不存在时会在启动训练前创建。
+    group: save
+    priority: required
+    control: folder
+    required: true
+    effectiveDefault: ./output
+  output_name:
+    label: 输出名称
+    group: save
+    priority: hidden
+    control: input
+    required: false
+    hidden: true
+    effectiveDefault: null
+  save_model_as:
+    label: 保存格式
+    description: 选择模型输出格式；默认使用 safetensors。
+    group: save
+    priority: recommended
+    control: select
+    effectiveDefault: safetensors
+  save_precision:
+    label: 保存精度
+    description: 指定保存权重时采用的精度；它只影响输出文件，不等同于训练时的混合精度。
+    group: save
+    priority: recommended
+    control: select
+    effectiveDefault: fp16
+  save_every_n_epochs:
+    label: 每 N epoch 保存
+    description: 每经过指定数量的 epoch 保存一次 checkpoint；可与按 step 保存同时使用，分别在两种时机触发保存。
+    group: save
+    priority: recommended
+    control: number
+    effectiveDefault: 1
+    min: 1
+    step: 1
+  save_every_n_steps:
+    label: 每 N step 保存
+    description: 每经过指定数量的训练 step 保存一次 checkpoint；可与按 epoch 保存同时使用，分别在两种时机触发保存。
+    group: save
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  save_state:
+    label: 保存训练状态
+    description: 保存模型时同时保存优化器等完整训练状态，之后可通过“继续训练状态”恢复。
+    group: save
+    priority: advanced
+  resume:
+    label: 继续训练状态
+    description: 指定先前保存的训练 state 目录，从优化器、步数等状态继续训练，而不是仅加载 LoRA 权重。
+    group: save
+    priority: advanced
+    control: folder
+  train_batch_size:
+    label: Batch Size
+    group: training
+    priority: hidden
+    control: number
+    required: false
+    hidden: true
+    effectiveDefault: null
+    min: 1
+    step: 1
+  max_train_epochs:
+    label: 最大 Epoch
+    description: 按完整数据集轮次限制训练时长；设置后会覆盖最大训练步数。
+    group: training
+    priority: recommended
+    control: number
+    effectiveDefault: 10
+    min: 1
+    step: 1
+  max_train_steps:
+    label: 最大步数
+    description: 按优化器更新步数限制训练时长；sd-scripts 同时收到最大 Epoch 时会由 Epoch 换算值覆盖，工作台中建议二选一。
+    group: training
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  seed:
+    label: 随机种子
+    description: 控制数据打乱、噪声与其他随机过程；使用同一环境和配置时有助于复现实验。
+    group: training
+    priority: recommended
+    control: number
+    effectiveDefault: 1337
+  mixed_precision:
+    label: 混合精度
+    description: 选择训练计算的混合精度模式；请根据 GPU 对 fp16 或 bf16 的支持情况设置。
+    group: training
+    priority: recommended
+    control: select
+    effectiveDefault: fp16
+  gradient_checkpointing:
+    label: 梯度检查点
+    description: 在反向传播时重新计算部分激活，以训练速度换取更低显存占用。
+    group: memory
+    priority: recommended
+  gradient_accumulation_steps:
+    label: 梯度累积步数
+    description: 累积指定次数的前向与反向结果后再更新权重；有效批量大小会随该值增大。
+    group: training
+    priority: advanced
+    control: number
+    effectiveDefault: 1
+    min: 1
+    step: 1
+  learning_rate:
+    label: 总学习率
+    description: 网络训练使用的基础学习率；组件专属学习率未设置时通常沿用此值。
+    group: optimizer
+    priority: recommended
+    control: input
+  max_grad_norm:
+    label: 最大梯度范数
+    description: 设为 0 可关闭梯度裁剪。
+    group: optimizer
+    priority: recommended
+    control: number
+    min: 0
+    step: 0.1
+  unet_lr:
+    label: U-Net / DiT 学习率
+    description: 单独设置 U-Net 或 DiT 部分的学习率；留空时使用总学习率。
+    group: optimizer
+    priority: recommended
+    control: input
+  text_encoder_lr:
+    label: 文本编码器学习率
+    description: 单独设置文本编码器学习率；部分模型有多个文本编码器，因此支持按顺序填写多个值。
+    group: optimizer
+    priority: advanced
+    control: stringArray
+  optimizer_type:
+    label: 优化器
+    description: 选择用于更新参数的优化器；列表提供脚本内置的常用实现，也可直接输入可导入的完整 Python 类路径。Prodigy、D-Adaptation 与 Schedule-Free 需要成套调整学习率和调度器，不应只切换此项。
+    group: optimizer
+    priority: recommended
+    control: select
+    choices:
+      - AdamW8bit
+      - AdamW
+      - PagedAdamW8bit
+      - PagedAdamW
+      - PagedAdamW32bit
+      - Lion8bit
+      - Lion
+      - PagedLion8bit
+      - SGDNesterov
+      - SGDNesterov8bit
+      - Adafactor
+      - Prodigy
+      - DAdaptation
+      - DAdaptAdaGrad
+      - DAdaptAdam
+      - DAdaptAdan
+      - DAdaptAdanIP
+      - DAdaptLion
+      - DAdaptSGD
+      - RAdamScheduleFree
+      - AdamWScheduleFree
+      - SGDScheduleFree
+    effectiveDefault: AdamW8bit
+    extra:
+      allowCustomChoice: true
+      choiceLabels:
+        AdamW8bit: AdamW 8-bit（推荐，省显存）
+        AdamW: AdamW（通用，无额外优化器依赖）
+        PagedAdamW8bit: Paged AdamW 8-bit（低显存）
+        PagedAdamW: Paged AdamW
+        PagedAdamW32bit: Paged AdamW 32-bit
+        Lion8bit: Lion 8-bit
+        Lion: Lion
+        PagedLion8bit: Paged Lion 8-bit
+        SGDNesterov: SGD Nesterov
+        SGDNesterov8bit: SGD Nesterov 8-bit
+        Adafactor: Adafactor（需配套参数）
+        Prodigy: Prodigy（高级，学习率通常约为 1）
+        DAdaptation: D-Adaptation（高级）
+        DAdaptAdaGrad: D-Adapt AdaGrad（高级）
+        DAdaptAdam: D-Adapt Adam（高级）
+        DAdaptAdan: D-Adapt Adan（高级）
+        DAdaptAdanIP: D-Adapt Adan IP（高级）
+        DAdaptLion: D-Adapt Lion（高级）
+        DAdaptSGD: D-Adapt SGD（高级）
+        RAdamScheduleFree: RAdam Schedule-Free（高级）
+        AdamWScheduleFree: AdamW Schedule-Free（高级）
+        SGDScheduleFree: SGD Schedule-Free（高级）
+  optimizer_args:
+    label: 优化器附加参数
+    description: 以 key=value 形式向优化器传递额外参数，例如 weight_decay=0.01 或 betas=0.9,0.999。
+    group: optimizer
+    priority: advanced
+    control: stringArray
+  lr_scheduler:
+    label: 学习率调度器
+    description: 选择训练过程中学习率随步数变化的策略；constant 表示保持不变。列表之外的新版本调度器仍可输入；自定义 Python 调度器类请改用“自定义调度器类型”。
+    group: optimizer
+    priority: recommended
+    control: select
+    choices:
+      - constant
+      - constant_with_warmup
+      - linear
+      - cosine
+      - cosine_with_restarts
+      - polynomial
+      - inverse_sqrt
+      - cosine_with_min_lr
+      - warmup_stable_decay
+    effectiveDefault: constant
+    extra:
+      allowCustomChoice: true
+      choiceLabels:
+        constant: constant 恒定（推荐基线）
+        constant_with_warmup: constant_with_warmup 恒定 + 预热
+        linear: linear 线性衰减
+        cosine: cosine 余弦衰减
+        cosine_with_restarts: cosine_with_restarts 余弦衰减 + 周期重启
+        polynomial: polynomial 多项式衰减
+        inverse_sqrt: inverse_sqrt 逆平方根衰减
+        cosine_with_min_lr: cosine_with_min_lr 余弦衰减 + 最低学习率
+        warmup_stable_decay: warmup_stable_decay 预热 + 稳定 + 衰减
+  lr_warmup_steps:
+    label: 预热步数
+    description: 学习率从较低值预热到目标值所需的步数；小于 1 的小数按总训练步数比例解释。
+    group: optimizer
+    priority: advanced
+    control: number
+  lr_scheduler_num_cycles:
+    label: 重启次数
+    description: cosine_with_restarts 调度器的余弦周期重启次数。
+    group: optimizer
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  fused_backward_pass:
+    label: 融合反向传播
+    description: 将反向传播与优化器更新合并以降低显存占用；仅适用于支持该模式的训练器与优化器组合。
+    group: optimizer
+    priority: advanced
+    control: switch
+  network_module:
+    label: 网络模块
+    description: 指定要训练的网络实现模块；不同模型族应使用其对应的 LoRA 模块。
+    group: network
+    priority: required
+    control: input
+    required: true
+  network_weights:
+    label: 继续训练 LoRA
+    description: 加载已有网络权重作为本次训练的初始值；这与恢复包含优化器的训练 state 不同。
+    group: network
+    priority: advanced
+    control: file
+    fileKind: lora
+  network_dim:
+    label: LoRA 维度
+    description: 设置 LoRA 的秩（rank）；更高的值通常提高容量，同时增加参数量、显存占用与文件大小。
+    group: network
+    priority: recommended
+    control: select
+    choices: [4, 8, 16, 32, 64, 128]
+    extra:
+      allowCustomChoice: true
+    min: 1
+    step: 1
+  network_alpha:
+    label: LoRA Alpha 缩放
+    description: LoRA 权重的缩放系数；其效果与网络维度共同决定，兼容旧行为时可设为与维度相同。
+    group: network
+    priority: recommended
+    control: select
+    choices: [1, 4, 8, 16, 32, 64]
+    extra:
+      allowCustomChoice: true
+    min: 0
+    step: 0.5
+  network_dropout:
+    label: 网络 Dropout
+    description: 训练时按比例随机丢弃网络神经元；0 或留空表示关闭，1 会丢弃全部神经元。
+    group: network
+    priority: advanced
+    control: number
+    min: 0
+    max: 1
+    step: 0.05
+  network_args:
+    label: 网络附加参数
+    description: 以 key=value 形式向所选网络模块传递额外参数；可用键由 network_module 的实现决定。
+    group: network
+    priority: advanced
+    control: stringArray
+  network_train_unet_only:
+    label: 仅训练 U-Net / DiT
+    description: 只训练 U-Net 或 DiT 相关网络模块，不更新文本编码器部分。
+    group: network
+    priority: recommended
+  network_train_text_encoder_only:
+    label: 仅训练文本编码器
+    description: 只训练文本编码器相关网络模块，不更新 U-Net 或 DiT 部分。
+    group: network
+    priority: advanced
+  cache_latents:
+    label: 缓存潜变量
+    description: 将 VAE 编码后的潜变量缓存到内存以减少重复计算和显存占用；启用后不能使用 Color Aug 或 Random Crop，水平翻转仍由脚本单独缓存处理。
+    group: memory
+    priority: recommended
+  cache_latents_to_disk:
+    label: 潜变量缓存到磁盘
+    description: 将 VAE 潜变量缓存到磁盘以减少内存占用；会自动依赖潜变量缓存，且不能配合图像增强。
+    group: memory
+    priority: recommended
+  cache_text_encoder_outputs:
+    label: 缓存文本编码器输出
+    description: 预先计算并缓存文本编码器输出，以减少训练期间的计算和显存占用；缓存后不能训练对应文本编码器。
+    group: memory
+    priority: recommended
+  cache_text_encoder_outputs_to_disk:
+    label: 文本编码器输出缓存到磁盘
+    description: 将文本编码器输出缓存到磁盘而非仅保留在内存中；会自动依赖文本编码器输出缓存。
+    group: memory
+    priority: recommended
+  text_encoder_batch_size:
+    label: 文本编码器批量大小
+    description: 缓存文本编码器输出时使用的批量大小；留空时沿用数据集批量大小。
+    group: memory
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  vae_batch_size:
+    label: VAE 批量大小
+    description: 缓存潜变量时一次交给 VAE 编码的图像数量；调低可减少峰值显存占用。
+    group: memory
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  max_data_loader_n_workers:
+    label: DataLoader 最大进程数
+    description: 较低的值会减少内存占用；0 表示在主进程加载数据。
+    group: memory
+    priority: advanced
+    control: number
+    min: 0
+    step: 1
+  persistent_data_loader_workers:
+    label: 保持 DataLoader 进程
+    description: 减少 epoch 间的数据加载等待，但会占用更多内存。
+    group: memory
+    priority: advanced
+    control: switch
+  disable_mmap_load_safetensors:
+    label: 禁用 Safetensors mmap
+    description: 在 WSL 等环境中可能加快模型加载。
+    group: memory
+    priority: advanced
+    control: switch
+  skip_cache_check:
+    label: 跳过缓存内容校验
+    description: 仅跳过缓存内容一致性校验；使用不匹配的旧缓存可能导致训练异常。
+    group: memory
+    priority: dangerous
+    control: switch
+  sdpa:
+    label: PyTorch SDPA 注意力
+    description: 使用 PyTorch 2.0 及以上版本内置的缩放点积注意力实现 Cross Attention。
+    group: memory
+    priority: recommended
+  xformers:
+    label: xFormers 注意力
+    description: 使用 xFormers 的 Cross Attention 实现；需要环境已安装兼容版本的 xFormers。
+    group: memory
+    priority: advanced
+  fp8_base:
+    label: 底模使用 FP8
+    description: 以 FP8 加载或运行底模以降低显存占用；仅适用于明确支持该模式的模型。
+    group: memory
+    priority: recommended
+  fp8_base_unet:
+    label: U-Net / DiT 使用 FP8
+    description: 仅让 U-Net 或 DiT 使用 FP8，文本编码器仍使用 fp16 或 bf16。
+    group: memory
+    priority: advanced
+  full_fp16:
+    label: 完整 FP16 训练
+    description: 包括梯度在内均使用 FP16；部分模型不支持。
+    group: memory
+    priority: dangerous
+    control: switch
+  full_bf16:
+    label: 完整 BF16 训练
+    description: 包括梯度在内均使用 BF16；部分模型不支持。
+    group: memory
+    priority: dangerous
+    control: switch
+  cpu_offload_checkpointing:
+    label: 梯度检查点卸载到 CPU
+    description: 用系统内存换取更低显存占用；不要与 Block Swap 同时启用。
+    group: memory
+    priority: advanced
+    control: switch
+  blocks_to_swap:
+    label: Block Swap 数量
+    description: 在前向和反向传播期间交换到 CPU 的 Transformer block 数量；数值越大越节省显存，但训练越慢。
+    group: memory
+    priority: recommended
+    control: number
+    min: 0
+    step: 1
+  min_bucket_reso:
+    label: Bucket 最小分辨率
+    group: dataset
+    priority: hidden
+    hidden: true
+    control: number
+    min: 64
+    step: 8
+  max_bucket_reso:
+    label: Bucket 最大分辨率
+    group: dataset
+    priority: hidden
+    hidden: true
+    control: number
+    min: 64
+    step: 8
+  bucket_reso_steps:
+    label: Bucket 分辨率步长
+    description: 推荐使用可被 8 整除的值。
+    group: dataset
+    priority: hidden
+    hidden: true
+    control: number
+    min: 8
+    step: 8
+  sample_prompts:
+    label: 采样 Prompt 文件
+    group: sampling
+    priority: hidden
+    hidden: true
+  sample_every_n_epochs:
+    label: 每 N epoch 采样
+    group: sampling
+    priority: hidden
+    control: number
+    hidden: true
+    min: 1
+    step: 1
+  sample_every_n_steps:
+    label: 每 N step 采样
+    group: sampling
+    priority: hidden
+    control: number
+    hidden: true
+    min: 1
+    step: 1
+  sample_sampler:
+    label: 采样器
+    group: sampling
+    priority: hidden
+    control: select
+    hidden: true
+  logging_dir:
+    label: 日志基目录
+    description: 选择训练日志的基目录。任务中心会在其下为每个任务创建独立目录，并从兼容事件文件实时绘制曲线；不需要启动 TensorBoard 服务。
+    group: logging
+    priority: recommended
+    control: folder
+    effectiveDefault: ./logs
+  log_with:
+    label: 日志工具
+    description: 选择训练指标去向。tensorboard 表示写入供任务中心读取的本地兼容事件；选择 W&B 时仍会同时保留本地事件，不需要启动 TensorBoard 服务。
+    group: logging
+    priority: advanced
+    control: select
+  wandb_api_key:
+    label: W&B API 密钥
+    description: 仅在启用 W&B 日志时使用。
+    group: logging
+    priority: advanced
+    control: secret
+    sensitive: true
+  huggingface_token:
+    label: Hugging Face 访问令牌
+    description: 仅在启用 Hugging Face 上传时使用。
+    group: save
+    priority: advanced
+    control: secret
+    sensitive: true
+  clip_skip:
+    label: CLIP 跳层（Clip Skip）
+    description: 使用文本编码器从输出端倒数第 N 层的结果；N 必须大于或等于 1。
+    group: model_specific
+    priority: recommended
+    control: number
+    min: 1
+    step: 1
+  v2:
+    label: SD2 模型
+    description: 按 Stable Diffusion 2.x 架构加载底模；仅用于对应的 SD2 checkpoint。
+    group: model_specific
+    priority: advanced
+  v_parameterization:
+    label: V-Prediction 参数化
+    description: 启用 v-parameterization 训练目标；应与采用该预测方式的底模配套使用。
+    group: model_specific
+    priority: advanced
+  noise_offset:
+    label: 噪声偏移（Noise Offset）
+    description: 给训练噪声添加偏移量以调整亮暗范围；合适数值取决于模型族与数据集，不设置时保持脚本原始训练目标。SDXL 可参考 0.0357，经典 SD 常见实验值约为 0.1。
+    group: training
+    priority: advanced
+    control: number
+  multires_noise_iterations:
+    label: 多分辨率噪声迭代
+    description: 启用多分辨率噪声并设置迭代次数；脚本说明建议启用时通常使用 6–10 次。
+    group: training
+    priority: advanced
+    control: number
+  min_snr_gamma:
+    label: Min SNR Gamma 阈值
+    description: 对高损失时间步降低权重；值越低作用越强，5 是经典扩散模型常见起点但不是脚本默认。Flow Matching 模型应优先使用各自的时间步与权重策略。
+    group: training
+    priority: advanced
+    control: number
+  shuffle_caption:
+    label: 打乱 Caption
+    group: caption
+    priority: hidden
+    hidden: true
+  caption_dropout_rate:
+    label: Caption 整体丢弃率
+    description: 按 0–1 比例随机丢弃整条 Caption，用于减弱训练对文本条件的依赖。
+    group: caption
+    priority: advanced
+    control: number
+  caption_tag_dropout_rate:
+    label: Caption 标签丢弃率
+    description: 按 0–1 比例随机丢弃 Caption 中以逗号分隔的标签。
+    group: caption
+    priority: advanced
+    control: number
+
+  # 下列条目为专家视图中的通用参数补充中文产品说明。
+  # 参数语义以 scripts/dev 的 argparse 定义为准，overlay 仅负责展示与分组。
+  alpha_mask:
+    label: 使用 Alpha 蒙版
+    description: 将训练图像的 Alpha 通道作为损失蒙版，只让蒙版覆盖区域参与损失计算。
+    group: dataset
+    priority: advanced
+  cache_info:
+    label: 缓存数据集元信息
+    description: 缓存 Caption 与图像尺寸等元信息以加快后续数据集加载；仅适用于 DreamBooth 数据集方式。
+    group: dataset
+    priority: advanced
+  caption_dropout_every_n_epochs:
+    label: 每 N Epoch 丢弃全部 Caption
+    description: 每隔指定数量的 epoch，将该轮所有 Caption 整体置空一次。
+    group: caption
+    priority: advanced
+  caption_prefix:
+    label: Caption 前缀
+    description: 在每条 Caption 文本开头自动添加固定字符串。
+    group: caption
+    priority: advanced
+  caption_separator:
+    label: Caption 分隔符
+    description: 指定解析 Caption 标签时使用的主分隔符。
+    group: caption
+    priority: advanced
+  caption_suffix:
+    label: Caption 后缀
+    description: 在每条 Caption 文本末尾自动添加固定字符串。
+    group: caption
+    priority: advanced
+  color_aug:
+    label: 颜色增强
+    description: 对训练图像启用轻量颜色变化增强；与潜变量缓存不能同时使用。
+    group: dataset
+    priority: advanced
+  conditioning_data_dir:
+    label: 条件图像目录
+    description: 指定用于蒙版损失等条件训练的数据目录；使用 masked_loss 时数据集需要该目录。
+    group: dataset
+    priority: advanced
+    control: folder
+    fileKind: folder
+  dataset_class:
+    label: 自定义数据集类
+    description: 使用任意自定义数据集时，填写可导入的完整类名，格式为 package.module.Class。
+    group: dataset
+    priority: advanced
+  enable_wildcard:
+    label: 启用 Caption 通配符
+    description: 解析 Caption 中形如 {image|picture|rendition} 的候选项，并在训练时随机选取其中一项。
+    group: caption
+    priority: advanced
+  face_crop_aug_range:
+    label: 人脸中心裁剪范围
+    description: 启用以人脸为中心的裁剪增强并指定倍率范围，例如 2.0,4.0。
+    group: dataset
+    priority: advanced
+  flip_aug:
+    label: 水平翻转增强
+    description: 训练时随机水平翻转图像；与潜变量缓存不能同时使用。
+    group: dataset
+    priority: advanced
+  keep_tokens_separator:
+    label: 固定标签分隔符
+    description: 用自定义分隔符把 Caption 分成固定与可变部分；分隔符前的标签不会被打乱，未设置时改用 keep_tokens 的数量规则。
+    group: caption
+    priority: advanced
+  masked_loss:
+    label: 蒙版损失
+    description: 仅在蒙版覆盖区域计算损失；数据集需要提供 conditioning_data_dir。
+    group: training
+    priority: advanced
+  max_token_length:
+    label: 文本编码器最大 Token 长度
+    description: 设置文本编码器可处理的最大 Token 长度；通用训练脚本支持 75、150 或 225。
+    group: caption
+    priority: advanced
+  prior_loss_weight:
+    label: 正则化图像损失权重
+    description: 调整 DreamBooth 正则化图像损失在总损失中的权重。
+    group: training
+    priority: advanced
+  random_crop:
+    label: 随机裁剪
+    description: 启用随机图像裁剪；脚本说明主要用于在人脸中心裁剪增强中训练画风。
+    group: dataset
+    priority: advanced
+  resize_interpolation:
+    label: 缩放插值方式
+    description: 选择图像需要缩放时使用的插值算法，可选 lanczos、nearest、bilinear、bicubic 或 area，默认 area。
+    group: dataset
+    priority: advanced
+  secondary_separator:
+    label: Caption 次级分隔符
+    description: 指定 Caption 的次级分隔符；完成丢弃或打乱后，脚本会将其替换为主分隔符。
+    group: caption
+    priority: advanced
+  skip_image_resolution:
+    label: 跳过小图阈值
+    description: 跳过不大于指定分辨率的图像；可填写单一尺寸或 width,height。
+    group: dataset
+    priority: advanced
+  token_warmup_min:
+    label: 标签预热起始数量
+    description: 从指定数量的逗号分隔标签开始训练，并在标签预热期间逐步增加可用标签数。
+    group: caption
+    priority: advanced
+  token_warmup_step:
+    label: 标签预热完成步数
+    description: 指定标签数量增长到完整长度所需的步数；小于 1 时按 max_train_steps 的比例计算。
+    group: caption
+    priority: advanced
+  train_inpainting:
+    label: 训练局部重绘模型
+    description: 按 Inpainting 架构与输入形式训练模型。
+    group: model_specific
+    priority: advanced
+  weighted_captions:
+    label: 加权 Caption
+    description: 启用 (token:1.3) 等标准权重语法；括号内不要使用逗号，否则打乱或 Dropout 可能破坏权重解析。
+    group: caption
+    priority: advanced
+  validation_split:
+    label: 验证集比例
+    description: 从训练图像中按指定比例划分验证数据。
+    group: dataset
+    priority: advanced
+  validation_seed:
+    label: 验证集随机种子
+    description: 控制验证数据集的打乱顺序；留空时沿用训练随机种子 seed。
+    group: dataset
+    priority: advanced
+  validate_every_n_epochs:
+    label: 每 N Epoch 验证
+    description: 每隔指定数量的 epoch 运行验证；存在验证集且未指定间隔时，默认每个 epoch 验证。
+    group: training
+    priority: advanced
+  validate_every_n_steps:
+    label: 每 N Step 验证
+    description: 每隔指定数量的训练 step 运行验证；未设置时仅按 epoch 验证。
+    group: training
+    priority: advanced
+  max_validation_steps:
+    label: 最大验证条目数
+    description: 限制每次验证最多处理的数据条目数；留空时遍历整个验证集。
+    group: training
+    priority: advanced
+  adaptive_noise_scale:
+    label: 自适应 Noise Offset
+    description: 将“潜变量绝对均值 × 此值”加入 noise_offset；必须同时设置 noise_offset，留空表示关闭。
+    group: training
+    priority: advanced
+  debiased_estimation_loss:
+    label: 去偏估计损失
+    description: 启用 Debiased Estimation Loss，对不同噪声水平的损失权重进行去偏调整。
+    group: training
+    priority: advanced
+  huber_c:
+    label: Huber 损失衰减参数
+    description: Huber 损失的衰减参数，仅在 loss_type 为 huber 或 smooth_l1 时生效，脚本默认值为 0.1。
+    group: training
+    priority: advanced
+  huber_scale:
+    label: Huber 损失缩放
+    description: Huber 损失的缩放参数，仅在 loss_type 为 huber 或 smooth_l1 时生效，脚本默认值为 1.0。
+    group: training
+    priority: advanced
+  huber_schedule:
+    label: Huber 损失调度
+    description: 选择 Huber 或 Smooth L1 损失的调度方式，可用 constant、exponential 或 snr，默认 snr。
+    group: training
+    priority: advanced
+  ip_noise_gamma:
+    label: 输入扰动噪声强度
+    description: 为正则化启用 Input Perturbation Noise；脚本引用的方法建议从 0.1 左右开始尝试。
+    group: training
+    priority: advanced
+  ip_noise_gamma_random_strength:
+    label: 随机输入扰动强度
+    description: 每次在 0 到 ip_noise_gamma 之间随机选择输入扰动噪声强度。
+    group: training
+    priority: advanced
+  loss_type:
+    label: 损失函数
+    description: 选择 L1、L2、Huber 或 Smooth L1 损失，默认使用 L2。
+    group: training
+    priority: advanced
+  logit_mean:
+    label: Logit Normal 均值
+    description: weighting_scheme 使用 logit_normal 时，设置其正态分布均值。
+    group: training
+    priority: advanced
+  logit_std:
+    label: Logit Normal 标准差
+    description: weighting_scheme 使用 logit_normal 时，设置其正态分布标准差。
+    group: training
+    priority: advanced
+  mode_scale:
+    label: Mode 权重缩放
+    description: weighting_scheme 使用 mode 时设置缩放系数，其他权重策略下不生效。
+    group: training
+    priority: advanced
+  max_timestep:
+    label: 最大时间步
+    description: 限制 U-Net 训练采样的最大时间步，允许范围为 1–1000，默认 1000。
+    group: training
+    priority: advanced
+  min_timestep:
+    label: 最小时间步
+    description: 限制 U-Net 训练采样的最小时间步，允许范围为 0–999，默认 0。
+    group: training
+    priority: advanced
+  multires_noise_discount:
+    label: 多分辨率噪声衰减
+    description: 设置多分辨率噪声的逐层衰减值；仅在启用 multires_noise_iterations 时生效。
+    group: training
+    priority: advanced
+  noise_offset_random_strength:
+    label: 随机 Noise Offset 强度
+    description: 每次在 0 到 noise_offset 之间随机选择噪声偏移强度。
+    group: training
+    priority: advanced
+  scale_v_pred_loss_like_noise_pred:
+    label: 按噪声预测缩放 V-Pred 损失
+    description: 将 v-prediction 损失缩放到与 noise prediction 损失相似的尺度。
+    group: training
+    priority: advanced
+  v_pred_like_loss:
+    label: V-Pred 辅助损失
+    description: 将类似 v-prediction 的辅助损失乘以此值后加入总损失。
+    group: training
+    priority: advanced
+  zero_terminal_snr:
+    label: 末端零信噪比（Zero Terminal SNR）
+    description: 调整噪声调度器的 beta，使末端信噪比强制为零。
+    group: training
+    priority: advanced
+  weighting_scheme:
+    label: 时间步损失权重策略
+    description: 设置时间步分布的损失权重策略；uniform 与 none 在脚本中行为相同。
+    group: model_specific
+    priority: advanced
+  model_prediction_type:
+    label: 模型预测解释方式
+    description: 选择如何解释模型输出：raw 直接使用，additive 加到带噪输入，sigma_scaled 应用 Sigma 缩放。
+    group: model_specific
+    priority: advanced
+  timestep_sampling:
+    label: 时间步采样方式
+    description: 选择训练时间步的采样分布；具体可选方法及默认值由当前模型族决定。
+    group: model_specific
+    priority: advanced
+  discrete_flow_shift:
+    label: 离散 Flow Shift
+    description: 调整 Rectified Flow 训练的时间步分布；实际默认值和生效的采样方式由当前模型族决定。
+    group: model_specific
+    priority: advanced
+  sigmoid_scale:
+    label: Sigmoid 采样缩放
+    description: 调整 sigmoid 类时间步采样的分布缩放；仅对训练器支持的 sigmoid、shift 等采样方式生效。
+    group: model_specific
+    priority: advanced
+  training_shift:
+    label: 训练时间步 Shift
+    description: 在损失权重策略之外额外调整 SD3 训练的时间步分布，脚本默认值为 1.0。
+    group: model_specific
+    priority: advanced
+  guidance_scale:
+    label: Guidance Scale
+    description: 设置蒸馏 Guidance 条件值；FLUX.1 dev 等 Guidance Distilled 模型会使用该参数。
+    group: model_specific
+    priority: advanced
+  initial_epoch:
+    label: 初始 Epoch 编号
+    description: 指定训练记录从哪个 epoch 编号开始，1 等同于未指定；不使用 resume 时不会同步推进学习率调度器。
+    group: training
+    priority: advanced
+  initial_step:
+    label: 初始 Step 编号
+    description: 指定包含所有 epoch 的初始 step，0 等同于未指定，并覆盖 initial_epoch；不使用 resume 时不会同步推进学习率调度器。
+    group: training
+    priority: advanced
+  skip_until_initial_step:
+    label: 跳过至初始 Step
+    description: 实际跳过训练数据，直到到达 initial_step 指定的步数。
+    group: training
+    priority: advanced
+  sample_at_first:
+    label: 训练前采样
+    description: 在第一次参数更新前先生成一组样图，用于记录训练起点效果。
+    group: sampling
+    priority: advanced
+  sample_batch_size:
+    label: 采样批量大小
+    description: 设置一次生成的样图数量；Lumina 会按宽高、Guidance Scale 和随机种子对采样请求分桶。
+    group: sampling
+    priority: advanced
+  base_weights:
+    label: 训练前合并的网络权重
+    description: 指定在开始训练前先合并进底模的一个或多个网络权重文件。
+    group: network
+    priority: advanced
+    control: stringArray
+  base_weights_multiplier:
+    label: 预合并权重倍率
+    description: 按顺序设置 base_weights 中各网络权重合并到底模时使用的倍率。
+    group: network
+    priority: advanced
+  dim_from_weights:
+    label: 从权重读取 LoRA 维度
+    description: 从 network_weights 指定的已有网络权重自动确定 LoRA 维度，而不是使用手动填写的 network_dim。
+    group: network
+    priority: advanced
+  scale_weight_norms:
+    label: 权重范数上限
+    description: 缩放各权重键值以抑制梯度爆炸和过拟合；脚本说明建议从 1 开始尝试。
+    group: network
+    priority: advanced
+  lr_decay_steps:
+    label: 学习率衰减步数
+    description: 设置调度器执行衰减的步数；整数表示绝对步数，小于 1 的小数表示总训练步数比例。
+    group: optimizer
+    priority: advanced
+  lr_scheduler_args:
+    label: 调度器附加参数
+    description: 以 key=value 形式向学习率调度器传递额外参数，例如 T_max=100。
+    group: optimizer
+    priority: advanced
+    control: stringArray
+  lr_scheduler_min_lr_ratio:
+    label: 最小学习率比例
+    description: 以初始学习率的比例设置最小学习率，仅用于支持最小学习率的 Cosine 或 Warmup Decay 调度器。
+    group: optimizer
+    priority: advanced
+  lr_scheduler_power:
+    label: Polynomial 幂指数
+    description: 设置 Polynomial 学习率调度器使用的幂指数。
+    group: optimizer
+    priority: advanced
+  lr_scheduler_timescale:
+    label: Inverse Sqrt 时间尺度
+    description: 设置 Inverse Sqrt 调度器的时间尺度；留空时采用预热步数。
+    group: optimizer
+    priority: advanced
+  lr_scheduler_type:
+    label: 自定义调度器模块
+    description: 指定自定义学习率调度器的可导入模块或类型。
+    group: optimizer
+    priority: advanced
+  use_8bit_adam:
+    label: 使用 8-bit AdamW
+    description: 使用 bitsandbytes 提供的 8-bit AdamW 优化器；需要安装并正确加载 bitsandbytes。
+    group: optimizer
+    priority: advanced
+  use_lion_optimizer:
+    label: 使用 Lion 优化器
+    description: 使用 Lion 优化器；需要安装 lion-pytorch。
+    group: optimizer
+    priority: advanced
+  fp16_master_weights_and_gradients:
+    label: FP16 主权重与梯度
+    description: 让支持此能力的优化器以 FP16 保存主权重和梯度，同时仍以 FP32 保存优化器状态。
+    group: optimizer
+    priority: advanced
+  deepspeed:
+    label: 启用 DeepSpeed
+    description: 使用 DeepSpeed 执行分布式训练；具体内存卸载与 ZeRO 行为由下方 DeepSpeed 参数控制。
+    group: memory
+    priority: advanced
+  zero_stage:
+    label: DeepSpeed ZeRO 阶段
+    description: 选择 ZeRO 优化阶段 0、1、2 或 3；阶段越高，参数、梯度与优化器状态的分片越充分。
+    group: memory
+    priority: advanced
+  zero3_init_flag:
+    label: ZeRO-3 分片初始化
+    description: 使用 deepspeed.zero.Init 构建大型模型，仅在 ZeRO Stage 3 下生效。
+    group: memory
+    priority: advanced
+  zero3_save_16bit_model:
+    label: ZeRO-3 保存 16-bit 模型
+    description: 训练结束时额外保存合并后的 16-bit 模型，仅在 ZeRO Stage 3 下生效。
+    group: memory
+    priority: advanced
+  offload_optimizer_device:
+    label: 优化器状态卸载设备
+    description: 选择不卸载、卸载到 CPU 或 NVMe；仅适用于 ZeRO Stage 2 和 Stage 3。
+    group: memory
+    priority: advanced
+  offload_optimizer_nvme_path:
+    label: 优化器 NVMe 路径
+    description: 指定优化器状态卸载到 NVMe 时使用的目录，仅适用于 ZeRO Stage 3。
+    group: memory
+    priority: advanced
+  offload_param_device:
+    label: 参数卸载设备
+    description: 选择将模型参数保持在本地、CPU 或 NVMe，仅适用于 ZeRO Stage 3。
+    group: memory
+    priority: advanced
+  offload_param_nvme_path:
+    label: 参数 NVMe 路径
+    description: 指定模型参数卸载到 NVMe 时使用的目录，仅适用于 ZeRO Stage 3。
+    group: memory
+    priority: advanced
+  ddp_gradient_as_bucket_view:
+    label: DDP 梯度 Bucket View
+    description: 为 DistributedDataParallel 启用 gradient_as_bucket_view，以复用通信桶内存。
+    group: memory
+    priority: advanced
+  ddp_static_graph:
+    label: DDP 静态计算图
+    description: 告知 DistributedDataParallel 训练计算图保持不变，以启用相应优化。
+    group: memory
+    priority: advanced
+  ddp_timeout:
+    label: DDP 超时时间
+    description: 设置分布式进程通信超时分钟数；留空时采用 Accelerate 的默认值。
+    group: memory
+    priority: advanced
+  dynamo_backend:
+    label: Torch Dynamo 后端
+    description: 选择 Torch Dynamo 编译后端，脚本默认使用 inductor。
+    group: memory
+    priority: advanced
+  torch_compile:
+    label: 启用 torch.compile
+    description: 使用 PyTorch 2.0 及以上版本的 torch.compile 编译模型执行图。
+    group: memory
+    priority: advanced
+  mem_eff_attn:
+    label: 省内存 Attention
+    description: 使用脚本内置的省内存 Cross Attention 实现。
+    group: memory
+    priority: advanced
+  highvram:
+    label: 高显存模式
+    description: 关闭为低显存设备设计的优化，例如潜变量缓存后不主动清理 CUDA 缓存；适合显存充足的设备。
+    group: memory
+    priority: advanced
+  lowram:
+    label: 低内存模式
+    description: 针对系统内存少于显存的环境优化模型加载，例如尽量直接加载到显存，适合部分 Colab 或 Kaggle 环境。
+    group: memory
+    priority: advanced
+  no_half_vae:
+    label: VAE 保持 FP32
+    description: 即使启用混合精度，也不让 VAE 使用 fp16 或 bf16，而是保持 float32。
+    group: memory
+    priority: advanced
+  attn_mode:
+    label: Attention 实现
+    description: 选择模型 Attention 实现；xFormers 需要配合 split_attn，SageAttention 仅支持推理，并会覆盖 xformers 或 sdpa 设置。
+    group: memory
+    priority: advanced
+  split_attn:
+    label: 拆分 Attention 计算
+    description: 拆分 Attention 批次计算以降低显存占用；部分模型在选择 xFormers Attention 时要求启用。
+    group: memory
+    priority: advanced
+  use_flash_attn:
+    label: 使用 Flash Attention
+    description: 为支持的模型启用 Flash Attention 实现。
+    group: memory
+    priority: advanced
+  use_sage_attn:
+    label: 使用 Sage Attention
+    description: 为支持的模型启用 Sage Attention 实现；训练支持情况取决于模型实现。
+    group: memory
+    priority: advanced
+  fp8_scaled:
+    label: DiT 使用缩放 FP8
+    description: 让 HunyuanImage DiT 使用带缩放的 FP8 计算以降低显存占用。
+    group: memory
+    priority: advanced
+  fp8_vl:
+    label: VLM 文本编码器使用 FP8
+    description: 让 HunyuanImage 的视觉语言模型文本编码器使用 FP8。
+    group: memory
+    priority: advanced
+  vae_chunk_size:
+    label: VAE 分块大小
+    description: 通过分块执行 VAE 编码或解码来降低峰值显存占用；具体方向、推荐值与取值约束由模型族决定。
+    group: memory
+    priority: advanced
+  vae_disable_cache:
+    label: 禁用 VAE 内部缓存
+    description: 关闭 Anima VAE 的内部缓存机制以减少内存占用并加快编解码，但行为会与官方实现不同。
+    group: memory
+    priority: advanced
+  unsloth_offload_checkpointing:
+    label: Unsloth 激活卸载
+    description: 使用异步非阻塞传输把激活卸载到 CPU 内存；比 cpu_offload_checkpointing 更快，且不能与后者或 blocks_to_swap 同时使用。
+    group: memory
+    priority: advanced
+  async_upload:
+    label: 异步上传 Hugging Face
+    description: 在后台异步上传输出到 Hugging Face，减少训练等待上传完成的时间。
+    group: save
+    priority: advanced
+  huggingface_repo_id:
+    label: Hugging Face 仓库 ID
+    description: 指定要上传模型和状态文件的 Hugging Face 仓库名称。
+    group: save
+    priority: advanced
+  huggingface_repo_type:
+    label: Hugging Face 仓库类型
+    description: 指定上传目标的 Hugging Face 仓库类型。
+    group: save
+    priority: advanced
+  huggingface_repo_visibility:
+    label: Hugging Face 仓库可见性
+    description: 设置 public 创建公开仓库，设置 private 或留空则使用私有仓库。
+    group: save
+    priority: advanced
+    control: select
+    choices: [private, public]
+    extra:
+      choiceLabels:
+        private: 私有
+        public: 公开
+  huggingface_path_in_repo:
+    label: Hugging Face 仓库内路径
+    description: 指定文件上传到 Hugging Face 仓库后的子目录或目标路径。
+    group: save
+    priority: advanced
+  resume_from_huggingface:
+    label: 从 Hugging Face 恢复状态
+    description: 从 Hugging Face 下载并恢复训练 state；resume 值格式为 repo_id/path:revision:repo_type。
+    group: save
+    priority: advanced
+  save_last_n_epochs:
+    label: 保留最近 N 个 Epoch Checkpoint
+    description: 按 epoch 保存时只保留最近指定数量的 checkpoint，并删除更早的文件。
+    group: save
+    priority: advanced
+  save_last_n_epochs_state:
+    label: 保留最近 N 个 Epoch State
+    description: 按 epoch 保存时只保留最近指定数量的训练 state，并覆盖 save_last_n_epochs 对 state 的保留数量。
+    group: save
+    priority: advanced
+  save_last_n_steps:
+    label: 按 Step 保留时长
+    description: 按 step 保存时，只保留最近指定步数范围内的 checkpoint，超过范围的旧文件会被删除。
+    group: save
+    priority: advanced
+  save_last_n_steps_state:
+    label: 按 Step 保留 State 时长
+    description: 按 step 保存时，只保留最近指定步数范围内的训练 state，并覆盖 save_last_n_steps 对 state 的保留规则。
+    group: save
+    priority: advanced
+  save_n_epoch_ratio:
+    label: Epoch 保存份数目标
+    description: 根据总 epoch 数自动计算保存间隔；例如设为 5 表示整个训练过程至少保存约 5 份 checkpoint。
+    group: save
+    priority: advanced
+  save_state_on_train_end:
+    label: 训练结束保存 State
+    description: 训练正常结束时保存包含优化器等信息的完整训练 state。
+    group: save
+    priority: advanced
+  save_state_to_huggingface:
+    label: 上传训练 State
+    description: 将完整训练 state 一并保存到 Hugging Face 仓库。
+    group: save
+    priority: advanced
+  save_clip:
+    label: 保存 CLIP（暂不可用）
+    description: 该参数在当前 SD3 脚本中尚不可用，因为暂不支持统一 checkpoint。
+    group: save
+    priority: dangerous
+    deprecated: true
+  save_t5xxl:
+    label: 保存 T5-XXL（暂不可用）
+    description: 该参数在当前 SD3 脚本中尚不可用，因为暂不支持统一 checkpoint。
+    group: save
+    priority: dangerous
+    deprecated: true
+  no_metadata:
+    label: 不写入模型元数据
+    description: 保存输出模型时不写入训练参数、作者与说明等元数据。
+    group: save
+    priority: advanced
+  metadata_title:
+    label: 模型标题
+    description: 写入模型元数据的标题；留空时使用 output_name。
+    group: save
+    priority: advanced
+  metadata_author:
+    label: 模型作者
+    description: 写入模型元数据的作者名称。
+    group: save
+    priority: advanced
+  metadata_description:
+    label: 模型说明
+    description: 写入模型元数据的内容说明。
+    group: save
+    priority: advanced
+    control: textarea
+  metadata_license:
+    label: 模型许可证
+    description: 写入模型元数据的许可证名称或标识。
+    group: save
+    priority: advanced
+  metadata_tags:
+    label: 模型标签
+    description: 写入模型元数据的标签列表，使用逗号分隔。
+    group: save
+    priority: advanced
+  metadata_merged_from:
+    label: 合并来源模型
+    description: 写入模型元数据的合并来源模型名称。
+    group: save
+    priority: advanced
+  metadata_preprocessor:
+    label: 数据预处理方式
+    description: 写入模型元数据的训练数据预处理方法。
+    group: save
+    priority: advanced
+  metadata_thumbnail:
+    label: 模型缩略图
+    description: 指定写入模型元数据的缩略图，可填写 Data URL 或本地图像路径；本地文件会转换为 Data URL。
+    group: save
+    priority: advanced
+  metadata_trigger_phrase:
+    label: 触发词
+    description: 写入模型元数据的推荐触发短语。
+    group: save
+    priority: advanced
+  metadata_usage_hint:
+    label: 使用提示
+    description: 写入模型元数据的使用方法或推荐设置。
+    group: save
+    priority: advanced
+    control: textarea
+  metadata_is_negative_embedding:
+    label: 标记为负向 Embedding
+    description: 在模型元数据中标记该输出是否为负向 Embedding。
+    group: save
+    priority: advanced
+  training_comment:
+    label: 训练备注
+    description: 将任意备注字符串写入输出模型的训练元数据。
+    group: save
+    priority: advanced
+    control: textarea
+  console_log_file:
+    label: 控制台日志文件
+    description: 将原本写往标准错误流的控制台日志改为写入指定文件。
+    group: logging
+    priority: advanced
+  console_log_level:
+    label: 控制台日志级别
+    description: 设置控制台日志详细程度，默认 INFO。
+    group: logging
+    priority: advanced
+  console_log_simple:
+    label: 简洁控制台日志
+    description: 使用更精简的控制台日志输出格式。
+    group: logging
+    priority: advanced
+  log_config:
+    label: 记录训练配置
+    description: 在日志中输出本次训练的完整配置。
+    group: logging
+    priority: advanced
+  log_prefix:
+    label: 日志目录前缀（任务托管）
+    description: 由任务中心自动设置为当前 Run ID，用于隔离并准确绑定事件文件；手动提交的值会被安全前缀替换。
+    group: logging
+    priority: hidden
+    hidden: true
+  log_tracker_config:
+    label: Tracker 配置文件
+    description: 指定日志 Tracker 使用的配置文件路径。
+    group: logging
+    priority: advanced
+    control: file
+  log_tracker_name:
+    label: Tracker 名称
+    description: 指定日志 Tracker 的运行名称；留空时使用训练脚本为当前任务定义的默认名称。
+    group: logging
+    priority: advanced
+  wandb_run_name:
+    label: W&B 运行名称
+    description: 设置本次 Weights & Biases 会话中显示的运行名称。
+    group: logging
+    priority: advanced
+  apply_lg_attn_mask:
+    label: 应用 CLIP-L/G 注意力掩码
+    description: 对 CLIP-L 与 CLIP-G 的文本编码结果应用注意力掩码，并将被遮挡位置的 Embedding 置零。
+    group: model_specific
+    priority: advanced
+  apply_t5_attn_mask:
+    label: 应用 T5 注意力掩码
+    description: 对 T5-XXL 文本编码结果应用注意力掩码；部分 FLUX 系模型还会把该掩码用于双流 Transformer block。
+    group: model_specific
+    priority: advanced
+  clip_g_dropout_rate:
+    label: CLIP-G 丢弃率（Dropout）
+    description: 设置 CLIP-G 文本编码器输出的 Dropout 比例，脚本默认值为 0。
+    group: model_specific
+    priority: advanced
+  clip_l_dropout_rate:
+    label: CLIP-L 丢弃率（Dropout）
+    description: 设置 CLIP-L 文本编码器输出的 Dropout 比例，脚本默认值为 0。
+    group: model_specific
+    priority: advanced
+  controlnet_model_name_or_path:
+    label: ControlNet 模型
+    description: 指定 ControlNet 权重文件，支持 .sft 或 .safetensors。
+    group: model
+    priority: advanced
+    control: file
+    fileKind: model
+  gemma2_max_token_length:
+    label: Gemma2 最大 Token 长度
+    description: 设置 Gemma2 文本编码器的最大 Token 长度，留空时使用 256。
+    group: model_specific
+    priority: advanced
+  qwen3_max_token_length:
+    label: Qwen3 最大 Token 长度
+    description: 设置 Anima 的 Qwen3 tokenizer 最大 Token 长度，默认 512。
+    group: model_specific
+    priority: advanced
+  t5_max_token_length:
+    label: T5 最大 Token 长度
+    description: 设置 Anima 的 T5 tokenizer 最大 Token 长度，默认 512。
+    group: model_specific
+    priority: advanced
+  t5xxl_max_token_length:
+    label: T5-XXL 最大 Token 长度
+    description: 设置 T5-XXL 可处理的最大 Token 长度；具体默认值由当前模型族和模型变体决定。
+    group: model_specific
+    priority: advanced
+  t5_dropout_rate:
+    label: T5 丢弃率（Dropout）
+    description: 设置 SD3 的 T5 文本编码器输出 Dropout 比例，脚本默认值为 0。
+    group: model_specific
+    priority: advanced
+  t5xxl_device:
+    label: T5-XXL 运行设备（暂不可用）
+    description: 当前 SD3 脚本尚不支持该参数；原计划用于指定 T5-XXL 设备，留空时跟随 Accelerator。
+    group: model_specific
+    priority: dangerous
+    deprecated: true
+  t5xxl_dtype:
+    label: T5-XXL 数据类型（暂不可用）
+    description: 当前 SD3 脚本尚不支持该参数；原计划用于指定 T5-XXL 精度，留空时跟随混合精度设置。
+    group: model_specific
+    priority: dangerous
+    deprecated: true
+  text_encoder_cpu:
+    label: 文本编码器使用 CPU
+    description: 在 CPU 上执行文本编码器推理，以显著降低显存占用，但会增加系统内存占用并降低速度。
+    group: memory
+    priority: advanced
+  enable_scaled_pos_embed:
+    label: 按分辨率缩放位置嵌入
+    description: 多分辨率训练时为每种分辨率缩放位置嵌入；仅针对 SD3.5 Medium，其他模型可能出现非预期行为。
+    group: model_specific
+    priority: advanced
+  pos_emb_random_crop_rate:
+    label: 位置嵌入随机裁剪率
+    description: 设置位置嵌入随机裁剪比例，默认 0；仅针对 SD3.5 Medium，其他模型可能出现非预期行为。
+    group: model_specific
+    priority: advanced
+  system_prompt:
+    label: 系统 Prompt
+    description: 在每条用户 Prompt 前加入固定的 System Prompt。
+    group: model_specific
+    priority: advanced
+    control: textarea
+  cross_attn_lr:
+    label: Cross Attention 学习率
+    description: 单独设置 Anima Cross Attention 层学习率；留空沿用基础学习率，设为 0 则冻结。
+    group: optimizer
+    priority: advanced
+  self_attn_lr:
+    label: Self Attention 学习率
+    description: 单独设置 Anima Self Attention 层学习率；留空沿用基础学习率，设为 0 则冻结。
+    group: optimizer
+    priority: advanced
+  mlp_lr:
+    label: MLP 学习率
+    description: 单独设置 Anima MLP 层学习率；留空沿用基础学习率，设为 0 则冻结。
+    group: optimizer
+    priority: advanced
+  mod_lr:
+    label: AdaLN 调制层学习率
+    description: 单独设置 Anima AdaLN 调制层学习率；留空沿用基础学习率，设为 0 则冻结。调制层默认不包含在 LoRA 中。
+    group: optimizer
+    priority: advanced
+  llm_adapter_lr:
+    label: LLM Adapter 学习率
+    description: 单独设置 Anima LLM Adapter 学习率；留空沿用基础学习率，设为 0 则冻结 Adapter。
+    group: optimizer
+    priority: advanced
+  config_file:
+    label: 外部训练配置文件
+    description: 通过 TOML 文件向 sd-scripts 传递参数；本工作台会自行生成并管理该文件，手动值不会写入训练配置。
+    group: advanced
+    priority: advanced
+  output_config:
+    label: 导出命令行配置
+    description: 让 sd-scripts 把命令行参数写入指定 TOML；本工作台已直接生成 TOML，因此不会传递该参数。
+    group: advanced
+    priority: advanced
+  debug_dataset:
+    label: 调试数据集
+    description: 显示数据集处理后的图像用于排查问题，并且不会开始训练。
+    group: advanced
+    priority: dangerous
+  tokenizer_cache_dir:
+    label: Tokenizer 缓存目录
+    description: 指定 Tokenizer 文件的本地缓存目录，便于在无网络环境中训练。
+    group: model
+    priority: advanced
+    control: folder
+    fileKind: folder

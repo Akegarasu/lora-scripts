@@ -1,0 +1,102 @@
+trainer:
+  defaultNetworkModule: networks.lora_lumina
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 16
+params:
+  pretrained_model_name_or_path:
+    description: 指定本地 Lumina Image 2.0 .safetensors 底模权重文件。
+  gemma2:
+    description: 指定 Lumina 使用的本地 Gemma2 文本编码器 .safetensors 权重文件。
+  ae:
+    description: 指定 Lumina 使用的本地自动编码器 .safetensors 权重文件。
+  network_module:
+    effectiveDefault: networks.lora_lumina
+  network_dim:
+    effectiveDefault: 8
+  network_alpha:
+    effectiveDefault: 8
+  learning_rate:
+    effectiveDefault: 0.0001
+  optimizer_type:
+    description: Lumina 官方基础示例使用标准 AdamW；如需 8-bit 优化器，可在确认环境已安装 bitsandbytes 后切换。
+    effectiveDefault: AdamW
+  mixed_precision:
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    effectiveDefault: true
+  network_train_unet_only:
+    description: 只训练 Lumina Transformer 的 LoRA，不训练 Gemma2 文本编码器 LoRA。
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 Gemma2 文本编码器输出以减少训练期间的计算和显存占用；缓存后不能训练 Gemma2 LoRA。
+    effectiveDefault: true
+  cache_latents:
+    description: 缓存 Lumina AE 编码后的潜变量，避免训练期间重复运行自动编码器；启用后不能使用 Color Aug 或 Random Crop，脚本仍支持水平翻转缓存。
+    effectiveDefault: true
+  timestep_sampling:
+    label: 时间步采样
+    description: 选择 Lumina Flow Matching 的时间步分布；Lumina Image 2.0 推荐 nextdit_shift。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: nextdit_shift
+  discrete_flow_shift:
+    label: 离散 Flow Shift
+    description: 设置 Lumina Euler Flow Matching 调度器的离散偏移，脚本默认 6.0。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: 6.0
+  model_prediction_type:
+    description: 选择如何处理 Lumina 模型输出；脚本默认并推荐 raw 直接使用预测值。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: raw
+  gemma2_max_token_length:
+    label: Gemma2 最大 Token 长度
+    description: Gemma2 tokenizer 对每条 Caption 保留的最大 Token 数；留空时使用 256。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  system_prompt:
+    label: 系统提示词（System Prompt）
+    description: 在每条训练与采样 Prompt 前统一添加的系统指令；默认使用 Lumina 文档的通用图像生成指令，修改后会改变 Gemma2 的文本条件。
+    group: model_specific
+    priority: advanced
+    control: textarea
+    effectiveDefault: You are an assistant designed to generate high-quality images based on user prompts.
+  use_flash_attn:
+    label: 使用 Flash Attention
+    description: 让 Lumina 模型使用 Flash Attention 以加速并降低显存占用；需要另行安装与当前 CUDA/PyTorch 兼容的 flash-attn。
+    group: memory
+    priority: advanced
+  use_sage_attn:
+    label: 使用 SageAttention
+    description: Lumina 当前实现仅支持在推理路径使用 SageAttention，训练时不要启用。
+    group: memory
+    priority: dangerous
+  sdpa:
+    description: Lumina 使用自身的 Attention 实现，不读取通用 SDPA 开关。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: Lumina 使用自身的 Attention 实现，不读取通用 xFormers 开关。
+    priority: hidden
+    hidden: true
+  text_encoder_lr:
+    description: 设置 Gemma2 LoRA 的学习率；当前 Lumina 网络实现使用数组第一项，留空时沿用总学习率。
+  v2:
+    description: Stable Diffusion 2.x 专用开关，Lumina 训练不会使用，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: Stable Diffusion 的 v-parameterization 开关，Lumina 的 Flow Matching 训练不会使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: Stable Diffusion CLIP 专用层跳过参数；Lumina 使用 Gemma2，因此不会生效。
+    priority: dangerous
+  max_token_length:
+    description: Stable Diffusion tokenizer 的旧参数，Lumina 不使用；请设置 Gemma2 最大 Token 长度。
+    priority: dangerous

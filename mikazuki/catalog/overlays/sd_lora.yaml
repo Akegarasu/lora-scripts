@@ -1,0 +1,50 @@
+trainer:
+  defaultNetworkModule: networks.lora
+  datasetDefaults:
+    resolution: [512, 512]
+    minBucketReso: 256
+    maxBucketReso: 1024
+    bucketResoSteps: 64
+params:
+  pretrained_model_name_or_path:
+    description: 指定 SD1.x/2.x 底模；支持本地 .ckpt/.safetensors 文件、本地 Diffusers 目录或 Hugging Face 模型仓库 ID。
+    control: modelSource
+    fileKind: null
+  vae:
+    description: 替换底模内置 VAE；支持本地 checkpoint、本地 Diffusers 目录或 Hugging Face 模型仓库 ID，留空使用底模 VAE。
+    control: modelSource
+    fileKind: null
+  network_module:
+    effectiveDefault: networks.lora
+  network_dim:
+    effectiveDefault: 32
+  network_alpha:
+    effectiveDefault: 32
+  learning_rate:
+    effectiveDefault: 0.0001
+  unet_lr:
+    effectiveDefault: 0.0001
+  text_encoder_lr:
+    description: 设置 SD 单个 CLIP 文本编码器 LoRA 的学习率；当前默认网络模块只使用数组第一项，留空时沿用总学习率。
+    effectiveDefault:
+      - 0.00001
+  mixed_precision:
+    effectiveDefault: fp16
+  gradient_checkpointing:
+    description: 反向传播时重算部分激活以降低 SD1.x/2.x 训练显存；需要更高吞吐时可关闭。
+    effectiveDefault: true
+  cache_latents:
+    description: 缓存 SD VAE 编码后的潜变量以减少重复计算；启用后不能使用 Color Aug 或 Random Crop，脚本仍支持水平翻转缓存。
+    effectiveDefault: true
+  xformers:
+    description: 使用 xFormers 的 Cross Attention 实现；仅在已确认安装版本与 PyTorch/CUDA 匹配时启用，否则训练会在加载阶段失败。
+    effectiveDefault: false
+  sdpa:
+    description: 使用 PyTorch 内置 SDPA 实现 SD1.x/2.x 的 Cross Attention，不需要额外安装 xFormers。
+    effectiveDefault: true
+  clip_skip:
+    description: 使用 CLIP 从输出端倒数第 N 层的结果；SD1.x 动漫模型常用 2，SD2.x 通常使用 1 或留空，请按底模要求设置。
+    control: select
+    choices: [1, 2]
+    extra:
+      allowCustomChoice: true

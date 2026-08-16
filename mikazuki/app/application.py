@@ -1,25 +1,23 @@
-import asyncio
 import mimetypes
 import os
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException
 
-from mikazuki.app.config import app_config
-from mikazuki.app.api import load_schemas, load_presets
-from mikazuki.app.api import router as api_router
-# from mikazuki.app.ipc import router as ipc_router
-from mikazuki.app.proxy import router as proxy_router
-from mikazuki.utils.devices import check_torch_gpu
+from mikazuki.app.api_v2 import router as api_v2_router
+from mikazuki.app.caption_api import router as caption_api_router
+from mikazuki.app.tag_editor_api import router as tag_editor_api_router
 
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
+FRONTEND_DIST = Path("frontend/dist")
 
 
 class SPAStaticFiles(StaticFiles):
@@ -33,25 +31,14 @@ class SPAStaticFiles(StaticFiles):
                 raise ex
 
 
-async def app_startup():
-    app_config.load_config()
-
-    await load_schemas()
-    await load_presets()
-    await asyncio.to_thread(check_torch_gpu)
-
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     if sys.platform == "win32" and os.environ.get("MIKAZUKI_DEV", "0") != "1":
         webbrowser.open(f'http://{os.environ["MIKAZUKI_HOST"]}:{os.environ["MIKAZUKI_PORT"]}')
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await app_startup()
     yield
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(proxy_router)
 
 
 cors_config = os.environ.get("MIKAZUKI_APP_CORS", "")
@@ -72,20 +59,29 @@ if cors_config != "":
 @app.middleware("http")
 async def add_cache_control_header(request, call_next):
     response = await call_next(request)
-    response.headers["Cache-Control"] = "max-age=0"
+    if "Cache-Control" not in response.headers:
+        response.headers["Cache-Control"] = "max-age=0"
     return response
 
-app.include_router(api_router, prefix="/api")
-# app.include_router(ipc_router, prefix="/ipc")
+app.include_router(api_v2_router, prefix="/api/v2")
+app.include_router(caption_api_router, prefix="/api/v2/caption")
+app.include_router(tag_editor_api_router, prefix="/api/v2/tag-editor")
 
 
 @app.get("/")
 async def index():
-    return FileResponse("./frontend/dist/index.html")
+    index_file = FRONTEND_DIST / "index.html"
+    if not index_file.exists():
+        return JSONResponse(
+            status_code=503,
+            content={"status": "frontend_not_built", "message": "frontend/dist/index.html does not exist"},
+        )
+    return FileResponse(index_file)
 
 
 @app.get("/favicon.ico", response_class=FileResponse)
 async def favicon():
     return FileResponse("assets/favicon.ico")
 
-app.mount("/", SPAStaticFiles(directory="frontend/dist", html=True), name="static")
+if FRONTEND_DIST.exists():
+    app.mount("/", SPAStaticFiles(directory=str(FRONTEND_DIST), html=True), name="static")

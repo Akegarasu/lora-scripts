@@ -1,0 +1,156 @@
+trainer:
+  defaultNetworkModule: networks.lora_sd3
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 32
+params:
+  pretrained_model_name_or_path:
+    description: 指定本地 SD3/SD3.5 单文件 .safetensors 底模权重；当前训练器不按 Diffusers 目录或 Hugging Face 仓库 ID 加载。
+  vae:
+    description: 可选的独立 SD3 VAE 权重文件；留空时从单文件底模中读取，只有替换 VAE 时才需要指定。
+    priority: advanced
+    required: false
+  clip_l:
+    description: 可选的独立 CLIP-L 权重文件；留空时从 SD3 单文件底模中读取。
+    priority: advanced
+    required: false
+  clip_g:
+    description: 可选的独立 CLIP-G 权重文件；留空时从 SD3 单文件底模中读取。
+    priority: advanced
+    required: false
+  t5xxl:
+    description: 可选的独立 T5-XXL 权重文件；留空时从 SD3 单文件底模中读取。
+    priority: advanced
+    required: false
+  network_module:
+    effectiveDefault: networks.lora_sd3
+  network_dim:
+    effectiveDefault: 16
+  network_alpha:
+    effectiveDefault: 1
+  learning_rate:
+    effectiveDefault: 0.0001
+  mixed_precision:
+    effectiveDefault: fp16
+  gradient_checkpointing:
+    effectiveDefault: true
+  network_train_unet_only:
+    description: 只训练 SD3 MMDiT 的 LoRA；关闭后可训练 CLIP-L/CLIP-G LoRA，但当前脚本始终不训练 T5-XXL LoRA。
+    effectiveDefault: true
+  cache_latents:
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 CLIP-L、CLIP-G 与 T5-XXL 输出以显著减少显存和计算量；启用后不能训练文本编码器 LoRA。
+    effectiveDefault: true
+  sdpa:
+    description: SD3 当前实现内部固定使用 Torch Attention，此通用开关不会改变 MMDiT 实现。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: SD3 当前 MMDiT 训练实现不读取通用 xFormers 开关。
+    priority: hidden
+    hidden: true
+  t5xxl_max_token_length:
+    label: T5 最大 Token 长度
+    description: T5-XXL tokenizer 对每条 Caption 保留的最大 Token 数，SD3 默认 256。
+    group: model_specific
+    priority: recommended
+    control: number
+    effectiveDefault: 256
+  apply_lg_attn_mask:
+    label: CLIP 注意力掩码
+    description: 对 CLIP-L 与 CLIP-G 的 Padding 位置应用 Attention Mask，并将对应嵌入清零。
+    group: model_specific
+    priority: advanced
+  apply_t5_attn_mask:
+    label: T5 注意力掩码
+    description: 对 T5-XXL 的 Padding 位置应用 Attention Mask，并将对应嵌入清零。
+    group: model_specific
+    priority: advanced
+  weighting_scheme:
+    label: 损失权重策略
+    description: 选择 SD3 按时间步调整 Flow Matching 损失权重的方法；uniform 表示不额外重加权。
+    group: model_specific
+    priority: advanced
+  training_shift:
+    label: 训练时间步偏移
+    description: 设置 SD3 Flow Matching 使用的时间步分布偏移，脚本默认 1.0。
+    group: model_specific
+    priority: advanced
+  pos_emb_random_crop_rate:
+    label: 位置嵌入随机裁剪率
+    description: 随机裁剪 SD3.5 Medium 位置嵌入的概率；仅适用于 SD3.5M，其他 SD3 型号可能产生异常结果。
+    group: model_specific
+    priority: advanced
+  enable_scaled_pos_embed:
+    label: 缩放位置嵌入
+    description: 为数据集中各分辨率预先生成缩放位置嵌入，用于 SD3.5 Medium 多分辨率训练；其他型号不应启用。
+    group: model_specific
+    priority: advanced
+  clip_l_dropout_rate:
+    label: CLIP-L Dropout 率
+    description: 训练时丢弃 CLIP-L 条件输出的概率，范围 0–1；默认 0 表示关闭。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 0
+    max: 1
+    step: 0.05
+  clip_g_dropout_rate:
+    label: CLIP-G Dropout 率
+    description: 训练时丢弃 CLIP-G 条件输出的概率，范围 0–1；默认 0 表示关闭。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 0
+    max: 1
+    step: 0.05
+  t5_dropout_rate:
+    label: T5 Dropout 率
+    description: 训练时丢弃 T5-XXL 条件输出的概率，范围 0–1；默认 0 表示关闭。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 0
+    max: 1
+    step: 0.05
+  text_encoder_lr:
+    description: 依次设置 CLIP-L、CLIP-G、T5-XXL 的 LoRA 学习率；一个值会复制到三者，两个值时第二个同时用于 CLIP-G 与 T5-XXL，但当前脚本不会训练 T5-XXL LoRA。
+  save_clip:
+    label: 保存 CLIP（未支持）
+    description: 计划用于把 CLIP 写入统一 checkpoint，但当前 SD3 训练器尚未实现，启用不会得到预期结果。
+    group: save
+    priority: dangerous
+    deprecated: true
+  save_t5xxl:
+    label: 保存 T5-XXL（未支持）
+    description: 计划用于把 T5-XXL 写入统一 checkpoint，但当前 SD3 训练器尚未实现，启用不会得到预期结果。
+    group: save
+    priority: dangerous
+    deprecated: true
+  t5xxl_device:
+    label: T5-XXL 设备（未支持）
+    description: 预留的 T5-XXL 运行设备参数，当前 SD3 训练器尚未支持，请保持为空。
+    group: memory
+    priority: dangerous
+    deprecated: true
+  t5xxl_dtype:
+    label: T5-XXL 精度（未支持）
+    description: 预留的 T5-XXL 精度参数，当前 SD3 训练器尚未支持，请保持为空。
+    group: memory
+    priority: dangerous
+    deprecated: true
+  v2:
+    description: Stable Diffusion 2.x 专用开关，SD3/SD3.5 训练不会使用，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: Stable Diffusion 1.x/2.x 的 v-parameterization 开关，SD3 Flow Matching 训练不会使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: Stable Diffusion 1.x/2.x CLIP 专用层跳过参数，SD3/SD3.5 训练不会使用。
+    priority: dangerous
+  max_token_length:
+    description: Stable Diffusion 1.x/2.x tokenizer 的旧参数，SD3 不使用；请设置 T5 最大 Token 长度。
+    priority: dangerous

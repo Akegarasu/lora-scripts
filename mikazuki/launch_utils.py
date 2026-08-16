@@ -1,8 +1,6 @@
-import locale
 import os
 import platform
 import re
-import shutil
 import subprocess
 import sys
 import socket
@@ -22,52 +20,10 @@ def base_dir_path():
     return Path(__file__).parents[1].absolute()
 
 
-def find_windows_git():
-    possible_paths = ["git\\bin\\git.exe", "git\\cmd\\git.exe", "Git\\mingw64\\libexec\\git-core\\git.exe", "C:\\Program Files\\Git\\cmd\\git.exe"]
-    for path in possible_paths:
-        if os.path.exists(path):
-            return path
-
-
-def prepare_git():
-    if shutil.which("git"):
-        return True
-
-    log.info("Finding git...")
-
-    if sys.platform == "win32":
-        git_path = find_windows_git()
-
-        if git_path is not None:
-            log.info(f"Git not found, but found git in {git_path}, add it to PATH")
-            os.environ["PATH"] += os.pathsep + os.path.dirname(git_path)
-            return True
-        else:
-            return False
-    else:
-        log.error("git not found, please install git first")
-        return False
-
-
-def prepare_submodules():
+def check_frontend_build() -> None:
     frontend_path = base_dir_path() / "frontend" / "dist"
-    tag_editor_path = base_dir_path() / "mikazuki" / "dataset-tag-editor" / "scripts"
-
-    if not os.path.exists(frontend_path) or not os.path.exists(tag_editor_path):
-        log.info("submodule not found, try clone...")
-        log.info("checking git installation...")
-        if not prepare_git():
-            log.error("git not found, please install git first")
-            sys.exit(1)
-        subprocess.run(["git", "submodule", "init"])
-        subprocess.run(["git", "submodule", "update"])
-
-
-def git_tag(path: str) -> str:
-    try:
-        return subprocess.check_output(["git", "-C", path, "describe", "--tags"]).strip().decode("utf-8")
-    except Exception as e:
-        return "<none>"
+    if not os.path.exists(frontend_path):
+        log.warning("frontend/dist not found. Run frontend build before using the bundled WebUI.")
 
 
 def check_dirs(dirs: List):
@@ -210,7 +166,7 @@ def setup_windows_bitsandbytes():
 
     if not installed_bnb or not bnb_cuda_setup:
         log.error("detected wrong install of bitsandbytes, reinstall it")
-        run_pip(f"uninstall bitsandbytes -y", "bitsandbytes", live=True)
+        run_pip("uninstall bitsandbytes -y", "bitsandbytes", live=True)
         run_pip(f"install {bnb_package}", bnb_package, live=True)
 
 
@@ -227,11 +183,11 @@ def setup_onnxruntime(
 
     if onnx_version and not is_installed(f"onnxruntime-gpu=={onnx_version}"):
         log.info("uninstalling wrong onnxruntime version")
-        run_pip(f"uninstall onnxruntime -y", "onnxruntime", live=True)
-        run_pip(f"uninstall onnxruntime-gpu -y", "onnxruntime", live=True)
+        run_pip("uninstall onnxruntime -y", "onnxruntime", live=True)
+        run_pip("uninstall onnxruntime-gpu -y", "onnxruntime", live=True)
 
-    if not is_installed(f"onnxruntime-gpu"):
-        log.info(f"installing onnxruntime")
+    if not is_installed("onnxruntime-gpu"):
+        log.info("installing onnxruntime")
         pip_install("onnxruntime", onnx_version, index_url=index_url, live=True)
         pip_install("onnxruntime-gpu", onnx_version, index_url=index_url, live=True)
 
@@ -280,7 +236,10 @@ def network_gfw_test(timeout=3):
         return False
 
 
-def prepare_environment(disable_auto_mirror: bool = True, prepare_onnxruntime: bool = True):
+def prepare_environment(
+        disable_auto_mirror: bool = True,
+        prepare_onnxruntime: bool = True,
+):
     if sys.platform == "win32":
         # disable triton on windows
         os.environ["XFORMERS_FORCE_DISABLE_TRITON"] = "1"
@@ -299,9 +258,9 @@ def prepare_environment(disable_auto_mirror: bool = True, prepare_onnxruntime: b
     if not os.environ.get("PATH"):
         os.environ["PATH"] = os.path.dirname(sys.executable)
 
-    prepare_submodules()
+    check_frontend_build()
 
-    check_dirs(["config/autosave", "logs"])
+    check_dirs(["logs"])
 
     # if not check_run("mikazuki/scripts/torch_check.py"):
     #     sys.exit(1)
@@ -313,32 +272,20 @@ def prepare_environment(disable_auto_mirror: bool = True, prepare_onnxruntime: b
         setup_onnxruntime()
 
 
-def catch_exception(f):
-    def wrapper(*args, **kwargs):
-        try:
-            return f(*args, **kwargs)
-        except Exception as e:
-            log.error(f"An error occurred: {e}")
-    return wrapper
-
-
-def check_port_avaliable(port: int):
+def check_port_available(port: int) -> bool:
     try:
-        s = socket.socket()
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(("127.0.0.1", port))
-        s.close()
+        with socket.socket() as server:
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            server.bind(("127.0.0.1", port))
         return True
-    except:
+    except OSError:
         return False
 
 
-def find_avaliable_ports(port_init: int, port_range: int):
-    server_ports = range(port_init, port_range)
+def find_available_port(port_start: int, port_end: int) -> Optional[int]:
+    for port in range(port_start, port_end):
+        if check_port_available(port):
+            return port
 
-    for p in server_ports:
-        if check_port_avaliable(p):
-            return p
-
-    log.error(f"error finding avaliable ports in range: {port_init} -> {port_range}")
+    log.error(f"error finding available ports in range: {port_start} -> {port_end}")
     return None

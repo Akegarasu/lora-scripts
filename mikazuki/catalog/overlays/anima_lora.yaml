@@ -1,0 +1,157 @@
+trainer:
+  defaultNetworkModule: networks.lora_anima
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 16
+params:
+  pretrained_model_name_or_path:
+    description: 指定 Anima DiT 底模权重文件；该训练器不按 Stable Diffusion checkpoint 或 Diffusers 模型目录方式加载。
+  vae:
+    description: 指定 Anima 使用的 Qwen-Image VAE 权重文件；这是必填项，不会从 DiT 底模中自动读取。
+    priority: required
+    required: true
+  qwen3:
+    description: 指定本地 Qwen3-0.6B 文本编码器；可使用单个权重文件，或包含模型、配置与 tokenizer 的完整本地目录。
+    control: fileOrFolder
+    fileKind: null
+    placeholder: 输入本地 Qwen3 模型文件或目录
+  llm_adapter_path:
+    description: 指定把 Qwen3 表征映射到 T5 兼容 Cross Attention 空间的 LLM Adapter 权重；留空时尝试从 Anima DiT 权重中读取。
+  t5_tokenizer_path:
+    description: 指定 LLM Adapter 目标 Token 使用的本地 T5 tokenizer 目录；这里不会加载或运行 T5 文本编码器。
+  network_module:
+    effectiveDefault: networks.lora_anima
+  network_dim:
+    effectiveDefault: 8
+  network_alpha:
+    effectiveDefault: 1
+  learning_rate:
+    effectiveDefault: 0.0001
+  mixed_precision:
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    effectiveDefault: true
+  network_train_unet_only:
+    description: 只训练 Anima DiT 的 LoRA，不训练 Qwen3 文本编码器 LoRA。
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 预先缓存 Qwen3 文本编码器输出；启用后不能训练 Qwen3 的 LoRA。Anima 支持 Caption 整体 Dropout，但修改其比例后需重建缓存；Shuffle、Tag Dropout 与 Token Warmup 必须关闭。
+    effectiveDefault: true
+  cache_text_encoder_outputs_to_disk:
+    description: 将 Qwen3 文本编码器输出写入磁盘缓存；会同时启用文本编码器输出缓存。
+    effectiveDefault: true
+  cache_latents:
+    description: 缓存 Qwen-Image VAE 编码得到的潜变量，减少训练期间的重复 VAE 计算。
+    effectiveDefault: true
+  fp8_base:
+    description: Anima 训练当前不支持通用底模 FP8；即使启用，脚本也会给出警告并将其关闭。
+    priority: dangerous
+  fp8_base_unet:
+    description: Anima 训练当前不支持仅将 DiT 设为 FP8；即使启用，脚本也会给出警告并将其关闭。
+    priority: dangerous
+  v2:
+    description: Stable Diffusion 2.x 专用开关，Anima 训练不会使用，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: Stable Diffusion 的 v-parameterization 开关，Anima 的 Rectified Flow 训练不会使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: Stable Diffusion CLIP 专用层跳过参数；Anima 使用 Qwen3，因此该参数不会生效。
+    priority: dangerous
+  max_token_length:
+    description: Stable Diffusion tokenizer 的旧参数，Anima 不使用；请分别设置 Qwen3 与 T5 最大 Token 长度。
+    priority: dangerous
+  timestep_sampling:
+    label: 时间步采样
+    description: 选择 Anima Rectified Flow 的时间步分布；默认 sigmoid，选择 shift 时才会使用离散 Flow Shift。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: sigmoid
+  discrete_flow_shift:
+    description: 设置 Anima Rectified Flow 的时间步偏移，默认 1.0；仅在时间步采样选择 shift 时生效。
+    group: model_specific
+    priority: advanced
+  qwen3_max_token_length:
+    label: Qwen3 最大 Token 长度
+    description: Qwen3 tokenizer 对每条 Caption 保留的最大 Token 数，默认 512；更长会增加文本编码计算与缓存占用。
+    group: model_specific
+    priority: advanced
+  t5_max_token_length:
+    label: T5 最大 Token 长度
+    description: LLM Adapter 目标输入所用 T5 tokenizer 的最大 Token 数，默认 512；该参数不代表加载 T5 文本编码器。
+    group: model_specific
+    priority: advanced
+  attn_mode:
+    label: Attention 实现
+    description: 选择 Anima DiT 的 Attention 实现；xFormers 需要同时启用拆分 Attention，SageAttention 不支持训练，sdpa 仅作为 torch 的兼容别名。
+    group: memory
+    priority: recommended
+    control: select
+    choices: [torch, xformers, flash, sdpa]
+    effectiveDefault: torch
+    extra:
+      choiceLabels:
+        torch: Torch（推荐）
+        xformers: xFormers
+        flash: Flash Attention
+        sdpa: SDPA（Torch 兼容别名）
+  split_attn:
+    label: 拆分 Attention
+    description: 分批计算 Anima Attention 以降低显存占用；使用 xFormers Attention 时必须启用。
+    group: memory
+    priority: advanced
+  sdpa:
+    description: 请使用“Attention 实现”选择 Torch/SDPA；通用 SDPA 开关不会控制 Anima DiT。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: 旧配置兼容开关；新配置请在“Attention 实现”中选择 xFormers。
+    priority: hidden
+    hidden: true
+  vae_chunk_size:
+    label: VAE 分块尺寸
+    description: 设置 Qwen-Image VAE 编解码的空间分块尺寸，以速度换取更低峰值显存；必须为偶数，留空表示不分块。
+    group: memory
+    priority: advanced
+    control: number
+    min: 2
+    step: 2
+    effectiveDefault: 64
+  vae_disable_cache:
+    label: 禁用 VAE 内部缓存
+    description: 关闭 Qwen-Image VAE 的内部缓存以减少内存占用并加快编解码；其行为与官方 VAE 实现不同。
+    group: memory
+    priority: advanced
+    effectiveDefault: true
+  unsloth_offload_checkpointing:
+    label: Unsloth 激活卸载
+    description: 使用异步非阻塞传输把激活卸载到 CPU 内存，并自动启用梯度检查点；不能与 CPU Offload Checkpointing 或 Block Swap 同时使用。
+    group: memory
+    priority: advanced
+  self_attn_lr:
+    label: Self Attention 学习率
+    description: Anima Self Attention 层的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    group: optimizer
+    priority: advanced
+  cross_attn_lr:
+    label: Cross Attention 学习率
+    description: Anima Cross Attention 层的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    group: optimizer
+    priority: advanced
+  mlp_lr:
+    label: MLP 学习率
+    description: Anima MLP 层的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    group: optimizer
+    priority: advanced
+  mod_lr:
+    label: AdaLN 调制层学习率
+    description: Anima AdaLN 调制层的独立学习率；留空沿用总学习率，设为 0 表示冻结。这些层默认不在 LoRA 目标中。
+    group: optimizer
+    priority: advanced
+  llm_adapter_lr:
+    label: LLM Adapter 学习率
+    description: Anima LLM Adapter 的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    group: optimizer
+    priority: advanced

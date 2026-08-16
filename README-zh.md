@@ -47,6 +47,12 @@ Stable Diffusion 训练工作台。一切集成于一个 WebUI 中。
 | ------------ | ------------ | ------------ |
 | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/b2ac5c36-3edf-43a6-9719-cb00b757fc76) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/9504fad1-7d77-46a7-a68f-91fbbdbc7407) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/4597917b-caa8-4e90-b950-8b01738996f2) |
 
+### Caption 与标签识别工作台
+
+启动 GUI 后打开 [http://127.0.0.1:28000/caption](http://127.0.0.1:28000/caption)，即可扫描数据集，并批量生成标签或自然语言 Caption。服务端目录当前登记 25 个模型：既有 WD/CL Tagger、BLIP/GIT/BLIP-2 兼容模型，以及 6 个 chat VLM 条目；缺少依赖或版本不兼容的模型会在任务开始前明确禁用。
+
+Caption 默认处理全部扫描图片、跳过已有文件并直接安全写入；手动选图和生成后复核均为可选模式。图库采用服务端分页与虚拟网格，可浏览千张以上的数据集；长期人工打标、查找替换和批量修订将由独立 Tag 编辑器承担。写入会检测 GUI 外部文件修改、按需保留备份，并与训练任务共享 GPU 队列。该功能完全位于 `scripts/` 之外，不影响 sd-scripts 子模块跟随上游更新。API、模型兼容性、许可和安全边界详见[前后端重构设计文档](docs/frontend-backend-refactor-design.md)。
+
 
 # 使用方法
 
@@ -170,7 +176,8 @@ source venv/bin/activate
 
 #### TensorBoard
 
-运行 `tensorboard.ps1` 将在 http://localhost:6006/ 启动 TensorBoard
+训练指标直接显示在每个任务详情中。默认环境只使用 `tensorboardX` 写入兼容事件文件，
+不安装也不启动 TensorBoard Web UI。
 
 ## 程序参数
 
@@ -180,9 +187,6 @@ source venv/bin/activate
 | `--port`                     | int   | 28000        | 运行服务器的端口                                |
 | `--listen`                   | bool  | false        | 启用服务器的监听模式                            |
 | `--skip-prepare-environment` | bool  | false        | 跳过环境准备步骤                                |
-| `--disable-tensorboard`      | bool  | false        | 禁用 TensorBoard                                |
-| `--disable-tageditor`        | bool  | false        | 禁用标签编辑器                                  |
-| `--tensorboard-host`         | str   | "127.0.0.1"  | 运行 TensorBoard 的主机                         |
-| `--tensorboard-port`         | int   | 6006         | 运行 TensorBoard 的端口                          |
-| `--localization`             | str   |              | 界面的本地化设置                                |
-| `--dev`                      | bool  | false        | 开发者模式，用于禁用某些检查                     |
+| `--skip-prepare-onnxruntime` | bool  | false        | 跳过 ONNX Runtime 准备                          |
+| `--disable-auto-mirror`      | bool  | false        | 禁用自动软件源镜像选择                          |
+| `--dev`                      | bool  | false        | 启用开发模式和自动重载                          |

@@ -1,0 +1,129 @@
+trainer:
+  defaultNetworkModule: networks.lora_flux
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 32
+params:
+  pretrained_model_name_or_path:
+    description: 指定本地 Chroma .sft/.safetensors 权重文件或 Diffusers 模型目录；目录内需包含 transformer 的三分片权重，不支持 Hugging Face 仓库 ID。
+    control: fileOrFolder
+    fileKind: null
+    placeholder: 选择 Chroma 权重文件或 Diffusers 模型目录
+  clip_l:
+    hidden: true
+    priority: hidden
+    required: false
+  t5xxl:
+    description: 指定 Chroma 使用的本地 T5-XXL 权重文件；Chroma 不使用 CLIP-L，但仍必须提供 T5-XXL。
+  ae:
+    description: 指定与 FLUX.1 共用格式的本地自动编码器权重文件；Chroma 训练必须提供。
+  model_type:
+    label: FLUX 模型类型
+    description: 固定为 chroma，用于选择 Chroma 模型结构；界面会自动写入，无需手动修改。
+    group: model
+    priority: hidden
+    control: select
+    choices: [chroma]
+    required: true
+    hidden: true
+    effectiveDefault: chroma
+  network_module:
+    effectiveDefault: networks.lora_flux
+  network_dim:
+    effectiveDefault: 16
+  network_alpha:
+    effectiveDefault: 1
+  learning_rate:
+    effectiveDefault: 0.0001
+  mixed_precision:
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    effectiveDefault: true
+  network_train_unet_only:
+    description: 只训练 Chroma Transformer 的 LoRA；Chroma 不训练 T5-XXL 文本编码器 LoRA。
+    effectiveDefault: true
+  cache_latents:
+    effectiveDefault: true
+  cache_latents_to_disk:
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 T5-XXL 编码结果以降低显存与重复计算；缓存后不能训练文本编码器，也不能使用会改变 Caption 的增强。
+    effectiveDefault: true
+  cache_text_encoder_outputs_to_disk:
+    effectiveDefault: true
+  sdpa:
+    description: Chroma 当前模型实现内部固定使用 Torch SDPA，此通用开关不会改变 Attention 实现。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: Chroma 当前模型实现不读取通用 xFormers 开关。
+    priority: hidden
+    hidden: true
+  guidance_scale:
+    label: 嵌入式 Guidance
+    description: Chroma 不是 Guidance Distilled 模型，训练时必须设为 0.0 以关闭嵌入式 Guidance；采样时的 CFG 是另一项参数。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: 0.0
+  timestep_sampling:
+    label: 时间步采样
+    description: 选择 Chroma 训练噪声时间步的分布；脚本文档推荐 sigmoid。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: sigmoid
+  model_prediction_type:
+    label: 预测类型
+    description: 选择如何处理 Chroma 的模型输出；推荐 raw 直接使用预测值，additive 会加回带噪输入，sigma_scaled 会按 Sigma 缩放。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: raw
+  apply_t5_attn_mask:
+    label: T5 注意力掩码
+    description: 对 T5-XXL 编码结果和 Chroma Double Block 应用 Padding Attention Mask；Chroma 训练强制要求启用。
+    group: model_specific
+    priority: required
+    effectiveDefault: true
+    required: true
+  t5xxl_max_token_length:
+    label: T5 最大 Token 长度
+    description: T5-XXL tokenizer 对每条 Caption 保留的最大 Token 数；Chroma 留空时按非 Schnell 模型使用 512。
+    group: model_specific
+    priority: advanced
+    control: number
+  discrete_flow_shift:
+    description: 设置 Flow Matching 调度器的偏移值；只有时间步采样选择 shift 时才生效，其他模式会忽略。
+    group: model_specific
+    priority: advanced
+  controlnet_model_name_or_path:
+    label: ControlNet 模型
+    description: 加载本地 .sft 或 .safetensors ControlNet 权重；普通 Chroma LoRA 训练无需设置。
+    group: model
+    priority: advanced
+    control: file
+    fileKind: model
+  cpu_offload_checkpointing:
+    description: Chroma 当前不支持把梯度检查点卸载到 CPU；请改用梯度检查点或 Block Swap 降低显存占用。
+    priority: dangerous
+  v2:
+    description: Stable Diffusion 2.x 专用开关，Chroma 训练不会使用，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: Stable Diffusion 的 v-parameterization 开关，Chroma 的 Flow Matching 训练不会使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: Stable Diffusion CLIP 专用层跳过参数；Chroma 不使用 CLIP-L，因此该参数不会生效。
+    priority: dangerous
+  max_token_length:
+    description: Stable Diffusion tokenizer 的旧参数，Chroma 不使用；请设置 T5 最大 Token 长度。
+    priority: dangerous
+  split_mode:
+    label: Split Mode（已弃用）
+    description: 已弃用；请改用 Block Swap 数量（blocks_to_swap）。
+    group: memory
+    priority: dangerous
+    control: switch
+    deprecated: true
+    extra:
+      replacement: blocks_to_swap

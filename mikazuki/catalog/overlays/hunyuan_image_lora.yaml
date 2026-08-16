@@ -1,0 +1,128 @@
+trainer:
+  defaultNetworkModule: networks.lora_hunyuan_image
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 32
+params:
+  pretrained_model_name_or_path:
+    description: 指定本地 HunyuanImage-2.1 DiT .safetensors 底模权重文件。
+  text_encoder:
+    description: 指定本地 Qwen2.5-VL 文本编码器权重文件；脚本按 bfloat16 模型加载。
+  byt5:
+    description: 指定本地 ByT5 文本编码器权重文件；必须使用 float16 权重。
+  vae:
+    description: 指定与 HunyuanImage-2.1 兼容的本地 VAE .safetensors 权重文件；脚本固定按 float16 运行。
+    priority: required
+    required: true
+  network_module:
+    effectiveDefault: networks.lora_hunyuan_image
+  network_dim:
+    effectiveDefault: 16
+  network_alpha:
+    effectiveDefault: 1
+  network_train_unet_only:
+    description: 只训练 HunyuanImage DiT 的 LoRA；当前网络实现不支持文本编码器 LoRA，因此必须启用。
+    effectiveDefault: true
+  learning_rate:
+    effectiveDefault: 0.0001
+  mixed_precision:
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 Qwen2.5-VL 与 ByT5 的编码结果，避免训练期间重复运行两个文本编码器。
+    effectiveDefault: true
+  cache_text_encoder_outputs_to_disk:
+    effectiveDefault: true
+  cache_latents:
+    effectiveDefault: true
+  cache_latents_to_disk:
+    effectiveDefault: true
+  fp8_scaled:
+    label: DiT 缩放 FP8
+    description: 以带缩放的 FP8 训练 HunyuanImage DiT，可显著降低显存占用，但官方文档说明训练结果可能变化；仅在低显存配置中启用，40GB 以上显存通常不需要。
+    group: memory
+    priority: recommended
+    effectiveDefault: false
+  fp8_vl:
+    label: Qwen2.5-VL 使用 FP8
+    description: 让 Qwen2.5-VL 文本编码器以 FP8 加载以减少显存或内存占用；不影响 ByT5。
+    group: memory
+    priority: advanced
+  text_encoder_cpu:
+    label: 文本编码器放 CPU
+    description: 在 CPU 上运行 Qwen2.5-VL 与 ByT5 以节省显存，但单条文本编码可能耗时数分钟；建议同时把文本编码器输出缓存到磁盘。
+    group: memory
+    priority: recommended
+  attn_mode:
+    label: Attention 实现
+    description: 选择 HunyuanImage DiT 的 Attention 实现；xFormers 在批量大于 1 时需要拆分 Attention，SageAttention 不支持训练，sdpa 是 torch 的兼容别名。
+    group: memory
+    priority: recommended
+    control: select
+    choices: [torch, xformers, flash, sdpa]
+    effectiveDefault: torch
+    extra:
+      choiceLabels:
+        torch: Torch（推荐）
+        xformers: xFormers
+        flash: Flash Attention
+        sdpa: SDPA（Torch 兼容别名）
+  split_attn:
+    label: 拆分 Attention
+    description: 将 Attention 批次逐项计算以降低显存并避免掩码峰值；使用 xFormers 且批量大于 1 时必须启用。
+    group: memory
+    priority: advanced
+    effectiveDefault: true
+  sdpa:
+    description: 请使用“Attention 实现”选择 Torch/SDPA；通用 SDPA 开关不会控制 HunyuanImage DiT。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: 旧配置兼容开关；新配置请在“Attention 实现”中选择 xFormers。
+    priority: hidden
+    hidden: true
+  timestep_sampling:
+    label: 时间步采样
+    description: 选择 HunyuanImage Flow Matching 的时间步分布；默认 sigma。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: sigma
+  discrete_flow_shift:
+    label: 离散 Flow Shift
+    description: 设置 HunyuanImage Flow Matching 调度器的离散偏移，脚本默认 5.0。
+    group: model_specific
+    priority: recommended
+    effectiveDefault: 5.0
+  model_prediction_type:
+    description: 选择如何处理 HunyuanImage 模型输出；脚本默认并推荐 raw 直接使用预测值。
+    group: model_specific
+    priority: recommended
+  vae_chunk_size:
+    label: VAE 分块尺寸
+    description: 分块执行 HunyuanImage VAE 编解码以降低峰值显存；留空表示不分块，启用时建议从 16 开始，值越大越快但越占显存。
+    group: memory
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  fp8_base:
+    description: HunyuanImage 不支持通用底模 FP8；请使用“DiT 缩放 FP8”，同时设置时脚本会忽略本项。
+    priority: dangerous
+  fp8_base_unet:
+    description: HunyuanImage 不支持通用的仅 DiT FP8 开关；请使用“DiT 缩放 FP8”，同时设置时脚本会忽略本项。
+    priority: dangerous
+  v2:
+    description: Stable Diffusion 2.x 专用开关，HunyuanImage 训练不会使用，请勿启用。
+    priority: dangerous
+  v_parameterization:
+    description: Stable Diffusion 的 v-parameterization 开关，HunyuanImage 的 Flow Matching 训练不会使用，请勿启用。
+    priority: dangerous
+  clip_skip:
+    description: Stable Diffusion CLIP 专用层跳过参数；HunyuanImage 使用 Qwen2.5-VL 与 ByT5，因此不会生效。
+    priority: dangerous
+  max_token_length:
+    description: Stable Diffusion tokenizer 的旧参数，HunyuanImage 的文本编码策略不会使用。
+    priority: dangerous
