@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
+  ArrowDownBold,
+  ArrowRightBold,
   ArrowUpBold,
   CopyDocument,
   Document,
   FolderOpened,
+  InfoFilled,
+  Picture,
   Refresh,
   Search,
+  View as ViewIcon,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
-import { apiClient } from '@/api/client'
-import type { FileItem } from '@/api/types'
+import { apiClient, outputFileUrl } from '@/api/client'
+import type { FileItem, SafetensorsMetadataResponse } from '@/api/types'
 
 interface DirectoryLocation {
   requestPath: string
@@ -19,8 +24,47 @@ interface DirectoryLocation {
   label: string
 }
 
+interface ItemEntry {
+  kind: 'item'
+  item: FileItem
+}
+
+interface ArtifactGroup {
+  kind: 'group'
+  key: string
+  primary: FileItem
+  checkpoints: FileItem[]
+  hasFinal: boolean
+}
+
+type BrowserEntry = ItemEntry | ArtifactGroup
+type ItemFilter = 'all' | 'dir' | 'file'
+
 const ROOT_LABEL = '输出目录'
 const ROOT_FALLBACK_PATH = 'output'
+const AUTOSAVE_PATTERN = /^(.*)-(\d{6})\.(safetensors|ckpt|pt|pth)$/i
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'bmp', 'gif', 'avif'])
+const IMPORTANT_METADATA_KEYS = [
+  'modelspec.title',
+  'ss_output_name',
+  'ss_base_model_version',
+  'ss_sd_model_name',
+  'ss_network_module',
+  'ss_network_dim',
+  'ss_network_alpha',
+  'ss_epoch',
+  'ss_num_epochs',
+  'ss_steps',
+  'ss_max_train_steps',
+  'ss_resolution',
+  'ss_optimizer',
+  'ss_lr_scheduler',
+  'ss_unet_lr',
+  'ss_text_encoder_lr',
+  'sshs_model_hash',
+  'sshs_legacy_hash',
+]
+const metadataPriority = new Map(IMPORTANT_METADATA_KEYS.map((key, index) => [key, index]))
 
 const items = ref<FileItem[]>([])
 const locations = ref<DirectoryLocation[]>([
@@ -33,8 +77,22 @@ const locations = ref<DirectoryLocation[]>([
 const query = ref('')
 const loading = ref(false)
 const error = ref('')
-const activeFilter = ref<'all' | 'dir' | 'file'>('all')
+const activeFilter = ref<ItemFilter>('all')
+const expandedGroups = ref(new Set<string>())
+
+const imagePreviewOpen = ref(false)
+const imagePreviewItem = ref<FileItem | null>(null)
+const imageLoadFailed = ref(false)
+
+const metadataOpen = ref(false)
+const metadataItem = ref<FileItem | null>(null)
+const metadata = ref<SafetensorsMetadataResponse | null>(null)
+const metadataLoading = ref(false)
+const metadataError = ref('')
+const metadataQuery = ref('')
+
 let loadVersion = 0
+let metadataLoadVersion = 0
 
 const currentLocation = computed(() => locations.value[locations.value.length - 1])
 const canGoUp = computed(() => locations.value.length > 1)
@@ -44,18 +102,108 @@ const totalFileBytes = computed(() =>
   items.value.reduce((total, item) => total + (item.type === 'file' ? item.size : 0), 0),
 )
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase())
-const visibleItems = computed(() => {
-  return items.value.filter((item) => {
+
+const browserEntries = computed<BrowserEntry[]>(() => {
+  const directories = items.value
+    .filter((item) => item.type === 'dir')
+    .map<ItemEntry>((item) => ({ kind: 'item', item }))
+  const files = items.value.filter((item) => item.type === 'file')
+  const filesByName = new Map(files.map((item) => [item.name.toLocaleLowerCase(), item]))
+  const candidates = new Map<string, { base: string; extension: string; versions: FileItem[] }>()
+
+  for (const file of files) {
+    const match = file.name.match(AUTOSAVE_PATTERN)
+    if (!match) continue
+    const base = match[1]
+    const extension = match[3].toLocaleLowerCase()
+    const key = `${base.toLocaleLowerCase()}.${extension}`
+    const candidate = candidates.get(key) || { base, extension, versions: [] }
+    candidate.versions.push(file)
+    candidates.set(key, candidate)
+  }
+
+  const groupedPaths = new Set<string>()
+  const fileEntries: BrowserEntry[] = []
+  for (const [key, candidate] of candidates) {
+    const finalFile = filesByName.get(`${candidate.base}.${candidate.extension}`.toLocaleLowerCase())
+    const versions = [...candidate.versions].sort(
+      (left, right) => checkpointSequence(right) - checkpointSequence(left),
+    )
+    if (!finalFile && versions.length < 2) continue
+
+    const primary = finalFile || versions[0]
+    const checkpoints = finalFile ? versions : versions.slice(1)
+    groupedPaths.add(primary.path)
+    for (const version of versions) groupedPaths.add(version.path)
+    fileEntries.push({
+      kind: 'group',
+      key,
+      primary,
+      checkpoints,
+      hasFinal: !!finalFile,
+    })
+  }
+
+  for (const file of files) {
+    if (!groupedPaths.has(file.path)) fileEntries.push({ kind: 'item', item: file })
+  }
+
+  fileEntries.sort((left, right) =>
+    entryItem(left).name.localeCompare(entryItem(right).name, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    }),
+  )
+  return [...directories, ...fileEntries]
+})
+
+const visibleEntries = computed(() =>
+  browserEntries.value.filter((entry) => {
+    const item = entryItem(entry)
     if (activeFilter.value !== 'all' && item.type !== activeFilter.value) return false
     if (!normalizedQuery.value) return true
-    const extension = item.type === 'file' ? fileExtension(item.name) : '文件夹'
-    return [item.name, extension].join(' ').toLocaleLowerCase().includes(normalizedQuery.value)
-  })
-})
+    return entrySearchText(entry).includes(normalizedQuery.value)
+  }),
+)
+
+const artifactGroupCount = computed(
+  () => browserEntries.value.filter((entry) => entry.kind === 'group').length,
+)
+const groupedVersionCount = computed(() =>
+  browserEntries.value.reduce((total, entry) => {
+    if (entry.kind !== 'group') return total
+    return total + entry.checkpoints.length + (entry.hasFinal ? 0 : 1)
+  }, 0),
+)
 const resultLabel = computed(() => {
-  if (!normalizedQuery.value) return `当前目录共 ${items.value.length} 项`
-  return `找到 ${visibleItems.value.length} 项，共 ${items.value.length} 项`
+  if (!normalizedQuery.value) return `当前目录显示 ${browserEntries.value.length} 项`
+  return `找到 ${visibleEntries.value.length} 项，共 ${browserEntries.value.length} 项`
 })
+const imagePreviewUrl = computed(() =>
+  imagePreviewItem.value ? outputFileUrl(imagePreviewItem.value.path) : '',
+)
+const metadataEntries = computed(() => {
+  const search = metadataQuery.value.trim().toLocaleLowerCase()
+  return Object.entries(metadata.value?.metadata || {})
+    .filter(([key, value]) => !search || `${key} ${value}`.toLocaleLowerCase().includes(search))
+    .sort(([left], [right]) => {
+      const leftPriority = metadataPriority.get(left) ?? Number.MAX_SAFE_INTEGER
+      const rightPriority = metadataPriority.get(right) ?? Number.MAX_SAFE_INTEGER
+      return leftPriority - rightPriority || left.localeCompare(right)
+    })
+})
+
+function entryItem(entry: BrowserEntry) {
+  return entry.kind === 'group' ? entry.primary : entry.item
+}
+
+function entrySearchText(entry: BrowserEntry) {
+  const entries = entry.kind === 'group' ? [entry.primary, ...entry.checkpoints] : [entry.item]
+  return entries
+    .map((item) => `${item.name} ${item.type === 'file' ? fileExtension(item.name) : '文件夹'}`)
+    .join(' ')
+    .toLocaleLowerCase()
+}
 
 function parentPath(value: string) {
   const normalized = value.replace(/\\/g, '/').replace(/\/+$/, '')
@@ -111,6 +259,7 @@ async function enterDirectory(item: FileItem) {
     label: item.name,
   })
   query.value = ''
+  expandedGroups.value = new Set()
 }
 
 async function goUp() {
@@ -120,6 +269,7 @@ async function goUp() {
   if (!loaded) return
   locations.value.pop()
   query.value = ''
+  expandedGroups.value = new Set()
 }
 
 function refresh() {
@@ -128,6 +278,45 @@ function refresh() {
 
 function clearSearch() {
   query.value = ''
+}
+
+function toggleGroup(key: string) {
+  const next = new Set(expandedGroups.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedGroups.value = next
+}
+
+function isGroupExpanded(group: ArtifactGroup) {
+  if (expandedGroups.value.has(group.key)) return true
+  if (!normalizedQuery.value) return false
+  return group.checkpoints.some((item) => itemSearchText(item).includes(normalizedQuery.value))
+}
+
+function visibleCheckpoints(group: ArtifactGroup) {
+  if (!normalizedQuery.value) return group.checkpoints
+  const matched = group.checkpoints.filter((item) =>
+    itemSearchText(item).includes(normalizedQuery.value),
+  )
+  return matched.length ? matched : group.checkpoints
+}
+
+function itemSearchText(item: FileItem) {
+  return `${item.name} ${fileExtension(item.name)}`.toLocaleLowerCase()
+}
+
+function checkpointSequence(item: FileItem) {
+  const match = item.name.match(AUTOSAVE_PATTERN)
+  return match ? Number(match[2]) : -1
+}
+
+function checkpointLabel(item: FileItem) {
+  const match = item.name.match(AUTOSAVE_PATTERN)
+  return match ? `自动保存 · #${match[2]}` : '自动保存的中途产物'
+}
+
+function groupedVersions(group: ArtifactGroup) {
+  return group.checkpoints.length + (group.hasFinal ? 0 : 1)
 }
 
 function fileExtension(name: string) {
@@ -140,6 +329,14 @@ function itemKind(item: FileItem) {
   return item.type === 'dir' ? '文件夹' : fileExtension(item.name)
 }
 
+function isSafetensors(item: FileItem) {
+  return item.type === 'file' && fileExtension(item.name) === 'SAFETENSORS'
+}
+
+function isImage(item: FileItem) {
+  return item.type === 'file' && IMAGE_EXTENSIONS.has(fileExtension(item.name).toLocaleLowerCase())
+}
+
 function formatSize(value: number) {
   if (!Number.isFinite(value) || value <= 0) return '0 B'
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -147,6 +344,47 @@ function formatSize(value: number) {
   const amount = value / 1024 ** unitIndex
   const precision = unitIndex === 0 || amount >= 100 ? 0 : amount >= 10 ? 1 : 2
   return `${amount.toFixed(precision)} ${units[unitIndex]}`
+}
+
+function formatModified(value: string) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date)
+}
+
+function openImagePreview(item: FileItem) {
+  imagePreviewItem.value = item
+  imageLoadFailed.value = false
+  imagePreviewOpen.value = true
+}
+
+async function openMetadata(item: FileItem) {
+  const requestVersion = ++metadataLoadVersion
+  metadataItem.value = item
+  metadata.value = null
+  metadataError.value = ''
+  metadataQuery.value = ''
+  metadataLoading.value = true
+  metadataOpen.value = true
+
+  try {
+    const response = await apiClient.getSafetensorsMetadata(item.path)
+    if (requestVersion === metadataLoadVersion) metadata.value = response
+  } catch (reason) {
+    if (requestVersion === metadataLoadVersion) {
+      metadataError.value = reason instanceof Error ? reason.message : String(reason)
+    }
+  } finally {
+    if (requestVersion === metadataLoadVersion) metadataLoading.value = false
+  }
 }
 
 async function copyPath(path: string, label: string) {
@@ -177,7 +415,7 @@ onMounted(() => {
           class="header-search"
           :prefix-icon="Search"
           :disabled="items.length === 0"
-          placeholder="搜索"
+          placeholder="搜索文件或版本"
           aria-label="搜索当前输出目录"
           clearable
         />
@@ -233,6 +471,9 @@ onMounted(() => {
           <span><strong>{{ directoryCount }}</strong> 个文件夹</span>
           <span><strong>{{ fileCount }}</strong> 个文件</span>
           <span v-if="fileCount"><strong>{{ formatSize(totalFileBytes) }}</strong> 文件总量</span>
+          <span v-if="artifactGroupCount">
+            <strong>{{ groupedVersionCount }}</strong> 个中途版本已折叠为 {{ artifactGroupCount }} 组
+          </span>
         </div>
 
         <span class="result-count" aria-live="polite">{{ resultLabel }}</span>
@@ -261,8 +502,11 @@ onMounted(() => {
       >
         <div class="list-heading" aria-hidden="true">
           <span>名称与路径</span>
-          <span>类型</span>
-          <span>大小</span>
+          <div class="heading-metadata">
+            <span>类型</span>
+            <span>大小</span>
+            <span>修改时间</span>
+          </div>
           <span>操作</span>
         </div>
 
@@ -293,71 +537,293 @@ onMounted(() => {
 
         <div v-else-if="items.length === 0" class="state-panel">
           <span class="state-icon" aria-hidden="true"><el-icon><FolderOpened /></el-icon></span>
-          <div>
-            <strong>当前目录还没有输出文件</strong>
-          </div>
+          <div><strong>当前目录还没有输出文件</strong></div>
           <el-button :icon="Refresh" :loading="loading" @click="refresh">刷新目录</el-button>
         </div>
 
-        <div v-else-if="visibleItems.length === 0" class="state-panel">
+        <div v-else-if="visibleEntries.length === 0" class="state-panel">
           <span class="state-icon" aria-hidden="true"><el-icon><Search /></el-icon></span>
-          <div>
-            <strong>没有匹配的项目</strong>
-          </div>
+          <div><strong>没有匹配的项目</strong></div>
           <el-button @click="clearSearch">清除搜索</el-button>
         </div>
 
-        <article
-          v-for="item in visibleItems"
-          v-else
-          :key="item.path"
-          class="file-row"
-          :class="{ directory: item.type === 'dir' }"
-          role="listitem"
-        >
-          <span class="file-icon" :class="{ folder: item.type === 'dir' }" aria-hidden="true">
-            <el-icon>
-              <FolderOpened v-if="item.type === 'dir'" />
-              <Document v-else />
-            </el-icon>
-          </span>
+        <template v-for="entry in visibleEntries" v-else :key="entry.kind === 'group' ? entry.key : entry.item.path">
+          <section v-if="entry.kind === 'group'" class="artifact-group" role="listitem">
+            <article class="file-row group-row">
+              <button
+                class="tree-toggle"
+                type="button"
+                :aria-expanded="isGroupExpanded(entry)"
+                :aria-label="`${isGroupExpanded(entry) ? '折叠' : '展开'} ${entry.primary.name} 的自动保存版本`"
+                @click="toggleGroup(entry.key)"
+              >
+                <el-icon><ArrowDownBold v-if="isGroupExpanded(entry)" /><ArrowRightBold v-else /></el-icon>
+              </button>
 
-          <button
-            v-if="item.type === 'dir'"
-            class="item-primary directory-link"
-            type="button"
-            :aria-label="`打开文件夹 ${item.name}`"
-            @click="enterDirectory(item)"
+              <div class="item-primary">
+                <div class="name-line">
+                  <strong>{{ entry.primary.name }}</strong>
+                  <span class="status-chip" :class="{ interim: !entry.hasFinal }">
+                    {{ entry.hasFinal ? '最终产物' : '最新自动保存' }}
+                  </span>
+                  <span class="version-count">{{ groupedVersions(entry) }} 个中途版本</span>
+                </div>
+                <code :title="entry.primary.path">{{ entry.primary.path }}</code>
+              </div>
+
+              <div class="item-metadata">
+                <span class="item-kind">{{ itemKind(entry.primary) }}</span>
+                <span class="item-size">{{ formatSize(entry.primary.size) }}</span>
+                <time class="item-modified" :datetime="entry.primary.modifiedAt">
+                  {{ formatModified(entry.primary.modifiedAt) }}
+                </time>
+              </div>
+
+              <div class="item-actions">
+                <el-button
+                  v-if="isSafetensors(entry.primary)"
+                  text
+                  size="small"
+                  :icon="InfoFilled"
+                  @click="openMetadata(entry.primary)"
+                >
+                  元数据
+                </el-button>
+                <el-button
+                  v-else-if="isImage(entry.primary)"
+                  text
+                  size="small"
+                  :icon="ViewIcon"
+                  @click="openImagePreview(entry.primary)"
+                >
+                  查看
+                </el-button>
+                <el-button
+                  circle
+                  text
+                  :icon="CopyDocument"
+                  :aria-label="`复制文件 ${entry.primary.name} 的路径`"
+                  title="复制路径"
+                  @click="copyPath(entry.primary.path, '文件')"
+                />
+              </div>
+            </article>
+
+            <div v-if="isGroupExpanded(entry)" class="version-list" role="list" aria-label="自动保存版本">
+              <article
+                v-for="checkpoint in visibleCheckpoints(entry)"
+                :key="checkpoint.path"
+                class="file-row version-row"
+                role="listitem"
+              >
+                <span class="file-icon version" aria-hidden="true"><el-icon><Document /></el-icon></span>
+                <div class="item-primary">
+                  <div class="name-line">
+                    <strong>{{ checkpoint.name }}</strong>
+                    <span class="status-chip interim">{{ checkpointLabel(checkpoint) }}</span>
+                  </div>
+                  <code :title="checkpoint.path">{{ checkpoint.path }}</code>
+                </div>
+
+                <div class="item-metadata">
+                  <span class="item-kind">{{ itemKind(checkpoint) }}</span>
+                  <span class="item-size">{{ formatSize(checkpoint.size) }}</span>
+                  <time class="item-modified" :datetime="checkpoint.modifiedAt">
+                    {{ formatModified(checkpoint.modifiedAt) }}
+                  </time>
+                </div>
+
+                <div class="item-actions">
+                  <el-button
+                    v-if="isSafetensors(checkpoint)"
+                    text
+                    size="small"
+                    :icon="InfoFilled"
+                    @click="openMetadata(checkpoint)"
+                  >
+                    元数据
+                  </el-button>
+                  <el-button
+                    circle
+                    text
+                    :icon="CopyDocument"
+                    :aria-label="`复制文件 ${checkpoint.name} 的路径`"
+                    title="复制路径"
+                    @click="copyPath(checkpoint.path, '文件')"
+                  />
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <article
+            v-else
+            class="file-row"
+            :class="{ directory: entry.item.type === 'dir' }"
+            role="listitem"
           >
-            <strong>{{ item.name }}</strong>
-            <code :title="item.path">{{ item.path }}</code>
-          </button>
-          <div v-else class="item-primary">
-            <strong>{{ item.name }}</strong>
-            <code :title="item.path">{{ item.path }}</code>
-          </div>
+            <span class="file-icon" :class="{ folder: entry.item.type === 'dir' }" aria-hidden="true">
+              <el-icon>
+                <FolderOpened v-if="entry.item.type === 'dir'" />
+                <Picture v-else-if="isImage(entry.item)" />
+                <Document v-else />
+              </el-icon>
+            </span>
 
-          <span class="item-kind" :class="{ folder: item.type === 'dir' }">{{ itemKind(item) }}</span>
-          <span class="item-size">{{ item.type === 'dir' ? '—' : formatSize(item.size) }}</span>
+            <button
+              v-if="entry.item.type === 'dir'"
+              class="item-primary directory-link"
+              type="button"
+              :aria-label="`打开文件夹 ${entry.item.name}`"
+              @click="enterDirectory(entry.item)"
+            >
+              <strong>{{ entry.item.name }}</strong>
+              <code :title="entry.item.path">{{ entry.item.path }}</code>
+            </button>
+            <div v-else class="item-primary">
+              <strong>{{ entry.item.name }}</strong>
+              <code :title="entry.item.path">{{ entry.item.path }}</code>
+            </div>
 
-          <el-button
-            class="copy-action"
-            circle
-            text
-            :icon="CopyDocument"
-            :aria-label="`复制${item.type === 'dir' ? '文件夹' : '文件'} ${item.name} 的路径`"
-            title="复制路径"
-            @click="copyPath(item.path, item.type === 'dir' ? '文件夹' : '文件')"
-          />
-        </article>
+            <div class="item-metadata">
+              <span class="item-kind" :class="{ folder: entry.item.type === 'dir' }">
+                {{ itemKind(entry.item) }}
+              </span>
+              <span class="item-size">{{ entry.item.type === 'dir' ? '—' : formatSize(entry.item.size) }}</span>
+              <time class="item-modified" :datetime="entry.item.modifiedAt">
+                {{ formatModified(entry.item.modifiedAt) }}
+              </time>
+            </div>
+
+            <div class="item-actions">
+              <el-button
+                v-if="isSafetensors(entry.item)"
+                text
+                size="small"
+                :icon="InfoFilled"
+                @click="openMetadata(entry.item)"
+              >
+                元数据
+              </el-button>
+              <el-button
+                v-else-if="isImage(entry.item)"
+                text
+                size="small"
+                :icon="ViewIcon"
+                @click="openImagePreview(entry.item)"
+              >
+                查看
+              </el-button>
+              <el-button
+                circle
+                text
+                :icon="CopyDocument"
+                :aria-label="`复制${entry.item.type === 'dir' ? '文件夹' : '文件'} ${entry.item.name} 的路径`"
+                title="复制路径"
+                @click="copyPath(entry.item.path, entry.item.type === 'dir' ? '文件夹' : '文件')"
+              />
+            </div>
+          </article>
+        </template>
       </div>
     </section>
+
+    <el-dialog
+      v-model="imagePreviewOpen"
+      class="output-image-dialog"
+      :title="imagePreviewItem?.name || '图片预览'"
+      width="min(920px, calc(100vw - 32px))"
+      append-to-body
+      destroy-on-close
+      align-center
+    >
+      <div class="image-preview-stage">
+        <img
+          v-if="imagePreviewItem && !imageLoadFailed"
+          :src="imagePreviewUrl"
+          :alt="imagePreviewItem.name"
+          @error="imageLoadFailed = true"
+        />
+        <div v-else class="preview-fallback">
+          <el-icon><Picture /></el-icon>
+          <strong>无法加载这张图片</strong>
+          <span>文件可能已被移动、删除或格式不受浏览器支持。</span>
+        </div>
+      </div>
+      <div v-if="imagePreviewItem" class="preview-file-info">
+        <code :title="imagePreviewItem.path">{{ imagePreviewItem.path }}</code>
+        <span>{{ formatSize(imagePreviewItem.size) }}</span>
+        <time :datetime="imagePreviewItem.modifiedAt">{{ formatModified(imagePreviewItem.modifiedAt) }}</time>
+        <el-button text :icon="CopyDocument" @click="copyPath(imagePreviewItem.path, '图片')">复制路径</el-button>
+      </div>
+    </el-dialog>
+
+    <el-drawer
+      v-model="metadataOpen"
+      class="metadata-drawer"
+      direction="rtl"
+      size="min(720px, 94vw)"
+      append-to-body
+      destroy-on-close
+    >
+      <template #header>
+        <div class="metadata-heading">
+          <span>Safetensors 元数据</span>
+          <strong :title="metadataItem?.name">{{ metadataItem?.name }}</strong>
+        </div>
+      </template>
+
+      <div v-loading="metadataLoading" class="metadata-content">
+        <el-alert
+          v-if="metadataError"
+          type="error"
+          title="无法读取元数据"
+          :description="metadataError"
+          show-icon
+          :closable="false"
+        >
+          <template #default>
+            <el-button v-if="metadataItem" size="small" @click="openMetadata(metadataItem)">重试</el-button>
+          </template>
+        </el-alert>
+
+        <template v-else-if="metadata">
+          <dl class="metadata-summary">
+            <div><dt>文件大小</dt><dd>{{ formatSize(metadata.size) }}</dd></div>
+            <div><dt>修改时间</dt><dd>{{ formatModified(metadata.modifiedAt) }}</dd></div>
+            <div><dt>张量数量</dt><dd>{{ metadata.tensorCount }}</dd></div>
+            <div><dt>元数据字段</dt><dd>{{ Object.keys(metadata.metadata).length }}</dd></div>
+          </dl>
+
+          <div class="metadata-toolbar">
+            <el-input
+              v-model="metadataQuery"
+              :prefix-icon="Search"
+              placeholder="搜索键或值"
+              clearable
+            />
+            <el-button :icon="CopyDocument" @click="copyPath(metadata.path, '文件')">复制路径</el-button>
+          </div>
+
+          <div v-if="metadataEntries.length" class="metadata-list">
+            <article v-for="[key, value] in metadataEntries" :key="key" class="metadata-entry">
+              <code>{{ key }}</code>
+              <pre>{{ value || '—' }}</pre>
+            </article>
+          </div>
+          <div v-else class="metadata-empty">
+            <InfoFilled />
+            <strong>{{ metadataQuery ? '没有匹配的元数据' : '文件没有 __metadata__ 字段' }}</strong>
+          </div>
+        </template>
+      </div>
+    </el-drawer>
   </section>
 </template>
 
 <style scoped>
 .outputs-page {
-  width: min(100%, 1380px);
+  width: min(100%, 1460px);
   min-height: 100dvh;
   margin: 0 auto;
   padding: 36px clamp(20px, 3vw, 48px) 64px;
@@ -371,17 +837,10 @@ onMounted(() => {
   gap: 24px;
 }
 
-.page-heading {
+.page-heading,
+.current-location,
+.item-primary {
   min-width: 0;
-}
-
-.eyebrow {
-  display: block;
-  margin-bottom: 7px;
-  color: var(--brand-strong);
-  font-size: var(--font-caption);
-  font-weight: 720;
-  letter-spacing: 0.1em;
 }
 
 .page-heading h1 {
@@ -392,14 +851,6 @@ onMounted(() => {
   line-height: 1.15;
   font-weight: 730;
   letter-spacing: -0.035em;
-}
-
-.page-heading p {
-  max-width: 58ch;
-  margin: 8px 0 0;
-  color: var(--text-secondary);
-  font-size: 14px;
-  line-height: 1.5;
 }
 
 .header-actions {
@@ -431,8 +882,6 @@ onMounted(() => {
   min-height: 58px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 18px;
   margin-top: 34px;
 }
 
@@ -461,10 +910,6 @@ onMounted(() => {
 
 .browser-panel {
   margin-top: 4px;
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
 }
 
 .location-bar {
@@ -474,11 +919,9 @@ onMounted(() => {
   gap: 10px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border-subtle);
-  background: transparent;
 }
 
 .current-location {
-  min-width: 0;
   display: grid;
   gap: 2px;
 }
@@ -489,7 +932,9 @@ onMounted(() => {
   font-weight: 650;
 }
 
-.current-location code {
+.current-location code,
+.item-primary code,
+.preview-file-info code {
   overflow: hidden;
   color: var(--text-muted);
   font-family: var(--font-mono);
@@ -529,12 +974,11 @@ onMounted(() => {
 }
 
 .inline-error {
-  margin: 12px 14px 0;
+  margin: 12px 0 0;
 }
 
 .file-list {
   min-height: 360px;
-  padding: 0;
   transition: opacity 120ms ease;
 }
 
@@ -546,12 +990,12 @@ onMounted(() => {
 .list-heading,
 .file-row {
   display: grid;
+  grid-template-columns: 38px minmax(250px, 1fr) minmax(336px, 440px) 156px;
   align-items: center;
   gap: 12px;
 }
 
 .list-heading {
-  grid-template-columns: 38px minmax(242px, 1fr) 116px 100px 48px;
   min-height: 46px;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-muted);
@@ -559,57 +1003,74 @@ onMounted(() => {
   font-weight: 620;
 }
 
-.list-heading span:first-child {
+.list-heading > span:first-child {
   grid-column: 1 / 3;
 }
 
-.list-heading span:nth-child(2),
-.list-heading span:nth-child(3),
-.list-heading span:nth-child(4) {
+.list-heading > span:last-child {
+  text-align: right;
+}
+
+.heading-metadata,
+.item-metadata {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) minmax(76px, 0.8fr) minmax(146px, 1.3fr);
+  align-items: center;
+  gap: 12px;
   text-align: right;
 }
 
 .file-row {
   position: relative;
-  grid-template-columns: 38px minmax(242px, 1fr) 116px 100px 48px;
-  min-height: 62px;
+  min-height: 66px;
   padding: 0 6px;
-  border-radius: 8px;
   border-bottom: 1px solid var(--border-subtle);
-}
-
-.file-row:last-child {
-  border-bottom: 0;
+  border-radius: 8px;
 }
 
 .file-row:hover {
   background: var(--surface-hover);
 }
 
+.tree-toggle,
 .file-icon {
   width: 32px;
   height: 32px;
   display: grid;
   place-items: center;
   border: 0;
-  border-radius: 0;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-muted);
   font-size: 17px;
+}
+
+.tree-toggle {
+  cursor: pointer;
+}
+
+.tree-toggle:hover {
+  background: var(--brand-soft);
+  color: var(--text-strong);
 }
 
 .file-icon.folder {
   color: var(--brand-strong);
 }
 
+.file-icon.version {
+  color: var(--warning);
+  font-size: 15px;
+}
+
 .item-primary {
-  min-width: 0;
   display: grid;
   gap: 4px;
   padding: 10px 0;
 }
 
-.item-primary strong {
+.item-primary > strong,
+.name-line strong {
   overflow: hidden;
   color: var(--text-strong);
   font-size: 14px;
@@ -619,14 +1080,37 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-.item-primary code {
-  overflow: hidden;
+.name-line {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.name-line strong {
+  min-width: 0;
+}
+
+.status-chip {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success);
+  font-size: 11px;
+  line-height: 1.5;
+  font-weight: 680;
+}
+
+.status-chip.interim {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.version-count {
+  flex: none;
   color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 11px;
 }
 
 .directory-link {
@@ -642,27 +1126,14 @@ onMounted(() => {
   color: var(--brand-strong);
 }
 
-.directory-link:focus-visible {
-  border-radius: 5px;
-  outline-offset: 3px;
-}
-
 .item-kind,
-.item-size {
-  justify-self: end;
+.item-size,
+.item-modified {
+  overflow: hidden;
   color: var(--text-secondary);
   font-size: 12px;
-  white-space: nowrap;
-}
-
-.item-kind {
-  max-width: 110px;
-  overflow: hidden;
-  padding: 3px 7px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .item-kind.folder {
@@ -673,12 +1144,51 @@ onMounted(() => {
   font-family: var(--font-mono);
 }
 
-.copy-action {
-  justify-self: end;
+.item-modified {
+  color: var(--text-muted);
 }
 
-.skeleton-list {
-  display: grid;
+.item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.item-actions :deep(.el-button + .el-button) {
+  margin-left: 0;
+}
+
+.artifact-group {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.artifact-group > .file-row,
+.version-list .file-row {
+  border-bottom: 0;
+}
+
+.group-row {
+  background: color-mix(in srgb, var(--success-soft) 28%, transparent);
+}
+
+.version-list {
+  margin: 0 0 5px 21px;
+  padding-left: 19px;
+  border-left: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border-subtle));
+}
+
+.version-row {
+  min-height: 62px;
+}
+
+.version-row::before {
+  position: absolute;
+  top: 50%;
+  left: -20px;
+  width: 18px;
+  border-top: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border-subtle));
+  content: '';
 }
 
 .skeleton-row {
@@ -690,7 +1200,7 @@ onMounted(() => {
 
 .skeleton-row :deep(.el-skeleton__template) {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 90px;
+  grid-template-columns: 38px minmax(0, 1fr) 160px;
   align-items: center;
   gap: 12px;
 }
@@ -716,7 +1226,7 @@ onMounted(() => {
 
 .skeleton-meta {
   justify-self: end;
-  width: 72px;
+  width: 132px;
 }
 
 .state-panel {
@@ -735,7 +1245,6 @@ onMounted(() => {
   height: 42px;
   display: grid;
   place-items: center;
-  border: 0;
   border-radius: 50%;
   background: var(--surface-sunken);
   color: var(--text-muted);
@@ -762,6 +1271,154 @@ onMounted(() => {
   overflow-wrap: anywhere;
 }
 
+.image-preview-stage {
+  min-height: min(68vh, 680px);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--surface-sunken);
+}
+
+.image-preview-stage img {
+  max-width: 100%;
+  max-height: min(68vh, 680px);
+  display: block;
+  object-fit: contain;
+}
+
+.preview-fallback {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 48px 20px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.preview-fallback :deep(.el-icon) {
+  font-size: 32px;
+}
+
+.preview-fallback strong {
+  color: var(--text-strong);
+}
+
+.preview-file-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 12px;
+  padding-top: 14px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.metadata-heading {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.metadata-heading > span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.metadata-heading > strong {
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metadata-content {
+  min-height: 240px;
+}
+
+.metadata-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0 0 20px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--border-subtle);
+}
+
+.metadata-summary > div {
+  padding: 12px 14px;
+  background: var(--surface-sunken);
+}
+
+.metadata-summary dt {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.metadata-summary dd {
+  margin: 4px 0 0;
+  color: var(--text-strong);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.metadata-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.metadata-list {
+  display: grid;
+  gap: 8px;
+}
+
+.metadata-entry {
+  padding: 11px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--surface-sunken);
+}
+
+.metadata-entry > code {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--brand-strong);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 680;
+  overflow-wrap: anywhere;
+}
+
+.metadata-entry > pre {
+  max-height: 240px;
+  margin: 0;
+  overflow: auto;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.metadata-empty {
+  min-height: 220px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--text-muted);
+}
+
+.metadata-empty svg {
+  width: 28px;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -772,17 +1429,19 @@ onMounted(() => {
   white-space: nowrap;
 }
 
-@media (max-width: 900px) {
-  .list-heading {
-    grid-template-columns: 36px minmax(214px, 1fr) 96px 80px 40px;
+@media (max-width: 1080px) {
+  .list-heading,
+  .file-row {
+    grid-template-columns: 36px minmax(220px, 1fr) minmax(300px, 370px) 136px;
   }
 
-  .file-row {
-    grid-template-columns: 36px minmax(214px, 1fr) 96px 80px 40px;
+  .heading-metadata,
+  .item-metadata {
+    grid-template-columns: 82px 72px minmax(138px, 1fr);
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 820px) {
   .outputs-page {
     padding: 24px 14px 92px;
   }
@@ -808,24 +1467,10 @@ onMounted(() => {
     margin-top: 20px;
   }
 
-  .browser-panel {
-    margin-top: 10px;
-  }
-
   .browser-toolbar {
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;
-    padding: 10px 0;
-  }
-
-  .result-count {
-    justify-self: start;
-  }
-
-  .file-list {
-    min-height: 320px;
-    padding: 0;
   }
 
   .list-heading {
@@ -833,52 +1478,62 @@ onMounted(() => {
   }
 
   .file-row {
-    grid-template-columns: 34px minmax(0, 1fr) 40px;
+    width: 100%;
+    max-width: 100%;
+    grid-template-columns: 34px minmax(0, 1fr);
     gap: 9px;
-    min-height: 82px;
-    padding: 8px 0;
+    min-height: 92px;
+    box-sizing: border-box;
+    padding: 9px 72px 9px 0;
   }
 
   .item-primary {
     padding: 2px 0;
   }
 
-  .item-kind,
-  .item-size {
+  .item-metadata {
     grid-column: 2;
     grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 5px 13px;
+    text-align: left;
   }
 
-  .item-kind {
-    max-width: calc(100% - 86px);
-    justify-self: start;
+  .item-actions {
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    transform: translateY(-50%);
   }
 
-  .item-size {
-    justify-self: end;
+  .name-line {
+    flex-wrap: wrap;
   }
 
-  .copy-action {
-    grid-column: 3;
-    grid-row: 1 / 3;
+  .name-line strong {
+    flex-basis: 100%;
   }
 
-  .state-panel {
-    min-height: 300px;
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    text-align: center;
+  .version-list {
+    margin-left: 16px;
+    padding-left: 12px;
+  }
+
+  .version-row::before {
+    left: -13px;
+    width: 11px;
+  }
+
+  .preview-file-info {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 
-@media (max-width: 460px) {
+@media (max-width: 520px) {
   .location-bar {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    padding: 10px;
-  }
-
-  .location-bar > :deep(.el-button:first-child) {
-    padding-inline: 10px;
+    padding: 10px 0;
   }
 
   .directory-stats {
@@ -887,8 +1542,25 @@ onMounted(() => {
     gap: 6px 12px;
   }
 
-  .directory-stats span:last-child {
+  .directory-stats span:nth-child(n + 3) {
     grid-column: 1 / -1;
+  }
+
+  .item-actions :deep(.el-button--small span) {
+    display: none;
+  }
+
+  .item-actions :deep(.el-button--small) {
+    width: 32px;
+    padding: 8px;
+  }
+
+  .metadata-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metadata-toolbar {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

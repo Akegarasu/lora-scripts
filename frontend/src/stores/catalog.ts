@@ -5,6 +5,23 @@ import type { ParamDefinition, ParamGroup, TrainerSummary } from '@/api/types'
 
 let paramsRequestId = 0
 let allParamsRequestId = 0
+const SELECTED_TRAINER_STORAGE_KEY = 'ls-v2-selected-trainer'
+
+function readStoredTrainerId() {
+  try {
+    return localStorage.getItem(SELECTED_TRAINER_STORAGE_KEY)?.trim() || ''
+  } catch {
+    return ''
+  }
+}
+
+function storeTrainerId(trainerId: string) {
+  try {
+    localStorage.setItem(SELECTED_TRAINER_STORAGE_KEY, trainerId)
+  } catch {
+    /* Remembering the selection must not block the training workbench. */
+  }
+}
 
 export const useCatalogStore = defineStore('catalog', {
   state: () => ({
@@ -50,14 +67,32 @@ export const useCatalogStore = defineStore('catalog', {
         const data = await apiClient.listTrainers()
         this.trainers = data.trainers
         this.manifestHash = data.manifestHash
-        if (!this.selectedTrainerId && data.trainers.length > 0) {
-          this.selectedTrainerId = data.trainers.find((item) => item.id === 'flux.lora')?.id || data.trainers[0].id
+        if (data.trainers.length > 0) {
+          const currentTrainerId = data.trainers.some((item) => item.id === this.selectedTrainerId)
+            ? this.selectedTrainerId
+            : ''
+          const storedTrainerId = readStoredTrainerId()
+          const rememberedTrainerId = data.trainers.some((item) => item.id === storedTrainerId)
+            ? storedTrainerId
+            : ''
+          this.selectedTrainerId =
+            currentTrainerId ||
+            rememberedTrainerId ||
+            data.trainers.find((item) => item.id === 'flux.lora')?.id ||
+            data.trainers[0].id
+          storeTrainerId(this.selectedTrainerId)
+        } else {
+          this.selectedTrainerId = ''
         }
       } catch (error) {
         this.error = error instanceof Error ? error.message : String(error)
       } finally {
         this.loading = false
       }
+    },
+    rememberSelectedTrainer(trainerId: string) {
+      if (!trainerId || !this.trainers.some((trainer) => trainer.id === trainerId)) return
+      storeTrainerId(trainerId)
     },
     async loadParams() {
       if (!this.selectedTrainerId) {

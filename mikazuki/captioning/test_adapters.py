@@ -1,3 +1,4 @@
+import builtins
 import copy
 import json
 import tempfile
@@ -52,6 +53,29 @@ class FakeOnnxSession:
 
 
 class OnnxProviderSelectionTests(unittest.TestCase):
+    def test_torch_is_imported_before_onnxruntime(self):
+        imports = []
+        original_import = builtins.__import__
+
+        def track_import(name, *args, **kwargs):
+            if name == "torch":
+                imports.append(name)
+                return SimpleNamespace()
+            if name == "onnxruntime":
+                imports.append(name)
+                return SimpleNamespace(
+                    InferenceSession=object,
+                    get_available_providers=lambda: ["CPUExecutionProvider"],
+                )
+            return original_import(name, *args, **kwargs)
+
+        provider = WDTaggerProvider("wd-test", "example/wd")
+        with patch("builtins.__import__", side_effect=track_import):
+            _, available = provider._runtime_components()
+
+        self.assertEqual(imports, ["torch", "onnxruntime"])
+        self.assertEqual(available, ["CPUExecutionProvider"])
+
     def test_auto_prefers_available_accelerator_with_cpu_fallback(self):
         providers = select_onnx_providers(
             "auto",

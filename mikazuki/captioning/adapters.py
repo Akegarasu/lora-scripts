@@ -258,6 +258,8 @@ class _OnnxTaggerProvider(CaptionProvider):
         if self._session_factory is not None and self._available_providers_fn is not None:
             return self._session_factory, self._available_providers_fn()
 
+        # PyTorch loads its bundled CUDA and cuDNN DLLs, which ONNX Runtime uses on Windows.
+        import torch  # noqa: F401
         import onnxruntime as ort
 
         return self._session_factory or ort.InferenceSession, (

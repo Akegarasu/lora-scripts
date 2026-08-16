@@ -217,10 +217,20 @@ export interface FileItem {
   path: string
   type: 'file' | 'dir'
   size: number
+  modifiedAt: string
 }
 
 export interface FilesResponse {
   items: FileItem[]
+}
+
+export interface SafetensorsMetadataResponse {
+  name: string
+  path: string
+  size: number
+  modifiedAt: string
+  tensorCount: number
+  metadata: Record<string, string>
 }
 
 export interface GpuInfo {

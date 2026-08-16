@@ -582,7 +582,9 @@ onMounted(async () => {
 watch(
   () => catalog.selectedTrainerId,
   async (trainerId, previousTrainerId) => {
-    if (!initialized.value || !trainerId || trainerId === previousTrainerId) return
+    if (!trainerId || trainerId === previousTrainerId) return
+    catalog.rememberSelectedTrainer(trainerId)
+    if (!initialized.value) return
     if (previousTrainerId) persistTrainerDraft(previousTrainerId)
     searchVisible.value = false
     await loadTrainerDraft(trainerId)

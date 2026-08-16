@@ -6,7 +6,7 @@ import time
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from mikazuki.catalog import get_catalog_service
 from mikazuki.compiler import TrainDraft, compile_draft
@@ -14,7 +14,16 @@ from mikazuki.jobs import get_job_runner, get_job_store
 from mikazuki.jobs.logs import read_log_from, tail_log
 from mikazuki.jobs.metrics import get_job_metrics_service, parse_tag_filter
 from mikazuki.jobs.models import TERMINAL_STATES
-from mikazuki.storage.files import BrowsePathError, list_files
+from mikazuki.storage.files import (
+    IMAGE_EXTENSIONS,
+    IMAGE_MEDIA_TYPES,
+    BrowsePathError,
+    SafetensorsMetadataError,
+    UnsupportedFileTypeError,
+    list_files,
+    read_safetensors_metadata,
+    resolve_output_file,
+)
 
 router = APIRouter()
 
@@ -278,6 +287,35 @@ async def browse_files(
     except BrowsePathError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     return {"items": [item.dict() for item in items]}
+
+
+@router.get("/files/content")
+async def read_output_file(path: str = Query(min_length=1)):
+    try:
+        resolved = resolve_output_file(path, extensions=IMAGE_EXTENSIONS)
+    except BrowsePathError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except UnsupportedFileTypeError as error:
+        raise HTTPException(status_code=415, detail=str(error)) from error
+
+    media_type = IMAGE_MEDIA_TYPES[resolved.suffix.lower()]
+    return FileResponse(resolved, media_type=media_type)
+
+
+@router.get("/files/safetensors-metadata")
+async def get_safetensors_metadata(path: str = Query(min_length=1)):
+    try:
+        return read_safetensors_metadata(path)
+    except BrowsePathError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except UnsupportedFileTypeError as error:
+        raise HTTPException(status_code=415, detail=str(error)) from error
+    except SafetensorsMetadataError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.get("/devices/gpus")

@@ -22,6 +22,7 @@ import type {
   JobMetricStateEvent,
   JobRecord,
   JobStartResult,
+  SafetensorsMetadataResponse,
   TagEditorApplyRequest,
   TagEditorChangeSetListResponse,
   TagEditorChangeSetSummary,
@@ -170,6 +171,12 @@ export const apiClient = {
       path: options.path || '',
     })
     return request<FilesResponse>(`/api/v2/files?${params.toString()}`)
+  },
+  getSafetensorsMetadata(path: string) {
+    const params = new URLSearchParams({ path })
+    return request<SafetensorsMetadataResponse>(
+      `/api/v2/files/safetensors-metadata?${params.toString()}`,
+    )
   },
   listGpus() {
     return request<{ gpus: GpuInfo[]; error?: string }>('/api/v2/devices/gpus')
@@ -335,6 +342,11 @@ export function apiAssetUrl(path: string): string {
   if (!path) return ''
   if (/^https?:\/\//i.test(path)) return path
   return `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`
+}
+
+export function outputFileUrl(path: string): string {
+  const params = new URLSearchParams({ path })
+  return apiAssetUrl(`/api/v2/files/content?${params.toString()}`)
 }
 
 export interface JobEventHandlers {
