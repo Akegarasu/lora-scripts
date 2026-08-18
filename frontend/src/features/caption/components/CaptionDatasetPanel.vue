@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 
 import { apiAssetUrl } from '@/api/client'
+import InfoHint from '@/components/InfoHint.vue'
 import { useCaptionStore } from '@/stores/caption'
 
 import CaptionPagedGallery, { type CaptionGalleryItem } from './CaptionPagedGallery.vue'
@@ -134,8 +135,13 @@ function changePageSize(size: number) {
       </el-select>
       <label class="selection-toggle">
         <span>
-          <strong>手动选择图片</strong>
-          <small>默认处理整个扫描结果；只在抽样或局部重跑时开启。</small>
+          <span class="selection-title">
+            <strong>手动选择图片</strong>
+            <InfoHint
+              content="默认处理整个扫描结果；仅在抽样或局部重跑时开启。"
+              label="手动选择图片说明"
+            />
+          </span>
         </span>
         <el-switch
           :model-value="selectionEnabled"
@@ -236,6 +242,12 @@ function changePageSize(size: number) {
   min-width: 0;
   display: grid;
   gap: 2px;
+}
+
+.selection-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .selection-toggle strong {

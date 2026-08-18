@@ -25,6 +25,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import ModelAssetForm from '@/components/ModelAssetForm.vue'
 import ParamControl from '@/components/ParamControl.vue'
 import ParamSearch from '@/components/ParamSearch.vue'
+import InfoHint from '@/components/InfoHint.vue'
 import type { ParamDefinition, ParamGroup } from '@/api/types'
 import { useCatalogStore } from '@/stores/catalog'
 import { useDevicesStore } from '@/stores/devices'
@@ -803,7 +804,6 @@ onBeforeUnmount(() => {
                 show-word-limit
                 placeholder="例如 aki_flux_style_v1"
               />
-              <small>同时用于任务名称与输出模型文件名。</small>
             </label>
 
             <label class="form-field" for="cpu-threads">
@@ -819,9 +819,12 @@ onBeforeUnmount(() => {
             </label>
 
             <label class="form-field gpu-field" for="gpu-select">
-              <span>
+              <span class="label-with-info">
                 <strong>运行 GPU</strong>
-                <small>不选择时沿用当前环境</small>
+                <InfoHint
+                  content="留空时沿用当前环境；多选时会配置 Accelerate 多卡启动参数。"
+                  label="运行 GPU 补充信息"
+                />
               </span>
               <el-select
                 id="gpu-select"
@@ -854,7 +857,6 @@ onBeforeUnmount(() => {
               </el-select>
               <small v-if="devices.error" class="field-warning">{{ devices.error }}</small>
               <small v-else-if="!devices.loading && !devices.gpus.length">未检测到 CUDA GPU，启动前请检查运行环境。</small>
-              <small v-else>多选时后端会配置 Accelerate 多卡启动参数。</small>
             </label>
           </div>
         </section>
@@ -1023,7 +1025,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .train-page {
   width: 100%;
-  max-width: 1500px;
+  max-width: var(--page-max);
   min-height: 100dvh;
   margin: 0 auto;
   overflow-x: clip;
@@ -1514,6 +1516,12 @@ onBeforeUnmount(() => {
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
+}
+
+.form-field > .label-with-info {
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
 }
 
 .form-field strong {

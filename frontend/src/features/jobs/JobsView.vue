@@ -907,7 +907,10 @@ watch(
 
 <style scoped>
 .jobs-page {
+  width: 100%;
+  max-width: var(--page-max);
   min-height: 100dvh;
+  margin: 0 auto;
   background: var(--canvas);
   color: var(--text);
 }
@@ -2009,7 +2012,7 @@ watch(
 /* Quiet workspace treatment: surfaces separate regions, borders do not. */
 .jobs-toolbar {
   position: static;
-  width: min(100%, 1500px);
+  width: min(100%, var(--page-max));
   min-height: 0;
   margin: 0 auto;
   padding: 48px clamp(22px, 3vw, 44px) 24px;
@@ -2024,7 +2027,7 @@ watch(
 }
 
 .jobs-layout {
-  max-width: 1500px;
+  max-width: var(--page-max);
   height: calc(100dvh - 108px);
   min-height: 620px;
   padding: 0 clamp(22px, 3vw, 44px) 32px;

@@ -823,7 +823,7 @@ onMounted(() => {
 
 <style scoped>
 .outputs-page {
-  width: min(100%, 1460px);
+  width: min(100%, var(--page-max));
   min-height: 100dvh;
   margin: 0 auto;
   padding: 36px clamp(20px, 3vw, 48px) 64px;

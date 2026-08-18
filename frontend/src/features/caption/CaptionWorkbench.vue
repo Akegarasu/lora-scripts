@@ -22,6 +22,7 @@ import type {
   CaptionOutputMode,
 } from '@/api/types'
 import FilePicker from '@/components/FilePicker.vue'
+import InfoHint from '@/components/InfoHint.vue'
 import { useCaptionStore } from '@/stores/caption'
 
 import CaptionDatasetPanel from './components/CaptionDatasetPanel.vue'
@@ -520,42 +521,59 @@ function openHistoryJob(jobId: string) {
         <section class="config-section" aria-labelledby="source-title">
           <div class="section-heading">
             <div>
-              <h2 id="source-title">选择并检查数据集</h2>
-              <p>扫描只读取图片和同名 Caption，不会修改任何文件。</p>
+              <div class="heading-with-info">
+                <h2 id="source-title">选择并检查数据集</h2>
+                <InfoHint
+                  content="扫描只读取图片和同名 Caption，不会修改任何文件。"
+                  label="数据集扫描说明"
+                />
+              </div>
             </div>
           </div>
 
           <div class="source-form">
             <label class="field field-wide">
-              <span class="field-label">图片目录 <em>必填</em></span>
+              <span class="field-label label-with-info">
+                <span>图片目录 <em>必填</em></span>
+                <InfoHint content="只能选择项目 train 根目录中的文件夹。" label="图片目录限制" />
+              </span>
               <el-input v-model="draft.path" clearable placeholder="train 目录中的图片文件夹">
                 <template #append>
                   <el-button :icon="FolderOpened" @click="pickerVisible = true">浏览</el-button>
                 </template>
               </el-input>
-              <small>出于安全考虑，目录必须位于项目的 train 根目录中。</small>
             </label>
 
             <label class="field">
-              <span class="field-label">Caption 后缀</span>
+              <span class="field-label label-with-info">
+                <span>Caption 后缀</span>
+                <InfoHint content="读取和写入与图片同名的描述文件。" label="Caption 后缀说明" />
+              </span>
               <el-select v-model="draft.captionExtension">
                 <el-option label=".txt（训练常用）" value=".txt" />
                 <el-option label=".caption" value=".caption" />
                 <el-option label=".tags" value=".tags" />
               </el-select>
-              <small>读取和写入与图片同名的描述文件。</small>
             </label>
 
             <label class="option-card">
               <span>
-                <strong>扫描子文件夹</strong>
-                <small>递归处理目录中的分组数据集；隐藏目录和符号链接会跳过。</small>
+                <span class="option-title">
+                  <strong>扫描子文件夹</strong>
+                  <InfoHint
+                    content="递归处理分组数据集；隐藏目录和符号链接会跳过。"
+                    label="扫描子文件夹说明"
+                  />
+                </span>
               </span>
               <el-switch v-model="draft.recursive" />
             </label>
 
             <label class="field">
-              <span class="field-label">扫描图片上限</span>
+              <span class="field-label label-with-info">
+                <span>扫描图片上限</span>
+                <InfoHint content="超大型数据集建议拆分任务，便于复核和恢复。" label="扫描上限建议" />
+              </span>
               <el-input-number
                 v-model="draft.maxImages"
                 :min="1"
@@ -563,7 +581,6 @@ function openHistoryJob(jobId: string) {
                 :step="1000"
                 controls-position="right"
               />
-              <small>超大型数据集建议拆分任务，便于复核和恢复。</small>
             </label>
 
             <div class="scan-action">
@@ -672,8 +689,10 @@ function openHistoryJob(jobId: string) {
 
           <div v-for="group in regularParamGroups" :key="group.id" class="param-group">
             <div class="param-group-heading">
-              <h3>{{ group.title }}</h3>
-              <p>{{ group.description }}</p>
+              <div class="heading-with-info">
+                <h3>{{ group.title }}</h3>
+                <InfoHint v-if="group.description" :content="group.description" :label="`${group.title}说明`" />
+              </div>
             </div>
             <div class="param-grid">
               <CaptionParamControl
@@ -688,8 +707,13 @@ function openHistoryJob(jobId: string) {
 
           <div v-if="selectedModel?.capabilities.prompt" class="prompt-block">
             <div class="param-group-heading">
-              <h3>多模态指令</h3>
-              <p>告诉模型关注哪些信息。指令本身不会被写入 Caption。</p>
+              <div class="heading-with-info">
+                <h3>多模态指令</h3>
+                <InfoHint
+                  content="告诉模型关注哪些信息；指令本身不会写入 Caption。"
+                  label="多模态指令说明"
+                />
+              </div>
             </div>
             <div class="param-grid">
               <label class="field field-wide">
@@ -707,7 +731,10 @@ function openHistoryJob(jobId: string) {
                 <small v-else>当前使用内置提示预设；将“提示预设”切换为“自定义指令”后可编辑。</small>
               </label>
               <label class="field">
-                <span class="field-label">输出语言</span>
+                <span class="field-label label-with-info">
+                  <span>输出语言</span>
+                  <InfoHint content="仅列出当前模型目录声明支持的语言。" label="输出语言说明" />
+                </span>
                 <el-select v-model="draft.language">
                   <el-option
                     v-for="language in selectedModel.capabilities.languages"
@@ -716,7 +743,6 @@ function openHistoryJob(jobId: string) {
                     :value="language"
                   />
                 </el-select>
-                <small>只显示模型 catalog 声明支持的语言。</small>
               </label>
             </div>
           </div>
@@ -734,8 +760,10 @@ function openHistoryJob(jobId: string) {
           <div v-if="advancedVisible" class="advanced-area">
             <div v-for="group in advancedParamGroups" :key="group.id" class="param-group">
               <div class="param-group-heading">
-                <h3>{{ group.title }} · 高级</h3>
-                <p>{{ group.description }}</p>
+                <div class="heading-with-info">
+                  <h3>{{ group.title }} · 高级</h3>
+                  <InfoHint v-if="group.description" :content="group.description" :label="`${group.title}说明`" />
+                </div>
               </div>
               <div class="param-grid">
                 <CaptionParamControl
@@ -759,12 +787,15 @@ function openHistoryJob(jobId: string) {
 
           <div class="param-group">
             <div class="param-group-heading">
-              <h3>结果整理</h3>
-              <p>
-                {{ draft.outputMode === 'caption'
-                  ? '自然语言描述只应用统一前缀和后缀，不执行标签清理。'
-                  : '这些规则在标签模型输出之后执行，再组成最终 Caption。' }}
-              </p>
+              <div class="heading-with-info">
+                <h3>结果整理</h3>
+                <InfoHint
+                  :content="draft.outputMode === 'caption'
+                    ? '自然语言描述只应用统一前缀和后缀，不执行标签清理。'
+                    : '这些规则在标签模型输出之后执行，再组成最终 Caption。'"
+                  label="结果整理说明"
+                />
+              </div>
             </div>
             <div class="param-grid">
               <label v-if="draft.outputMode !== 'caption'" class="field">
@@ -786,9 +817,11 @@ function openHistoryJob(jobId: string) {
                 <el-input v-model="draft.suffix" clearable placeholder="可选" />
               </label>
               <label v-if="draft.outputMode !== 'caption'" class="field">
-                <span class="field-label">标签分隔符</span>
+                <span class="field-label label-with-info">
+                  <span>标签分隔符</span>
+                  <InfoHint content="通常使用英文逗号加空格。" label="标签分隔符建议" />
+                </span>
                 <el-input v-model="draft.separator" maxlength="32" />
-                <small>通常使用英文逗号加空格。</small>
               </label>
               <label v-if="draft.outputMode !== 'caption'" class="option-card">
                 <span>
@@ -895,7 +928,7 @@ function openHistoryJob(jobId: string) {
               <label class="option-card">
                 <span>
                   <strong>生成后进入可选复核 <el-tag type="info" effect="plain">可选</el-tag></strong>
-                  <small>开启后暂存逐图结果，确认后再写入；适合小批量抽样验证。大批量编辑将由 Tag 编辑器承担。</small>
+                  <small>暂存逐图结果，确认后再写入。</small>
                 </span>
                 <el-switch v-model="draft.stageBeforeWrite" />
               </label>
@@ -1076,6 +1109,18 @@ function openHistoryJob(jobId: string) {
   display: flex;
   align-items: flex-start;
   gap: 13px;
+}
+
+.heading-with-info,
+.label-with-info,
+.option-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-with-info {
+  justify-self: start;
 }
 
 .section-heading h2 {

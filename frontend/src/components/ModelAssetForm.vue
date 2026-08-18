@@ -43,7 +43,7 @@ function updateValue(param: ParamDefinition, value: unknown) {
 }
 
 function assetDescription(param: ParamDefinition) {
-  return param.description || param.help || (isRequired(param) ? '此资产是当前训练器启动所必需的。' : '可选资产，留空时使用训练器默认行为。')
+  return param.description || param.help || ''
 }
 </script>
 
@@ -87,7 +87,7 @@ function assetDescription(param: ParamDefinition) {
         </el-tag>
       </div>
       <code class="asset-flag">{{ param.name }}</code>
-      <p class="asset-description">{{ assetDescription(param) }}</p>
+      <p v-if="assetDescription(param)" class="asset-description">{{ assetDescription(param) }}</p>
       <ParamControl
         :param="param"
         :model-value="draft.getValue(param)"
@@ -101,7 +101,7 @@ function assetDescription(param: ParamDefinition) {
 <style scoped>
 .asset-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -184,7 +184,6 @@ function assetDescription(param: ParamDefinition) {
 }
 
 .asset-description {
-  min-height: 38px;
   margin: 0 0 2px;
   color: var(--el-text-color-secondary);
   font-size: 13px;
@@ -195,6 +194,12 @@ function assetDescription(param: ParamDefinition) {
   color: var(--el-color-danger);
   font-size: 13px;
   line-height: 1.4;
+}
+
+@media (max-width: 720px) {
+  .asset-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

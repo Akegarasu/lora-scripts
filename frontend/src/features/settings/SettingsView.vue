@@ -976,7 +976,7 @@ onMounted(() => {
 
 /* ChatGPT-style settings workspace */
 .settings-page {
-  width: min(100% - 32px, 1040px);
+  width: min(100% - 32px, var(--page-max));
   min-height: 0;
   margin: 32px auto;
   padding: 0;

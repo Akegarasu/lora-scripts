@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import type { CaptionModelParam } from '@/api/types'
+import InfoHint from '@/components/InfoHint.vue'
 
 const props = defineProps<{
   param: CaptionModelParam
@@ -32,6 +33,24 @@ const textValue = computed({
   set: (next: string) => emit('update:modelValue', next),
 })
 
+const supplementaryInfo = computed(() => {
+  const parts: string[] = []
+  if (props.param.default !== undefined && props.param.default !== null && props.param.default !== '') {
+    parts.push(`默认值：${formatValue(props.param.default)}`)
+  }
+  if (props.param.min !== undefined || props.param.max !== undefined) {
+    parts.push(`范围：${props.param.min ?? '不限'} ～ ${props.param.max ?? '不限'}`)
+  }
+  if (props.param.step !== undefined) parts.push(`步长：${props.param.step}`)
+  return parts.join('；')
+})
+
+function formatValue(value: unknown) {
+  if (typeof value === 'boolean') return value ? '开启' : '关闭'
+  if (Array.isArray(value)) return value.join(', ')
+  return String(value)
+}
+
 function choiceLabel(choice: unknown) {
   if (props.param.name === 'promptPreset') {
     const labels: Record<string, string> = {
@@ -52,16 +71,30 @@ function choiceLabel(choice: unknown) {
 <template>
   <label v-if="param.type === 'boolean'" class="boolean-control">
     <span>
-      <strong>{{ param.label }}</strong>
-      <small>{{ param.description }}</small>
+      <span class="control-title">
+        <strong>{{ param.label }}</strong>
+        <InfoHint
+          v-if="supplementaryInfo"
+          :content="supplementaryInfo"
+          :label="`${param.label}的默认与范围信息`"
+        />
+      </span>
+      <small v-if="param.description">{{ param.description }}</small>
     </span>
     <el-switch v-model="booleanValue" :aria-label="param.label" />
   </label>
 
   <label v-else class="param-control">
     <span class="param-label">
-      {{ param.label }}
-      <em v-if="param.required">必填</em>
+      <span>
+        {{ param.label }}
+        <em v-if="param.required">必填</em>
+      </span>
+      <InfoHint
+        v-if="supplementaryInfo"
+        :content="supplementaryInfo"
+        :label="`${param.label}的默认与范围信息`"
+      />
     </span>
 
     <el-input-number
@@ -106,7 +139,7 @@ function choiceLabel(choice: unknown) {
       :placeholder="param.placeholder"
     />
 
-    <small>{{ param.description }}</small>
+    <small v-if="param.description">{{ param.description }}</small>
   </label>
 </template>
 
@@ -123,9 +156,18 @@ function choiceLabel(choice: unknown) {
 }
 
 .param-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text-strong);
   font-size: 14px;
   font-weight: 640;
+}
+
+.control-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .param-label em {

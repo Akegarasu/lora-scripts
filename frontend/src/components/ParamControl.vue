@@ -4,6 +4,7 @@ import { Document, FolderOpened } from '@element-plus/icons-vue'
 
 import type { ParamDefinition } from '@/api/types'
 import FilePicker from './FilePicker.vue'
+import InfoHint from './InfoHint.vue'
 import ScientificNumberInput from './ScientificNumberInput.vue'
 
 const props = defineProps<{
@@ -71,6 +72,14 @@ const controlPlaceholder = computed(() => {
 const defaultHint = computed(() =>
   hasDefault.value ? `默认值：${formatValue(defaultValue.value)}` : '未设置时由训练器决定',
 )
+const pathHint = computed(() => {
+  if (isModelSource.value) return '可填写本地模型路径或 Hugging Face 仓库 ID'
+  if (isFileOrFolder.value) return '接受本地模型文件或文件夹'
+  if (control.value === 'folder') return '接受文件夹路径'
+  if (isPathControl.value) return '接受文件路径'
+  return ''
+})
+const controlInfo = computed(() => [defaultHint.value, pathHint.value].filter(Boolean).join('；'))
 
 // el-input-number needs `undefined` (not 0) to render an empty field, otherwise
 // every optional number silently compiles to 0.
@@ -218,117 +227,109 @@ function updatePath(next: string) {
 
 <template>
   <div class="param-control">
-    <el-switch
-      v-if="control === 'switch'"
-      v-model="value"
-      :aria-label="fieldLabel"
-      inline-prompt
-    />
+    <div class="control-row">
+      <div class="control-input">
+        <el-switch
+          v-if="control === 'switch'"
+          v-model="value"
+          :aria-label="fieldLabel"
+          inline-prompt
+        />
 
-    <el-select
-      v-else-if="control === 'select'"
-      :model-value="value"
-      clearable
-      filterable
-      :allow-create="allowsCustomChoice"
-      :default-first-option="allowsCustomChoice"
-      :multiple="isArrayParam"
-      :collapse-tags="isArrayParam"
-      :collapse-tags-tooltip="isArrayParam"
-      :aria-label="fieldLabel"
-      :placeholder="controlPlaceholder"
-      @update:model-value="updateSelect"
-    >
-      <el-option
-        v-for="choice in selectChoices"
-        :key="String(choice)"
-        :label="choiceLabel(choice)"
-        :value="choice"
-      />
-    </el-select>
+        <el-select
+          v-else-if="control === 'select'"
+          :model-value="value"
+          clearable
+          filterable
+          :allow-create="allowsCustomChoice"
+          :default-first-option="allowsCustomChoice"
+          :multiple="isArrayParam"
+          :collapse-tags="isArrayParam"
+          :collapse-tags-tooltip="isArrayParam"
+          :aria-label="fieldLabel"
+          :placeholder="controlPlaceholder"
+          @update:model-value="updateSelect"
+        >
+          <el-option
+            v-for="choice in selectChoices"
+            :key="String(choice)"
+            :label="choiceLabel(choice)"
+            :value="choice"
+          />
+        </el-select>
 
-    <el-input-number
-      v-else-if="control === 'number'"
-      class="number-control"
-      :model-value="numberValue"
-      :aria-label="fieldLabel"
-      :min="numberMin"
-      :max="numberMax"
-      :precision="numberPrecision"
-      :step="numberStep"
-      :placeholder="controlPlaceholder"
-      controls-position="right"
-      @update:model-value="updateNumber"
-    />
+        <el-input-number
+          v-else-if="control === 'number'"
+          class="number-control"
+          :model-value="numberValue"
+          :aria-label="fieldLabel"
+          :min="numberMin"
+          :max="numberMax"
+          :precision="numberPrecision"
+          :step="numberStep"
+          :placeholder="controlPlaceholder"
+          controls-position="right"
+          @update:model-value="updateNumber"
+        />
 
-    <ScientificNumberInput
-      v-else-if="control === 'scientificNumber'"
-      :model-value="modelValue"
-      :label="fieldLabel"
-      :min="numberMin"
-      :max="numberMax"
-      :step="numberStep"
-      :placeholder="controlPlaceholder"
-      @update:model-value="updateNumber"
-    />
+        <ScientificNumberInput
+          v-else-if="control === 'scientificNumber'"
+          :model-value="modelValue"
+          :label="fieldLabel"
+          :min="numberMin"
+          :max="numberMax"
+          :step="numberStep"
+          :placeholder="controlPlaceholder"
+          @update:model-value="updateNumber"
+        />
 
-    <div v-else-if="isPathControl" class="path-control">
-      <el-input v-model="value" clearable :aria-label="fieldLabel" :placeholder="controlPlaceholder">
-        <template #prefix>
-          <el-icon aria-hidden="true">
-            <FolderOpened v-if="control === 'folder'" />
-            <Document v-else />
-          </el-icon>
-        </template>
-        <template #append>
-          <el-button :aria-label="`浏览${fieldLabel}`" @click="pickerVisible = true">浏览</el-button>
-        </template>
-      </el-input>
-      <span class="path-kind">
-        {{
-          isModelSource
-            ? '路径或仓库 ID'
-            : isFileOrFolder
-              ? '文件或文件夹'
-              : control === 'folder'
-                ? '文件夹路径'
-                : '文件路径'
-        }}
-      </span>
+        <div v-else-if="isPathControl" class="path-control">
+          <el-input v-model="value" clearable :aria-label="fieldLabel" :placeholder="controlPlaceholder">
+            <template #prefix>
+              <el-icon aria-hidden="true">
+                <FolderOpened v-if="control === 'folder'" />
+                <Document v-else />
+              </el-icon>
+            </template>
+            <template #append>
+              <el-button :aria-label="`浏览${fieldLabel}`" @click="pickerVisible = true">浏览</el-button>
+            </template>
+          </el-input>
+        </div>
+
+        <el-input
+          v-else-if="control === 'stringArray'"
+          :model-value="stringArrayText"
+          type="textarea"
+          :aria-label="fieldLabel"
+          :autosize="{ minRows: 2, maxRows: 6 }"
+          :placeholder="hasDefault ? `${controlPlaceholder}；每行一个值` : '每行一个值'"
+          @update:model-value="updateStringArray"
+        />
+
+        <el-input
+          v-else-if="control === 'textarea' || control === 'code'"
+          v-model="value"
+          type="textarea"
+          :aria-label="fieldLabel"
+          :autosize="{ minRows: 2, maxRows: 10 }"
+          :placeholder="controlPlaceholder"
+        />
+
+        <el-input
+          v-else-if="control === 'secret'"
+          v-model="value"
+          type="password"
+          show-password
+          clearable
+          :aria-label="fieldLabel"
+          :placeholder="controlPlaceholder"
+        />
+
+        <el-input v-else v-model="value" clearable :aria-label="fieldLabel" :placeholder="controlPlaceholder" />
+      </div>
+      <InfoHint :content="controlInfo" :label="`${fieldLabel}的默认与输入信息`" />
     </div>
-
-    <el-input
-      v-else-if="control === 'stringArray'"
-      :model-value="stringArrayText"
-      type="textarea"
-      :aria-label="fieldLabel"
-      :autosize="{ minRows: 2, maxRows: 6 }"
-      :placeholder="hasDefault ? `${controlPlaceholder}；每行一个值` : '每行一个值'"
-      @update:model-value="updateStringArray"
-    />
-
-    <el-input
-      v-else-if="control === 'textarea' || control === 'code'"
-      v-model="value"
-      type="textarea"
-      :aria-label="fieldLabel"
-      :autosize="{ minRows: 2, maxRows: 10 }"
-      :placeholder="controlPlaceholder"
-    />
-
-    <el-input
-      v-else-if="control === 'secret'"
-      v-model="value"
-      type="password"
-      show-password
-      clearable
-      :aria-label="fieldLabel"
-      :placeholder="controlPlaceholder"
-    />
-
-    <el-input v-else v-model="value" clearable :aria-label="fieldLabel" :placeholder="controlPlaceholder" />
-
-    <span class="default-hint">{{ defaultHint }}</span>
   </div>
 
   <FilePicker
@@ -343,9 +344,25 @@ function updatePath(next: string) {
 
 <style scoped>
 .param-control {
-  display: grid;
   min-width: 0;
-  gap: 5px;
+}
+
+.control-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.control-input {
+  min-width: 0;
+}
+
+.control-input :deep(.el-select),
+.control-input :deep(.el-input),
+.control-input :deep(.el-textarea) {
+  width: 100%;
 }
 
 .number-control {
@@ -353,37 +370,12 @@ function updatePath(next: string) {
 }
 
 .path-control {
-  position: relative;
   min-width: 0;
-}
-
-.path-kind {
-  position: absolute;
-  top: -8px;
-  right: 44px;
-  padding: 0 5px;
-  border-radius: 5px;
-  background: var(--el-bg-color);
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 18px;
-  pointer-events: none;
-}
-
-.default-hint {
-  min-height: 17px;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 18px;
 }
 
 @media (max-width: 720px) {
   .number-control {
     width: 100%;
-  }
-
-  .path-kind {
-    display: none;
   }
 }
 </style>
