@@ -1,4 +1,5 @@
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -6,11 +7,15 @@ from unittest.mock import patch
 
 from mikazuki.storage.files import (
     BrowsePathError,
+    FileManagerUnavailableError,
     SafetensorsMetadataError,
     UnsupportedFileTypeError,
+    file_manager_capability,
     list_files,
     read_safetensors_metadata,
     resolve_output_file,
+    resolve_output_path,
+    show_output_in_file_manager,
 )
 
 
@@ -72,6 +77,75 @@ class StorageFilesPathBoundaryTests(unittest.TestCase):
             resolve_output_file("../outside/secret.txt")
         with self.assertRaises(UnsupportedFileTypeError):
             resolve_output_file("inside/visible.txt", extensions={".png"})
+
+    def test_output_path_resolver_accepts_files_and_directories_within_output(self) -> None:
+        self.assertEqual(self.inside.resolve(), resolve_output_path("inside"))
+        self.assertEqual(
+            (self.inside / "visible.txt").resolve(),
+            resolve_output_path("inside/visible.txt"),
+        )
+        with self.assertRaises(BrowsePathError):
+            resolve_output_path("../outside")
+
+    def test_file_manager_capability_requires_an_interactive_desktop(self) -> None:
+        with (
+            patch("mikazuki.storage.files.platform.system", return_value="Windows"),
+            patch("mikazuki.storage.files._windows_has_interactive_desktop", return_value=False),
+            patch("mikazuki.storage.files.shutil.which") as which,
+        ):
+            capability = file_manager_capability()
+
+        self.assertFalse(capability["available"])
+        self.assertIn("图形化桌面", str(capability["reason"]))
+        which.assert_not_called()
+
+    def test_file_manager_capability_detects_windows_explorer(self) -> None:
+        with (
+            patch("mikazuki.storage.files.platform.system", return_value="Windows"),
+            patch("mikazuki.storage.files._windows_has_interactive_desktop", return_value=True),
+            patch("mikazuki.storage.files.shutil.which", return_value=r"C:\Windows\explorer.exe"),
+        ):
+            capability = file_manager_capability()
+
+        self.assertTrue(capability["available"])
+        self.assertEqual("windows", capability["platform"])
+        self.assertEqual("Windows 文件资源管理器", capability["fileManager"])
+
+    def test_reveal_output_file_uses_explorer_select_without_a_shell(self) -> None:
+        target = (self.inside / "visible.txt").resolve()
+        capability = {
+            "available": True,
+            "platform": "windows",
+            "fileManager": "Windows 文件资源管理器",
+            "reason": None,
+        }
+        with (
+            patch("mikazuki.storage.files.file_manager_capability", return_value=capability),
+            patch("mikazuki.storage.files.subprocess.Popen") as popen,
+        ):
+            revealed = show_output_in_file_manager("inside/visible.txt")
+
+        self.assertEqual(target, revealed)
+        command = popen.call_args.args[0]
+        options = popen.call_args.kwargs
+        self.assertEqual(["explorer.exe", "/select,", str(target)], command)
+        self.assertNotIn("shell", options)
+        self.assertEqual(subprocess.DEVNULL, options["stdin"])
+
+    def test_reveal_rechecks_capability_before_resolving_or_launching(self) -> None:
+        capability = {
+            "available": False,
+            "platform": "linux",
+            "fileManager": None,
+            "reason": "当前后端运行环境没有可用的图形化桌面",
+        }
+        with (
+            patch("mikazuki.storage.files.file_manager_capability", return_value=capability),
+            patch("mikazuki.storage.files.subprocess.Popen") as popen,
+        ):
+            with self.assertRaises(FileManagerUnavailableError):
+                show_output_in_file_manager("missing.txt")
+        popen.assert_not_called()
 
     def test_reads_bounded_safetensors_metadata_without_tensor_data(self) -> None:
         model = self.inside / "model.safetensors"

@@ -535,9 +535,12 @@ function openHistoryJob(jobId: string) {
             <label class="field field-wide">
               <span class="field-label label-with-info">
                 <span>图片目录 <em>必填</em></span>
-                <InfoHint content="只能选择项目 train 根目录中的文件夹。" label="图片目录限制" />
+                <InfoHint
+                  content="可直接输入任意本地目录；浏览窗口仍只显示项目 train 目录中的内容。"
+                  label="图片目录说明"
+                />
               </span>
-              <el-input v-model="draft.path" clearable placeholder="train 目录中的图片文件夹">
+              <el-input v-model="draft.path" clearable placeholder="输入任意本地图片目录，或从 train 目录浏览">
                 <template #append>
                   <el-button :icon="FolderOpened" @click="pickerVisible = true">浏览</el-button>
                 </template>

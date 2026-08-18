@@ -86,8 +86,6 @@ function updateStepSchedule(value: number | undefined) {
       <el-switch
         v-model="draft.sample.enabled"
         inline-prompt
-        active-text="开启"
-        inactive-text="关闭"
         aria-label="启用训练中采样"
       />
     </div>

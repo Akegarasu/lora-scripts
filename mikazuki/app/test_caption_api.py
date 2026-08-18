@@ -105,16 +105,21 @@ class CaptionApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(items.items[0].id, "item_api")
         self.assertEqual(logs, {"jobId": "caption_api", "cursor": 7, "lines": ["worker ready"]})
 
-    async def test_dataset_inspect_rejects_parent_traversal_path(self) -> None:
+    async def test_dataset_inspect_accepts_parent_path_outside_browse_root(self) -> None:
+        outside = self.workspace / "escape"
+        outside.mkdir()
+        Image.new("RGB", (12, 10), (10, 20, 30)).save(outside / "outside.png")
+
         with patch(
             "mikazuki.app.caption_api.get_caption_dataset_registry",
             return_value=self.registry,
         ):
-            with self.assertRaises(HTTPException) as raised:
-                await caption_api.inspect_caption_dataset(
-                    CaptionDatasetInspectRequest(root="train", path="../escape")
-                )
-        self.assertEqual(raised.exception.status_code, 400)
+            inspected = await caption_api.inspect_caption_dataset(
+                CaptionDatasetInspectRequest(root="train", path="../escape")
+            )
+
+        self.assertEqual(inspected.dataset.total, 1)
+        self.assertEqual(inspected.dataset.path, outside.resolve().as_posix())
 
     async def test_dataset_inspect_list_and_thumbnail_endpoints(self) -> None:
         with patch(

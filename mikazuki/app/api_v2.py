@@ -18,11 +18,15 @@ from mikazuki.storage.files import (
     IMAGE_EXTENSIONS,
     IMAGE_MEDIA_TYPES,
     BrowsePathError,
+    FileManagerLaunchError,
+    FileManagerUnavailableError,
     SafetensorsMetadataError,
     UnsupportedFileTypeError,
+    file_manager_capability,
     list_files,
     read_safetensors_metadata,
     resolve_output_file,
+    show_output_in_file_manager,
 )
 
 router = APIRouter()
@@ -287,6 +291,26 @@ async def browse_files(
     except BrowsePathError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
     return {"items": [item.dict() for item in items]}
+
+
+@router.get("/files/file-manager-capability")
+async def get_file_manager_capability():
+    return file_manager_capability()
+
+
+@router.post("/files/reveal")
+async def reveal_output_path(path: str = Query(min_length=1)):
+    try:
+        resolved = show_output_in_file_manager(path)
+    except BrowsePathError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except FileManagerUnavailableError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    except FileManagerLaunchError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return {"status": "opened", "path": str(resolved).replace("\\", "/")}
 
 
 @router.get("/files/content")

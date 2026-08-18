@@ -224,6 +224,18 @@ export interface FilesResponse {
   items: FileItem[]
 }
 
+export interface FileManagerCapability {
+  available: boolean
+  platform: string
+  fileManager?: string | null
+  reason?: string | null
+}
+
+export interface RevealOutputPathResponse {
+  status: string
+  path: string
+}
+
 export interface SafetensorsMetadataResponse {
   name: string
   path: string

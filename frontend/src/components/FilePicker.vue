@@ -32,6 +32,7 @@ const error = ref('')
 const pathInputElement = ref<{ focus: () => void } | null>(null)
 
 const isFolderMode = computed(() => props.kind === 'folder')
+const browseKind = computed(() => (isFolderMode.value ? 'file' : props.kind))
 const canSelectDirectory = computed(() => isFolderMode.value || !!props.allowDirectories)
 const rootLabel = computed(() => {
   const labels: Record<string, string> = {
@@ -76,6 +77,9 @@ const canConfirmSelection = computed(() => {
 })
 const selectionHint = computed(() => {
   if (selectedItem.value) {
+    if (selectedItem.value.type !== 'dir' && isFolderMode.value) {
+      return `已选中：${selectedItem.value.name} · 文件仅供查看，请选择一个文件夹`
+    }
     const action = selectedItem.value.type === 'dir' ? '双击进入文件夹' : '双击直接选择文件'
     return `已选中：${selectedItem.value.name} · ${action}`
   }
@@ -111,7 +115,7 @@ async function load(nextPath = currentPath.value) {
   error.value = ''
   selectedItem.value = null
   try {
-    const data = await apiClient.browseFiles({ kind: props.kind, root: props.root, path: requestedPath })
+    const data = await apiClient.browseFiles({ kind: browseKind.value, root: props.root, path: requestedPath })
     items.value = data.items
     currentPath.value = requestedPath || inferDirectory(data.items)
     if (!requestedPath && !rootPath.value) {
@@ -156,6 +160,7 @@ function activateItem(item: FileItem) {
     void enterDirectory(item)
     return
   }
+  if (isFolderMode.value) return
   choose(item.path)
 }
 
@@ -256,7 +261,7 @@ async function focusPathInput() {
       height="min(52vh, 460px)"
       highlight-current-row
       row-key="path"
-      aria-label="目录内容"
+      aria-label="目录内容（包含文件和文件夹）"
       @row-click="selectItem"
       @row-dblclick="activateItem"
     >
@@ -302,14 +307,15 @@ async function focusPathInput() {
               进入
             </el-button>
           </template>
-          <el-button v-else size="small" text @click.stop="choose(row.path)">选择</el-button>
+          <el-button v-else-if="!isFolderMode" size="small" text @click.stop="choose(row.path)">选择</el-button>
+          <span v-else class="view-only-label">仅查看</span>
         </template>
       </el-table-column>
       <template #empty>
         <div class="picker-empty">
           <el-icon aria-hidden="true"><FolderOpened /></el-icon>
           <strong>当前目录为空</strong>
-          <span>{{ kind === 'folder' ? '这里没有子文件夹' : '这里没有符合当前类型的文件' }}</span>
+          <span>这里没有符合当前类型的内容</span>
         </div>
       </template>
     </el-table>
@@ -369,6 +375,11 @@ async function focusPathInput() {
 .file-icon {
   color: var(--el-color-primary);
   font-size: 17px;
+}
+
+.view-only-label {
+  color: var(--el-text-color-placeholder);
+  font-size: 12px;
 }
 
 .picker-empty {

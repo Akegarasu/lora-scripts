@@ -16,7 +16,7 @@ import {
 import { ElMessage } from 'element-plus'
 
 import { apiClient, outputFileUrl } from '@/api/client'
-import type { FileItem, SafetensorsMetadataResponse } from '@/api/types'
+import type { FileItem, FileManagerCapability, SafetensorsMetadataResponse } from '@/api/types'
 
 interface DirectoryLocation {
   requestPath: string
@@ -79,6 +79,8 @@ const loading = ref(false)
 const error = ref('')
 const activeFilter = ref<ItemFilter>('all')
 const expandedGroups = ref(new Set<string>())
+const fileManagerCapability = ref<FileManagerCapability | null>(null)
+const revealingPaths = ref(new Set<string>())
 
 const imagePreviewOpen = ref(false)
 const imagePreviewItem = ref<FileItem | null>(null)
@@ -102,6 +104,10 @@ const totalFileBytes = computed(() =>
   items.value.reduce((total, item) => total + (item.type === 'file' ? item.size : 0), 0),
 )
 const normalizedQuery = computed(() => query.value.trim().toLocaleLowerCase())
+const canRevealInFileManager = computed(() => fileManagerCapability.value?.available === true)
+const fileManagerUnavailableReason = computed(
+  () => fileManagerCapability.value?.reason || '当前运行环境无法调用图形化文件管理器',
+)
 
 const browserEntries = computed<BrowserEntry[]>(() => {
   const directories = items.value
@@ -397,8 +403,44 @@ async function copyPath(path: string, label: string) {
   }
 }
 
+async function loadFileManagerCapability() {
+  try {
+    fileManagerCapability.value = await apiClient.getFileManagerCapability()
+  } catch (reason) {
+    fileManagerCapability.value = {
+      available: false,
+      platform: 'unknown',
+      reason: reason instanceof Error ? reason.message : String(reason),
+    }
+  }
+}
+
+function isRevealing(path: string) {
+  return revealingPaths.value.has(path)
+}
+
+async function revealInFileManager(item: FileItem) {
+  if (!canRevealInFileManager.value || revealingPaths.value.has(item.path)) return
+  const next = new Set(revealingPaths.value)
+  next.add(item.path)
+  revealingPaths.value = next
+  try {
+    await apiClient.revealOutputPath(item.path)
+    const manager = fileManagerCapability.value?.fileManager || '文件资源管理器'
+    ElMessage.success(`已在${manager}中显示`)
+  } catch (reason) {
+    ElMessage.error(reason instanceof Error ? reason.message : String(reason))
+    void loadFileManagerCapability()
+  } finally {
+    const remaining = new Set(revealingPaths.value)
+    remaining.delete(item.path)
+    revealingPaths.value = remaining
+  }
+}
+
 onMounted(() => {
   void loadDirectory('')
+  void loadFileManagerCapability()
 })
 </script>
 
@@ -437,6 +479,14 @@ onMounted(() => {
         <button type="button" :class="{ active: activeFilter === 'dir' }" @click="activeFilter = 'dir'">文件夹</button>
         <button type="button" :class="{ active: activeFilter === 'file' }" @click="activeFilter = 'file'">文件</button>
       </div>
+      <span
+        v-if="fileManagerCapability && !canRevealInFileManager"
+        class="file-manager-unavailable"
+        :title="fileManagerUnavailableReason"
+      >
+        <el-icon><InfoFilled /></el-icon>
+        当前环境无法调用文件资源管理器
+      </span>
     </div>
 
     <section class="browser-panel" aria-label="输出文件浏览器">
@@ -599,6 +649,16 @@ onMounted(() => {
                   查看
                 </el-button>
                 <el-button
+                  v-if="canRevealInFileManager"
+                  circle
+                  text
+                  :icon="FolderOpened"
+                  :loading="isRevealing(entry.primary.path)"
+                  :aria-label="`在文件资源管理器中显示 ${entry.primary.name}`"
+                  title="在文件资源管理器中显示"
+                  @click="revealInFileManager(entry.primary)"
+                />
+                <el-button
                   circle
                   text
                   :icon="CopyDocument"
@@ -643,6 +703,16 @@ onMounted(() => {
                   >
                     元数据
                   </el-button>
+                  <el-button
+                    v-if="canRevealInFileManager"
+                    circle
+                    text
+                    :icon="FolderOpened"
+                    :loading="isRevealing(checkpoint.path)"
+                    :aria-label="`在文件资源管理器中显示 ${checkpoint.name}`"
+                    title="在文件资源管理器中显示"
+                    @click="revealInFileManager(checkpoint)"
+                  />
                   <el-button
                     circle
                     text
@@ -714,6 +784,16 @@ onMounted(() => {
               >
                 查看
               </el-button>
+              <el-button
+                v-if="canRevealInFileManager"
+                circle
+                text
+                :icon="FolderOpened"
+                :loading="isRevealing(entry.item.path)"
+                :aria-label="`在文件资源管理器中显示 ${entry.item.name}`"
+                title="在文件资源管理器中显示"
+                @click="revealInFileManager(entry.item)"
+              />
               <el-button
                 circle
                 text
@@ -882,7 +962,17 @@ onMounted(() => {
   min-height: 58px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
   margin-top: 34px;
+}
+
+.file-manager-unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .filter-tabs {
@@ -1484,7 +1574,7 @@ onMounted(() => {
     gap: 9px;
     min-height: 92px;
     box-sizing: border-box;
-    padding: 9px 72px 9px 0;
+    padding: 9px 132px 9px 0;
   }
 
   .item-primary {

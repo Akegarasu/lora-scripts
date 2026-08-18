@@ -1,4 +1,9 @@
+import ctypes
 import json
+import os
+import platform
+import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Set
@@ -53,6 +58,14 @@ class SafetensorsMetadataError(ValueError):
     """Raised when a safetensors header is missing, invalid, or too large."""
 
 
+class FileManagerUnavailableError(RuntimeError):
+    """Raised when the backend has no usable graphical file manager."""
+
+
+class FileManagerLaunchError(RuntimeError):
+    """Raised when a validated output path cannot be shown by the file manager."""
+
+
 def list_files(kind: str = "file", root: str = "workspace", path: Optional[str] = None) -> List[FileItem]:
     base = ROOTS.get(root, ROOTS["workspace"]).resolve()
     target = _resolve_path(base, path)
@@ -78,11 +91,78 @@ def list_files(kind: str = "file", root: str = "workspace", path: Optional[str] 
     return items
 
 
-def resolve_output_file(path: str, *, extensions: Optional[Set[str]] = None) -> Path:
-    """Resolve a regular file beneath output, optionally enforcing suffixes."""
+def file_manager_capability() -> Dict[str, object]:
+    """Describe whether this backend process can reach a graphical file manager."""
+    system = platform.system().lower()
+    if system == "windows":
+        if not _windows_has_interactive_desktop():
+            return _unavailable_file_manager(system, "当前后端运行环境没有可用的图形化桌面")
+        executable = shutil.which("explorer.exe")
+        name = "Windows 文件资源管理器"
+    elif system == "darwin":
+        if not _darwin_has_interactive_desktop():
+            return _unavailable_file_manager(system, "当前后端运行环境没有可用的图形化桌面")
+        executable = shutil.which("open")
+        name = "Finder"
+    elif system == "linux":
+        if not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")):
+            return _unavailable_file_manager(system, "当前后端运行环境没有可用的图形化桌面")
+        executable = shutil.which("xdg-open")
+        name = "系统文件管理器"
+    else:
+        return _unavailable_file_manager(system or "unknown", "当前系统不支持在文件管理器中显示")
+
+    if not executable:
+        return _unavailable_file_manager(system, "未找到可用的系统文件管理器")
+    return {
+        "available": True,
+        "platform": system,
+        "fileManager": name,
+        "reason": None,
+    }
+
+
+def show_output_in_file_manager(path: str) -> Path:
+    """Reveal a file or directory beneath output using the local graphical shell."""
+    capability = file_manager_capability()
+    if not capability["available"]:
+        raise FileManagerUnavailableError(str(capability.get("reason") or "文件管理器不可用"))
+
+    resolved = resolve_output_path(path)
+    command = _file_manager_command(str(capability["platform"]), resolved)
+    try:
+        options: Dict[str, object] = {
+            "stdin": subprocess.DEVNULL,
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "close_fds": True,
+        }
+        if os.name == "nt":
+            options["creationflags"] = (
+                getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+                | getattr(subprocess, "DETACHED_PROCESS", 0)
+            )
+        else:
+            options["start_new_session"] = True
+        subprocess.Popen(command, **options)
+    except OSError as error:
+        raise FileManagerLaunchError(f"无法启动系统文件管理器：{error}") from error
+    return resolved
+
+
+def resolve_output_path(path: str) -> Path:
+    """Resolve an existing file or directory beneath the managed output root."""
     base = ROOTS["output"].resolve()
     resolved = _resolve_path(base, path)
-    if not resolved.exists() or not resolved.is_file():
+    if not resolved.exists():
+        raise FileNotFoundError("output path not found")
+    return resolved
+
+
+def resolve_output_file(path: str, *, extensions: Optional[Set[str]] = None) -> Path:
+    """Resolve a regular file beneath output, optionally enforcing suffixes."""
+    resolved = resolve_output_path(path)
+    if not resolved.is_file():
         raise FileNotFoundError("output file not found")
     if extensions is not None and resolved.suffix.lower() not in extensions:
         raise UnsupportedFileTypeError("unsupported output file type")
@@ -153,6 +233,64 @@ def _include_item(path: Path, kind: str) -> bool:
     if kind == "folder":
         return False
     return True
+
+
+def _unavailable_file_manager(system: str, reason: str) -> Dict[str, object]:
+    return {
+        "available": False,
+        "platform": system,
+        "fileManager": None,
+        "reason": reason,
+    }
+
+
+def _windows_has_interactive_desktop() -> bool:
+    if os.environ.get("SESSIONNAME", "").strip().lower() == "services":
+        return False
+    try:
+        class UserObjectFlags(ctypes.Structure):
+            _fields_ = [
+                ("fInherit", ctypes.c_int),
+                ("fReserved", ctypes.c_int),
+                ("dwFlags", ctypes.c_uint32),
+            ]
+
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.GetProcessWindowStation.restype = ctypes.c_void_p
+        window_station = user32.GetProcessWindowStation()
+        if not window_station:
+            return False
+        flags = UserObjectFlags()
+        required = ctypes.c_uint32()
+        succeeded = user32.GetUserObjectInformationW(
+            window_station,
+            1,  # UOI_FLAGS
+            ctypes.byref(flags),
+            ctypes.sizeof(flags),
+            ctypes.byref(required),
+        )
+        return bool(succeeded and flags.dwFlags & 0x0001)  # WSF_VISIBLE
+    except (AttributeError, OSError):
+        return False
+
+
+def _darwin_has_interactive_desktop() -> bool:
+    try:
+        return os.stat("/dev/console").st_uid != 0
+    except OSError:
+        return False
+
+
+def _file_manager_command(system: str, path: Path) -> List[str]:
+    if system == "windows":
+        if path.is_dir():
+            return ["explorer.exe", str(path)]
+        return ["explorer.exe", "/select,", str(path)]
+    if system == "darwin":
+        return ["open", "-R", str(path)]
+    if system == "linux":
+        return ["xdg-open", str(path if path.is_dir() else path.parent)]
+    raise FileManagerUnavailableError("当前系统不支持在文件管理器中显示")
 
 
 def _display_path(path: Path) -> str:

@@ -11,6 +11,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 
 import FilePicker from '@/components/FilePicker.vue'
+import InfoHint from '@/components/InfoHint.vue'
 import type {
   TagEditorChangeSetSummary,
   TagEditorDatasetItem,
@@ -129,13 +130,6 @@ watch(
     queryInput.value = editor.query
     stateInput.value = editor.itemState
     sortInput.value = editor.sort
-  },
-)
-
-watch(
-  () => source.root,
-  (root, previousRoot) => {
-    if (root !== previousRoot) source.path = ''
   },
 )
 
@@ -513,8 +507,13 @@ onBeforeUnmount(() => {
     <section class="source-section" aria-labelledby="source-title">
       <div class="source-heading">
         <div>
-          <h2 id="source-title">选择并扫描 Caption 目录</h2>
-          <p>只读取 train、datasets 或 workspace 根目录中的本地 sidecar。</p>
+          <div class="source-title-row">
+            <h2 id="source-title">选择并扫描 Caption 目录</h2>
+            <InfoHint
+              content="可直接输入任意本地目录；浏览窗口仍只显示所选浏览根目录中的内容。"
+              label="Caption 目录说明"
+            />
+          </div>
         </div>
         <div class="source-actions">
           <el-button v-if="dataset" text :icon="Refresh" :loading="editor.inspecting" @click="rescanDataset">重新扫描</el-button>
@@ -523,7 +522,10 @@ onBeforeUnmount(() => {
 
       <div class="source-grid">
         <label class="field">
-          <span>安全根目录</span>
+          <span class="label-with-info">
+            <span>浏览根目录</span>
+            <InfoHint content="仅影响浏览窗口和相对路径的基准，不限制手动输入的绝对路径。" label="浏览根目录说明" />
+          </span>
           <el-select v-model="source.root">
             <el-option label="train" value="train" />
             <el-option label="datasets" value="datasets" />
@@ -531,7 +533,10 @@ onBeforeUnmount(() => {
           </el-select>
         </label>
         <label class="field field-wide">
-          <span>图片目录</span>
+          <span class="label-with-info">
+            <span>图片目录</span>
+            <InfoHint content="支持直接输入任意本地目录；相对路径按浏览根目录解析。" label="图片目录说明" />
+          </span>
           <el-input v-model="source.path" clearable :placeholder="sourceLabel">
             <template #append><el-button :icon="FolderOpened" @click="pickerVisible = true">浏览</el-button></template>
           </el-input>
@@ -837,6 +842,17 @@ onBeforeUnmount(() => {
 
 .source-heading > div:first-child {
   min-width: 0;
+}
+
+.source-title-row,
+.label-with-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-with-info {
+  justify-self: start;
 }
 
 .source-heading h2 {

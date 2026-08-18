@@ -42,7 +42,7 @@ class CaptionDatasetError(ValueError):
 
 
 class CaptionDatasetPathError(CaptionDatasetError):
-    """Raised when a requested path is invalid or escapes its allowed root."""
+    """Raised when a requested caption dataset path is invalid."""
 
 
 class CaptionDatasetNotFoundError(CaptionDatasetError):
@@ -107,8 +107,8 @@ class CaptionDatasetSnapshot:
 
     @property
     def allowed_root(self) -> Path:
-        """Canonical configured root (train/datasets/workspace)."""
-        return self.rootPath
+        """Canonical selected dataset directory used for reads and writes."""
+        return self.datasetPath
 
 
 class CaptionDatasetRegistry:
@@ -321,15 +321,17 @@ class CaptionDatasetRegistry:
         if not candidate.is_absolute():
             candidate = root_path / candidate
         dataset_path = candidate.resolve()
-        _require_within(dataset_path, root_path)
 
         if not dataset_path.exists():
             raise CaptionDatasetPathError("caption dataset path does not exist")
         if not dataset_path.is_dir():
             raise CaptionDatasetPathError("caption dataset path must be a directory")
 
-        relative = dataset_path.relative_to(root_path)
-        display_path = "." if not relative.parts else relative.as_posix()
+        try:
+            relative = dataset_path.relative_to(root_path)
+            display_path = "." if not relative.parts else relative.as_posix()
+        except ValueError:
+            display_path = dataset_path.as_posix()
         return root_path, dataset_path, display_path
 
     def _inspect_item(

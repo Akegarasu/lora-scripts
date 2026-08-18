@@ -9,7 +9,6 @@ from PIL import Image
 from mikazuki.captioning.datasets import (
     CaptionDatasetConflictError,
     CaptionDatasetNotFoundError,
-    CaptionDatasetPathError,
     CaptionDatasetRegistry,
 )
 from mikazuki.captioning.models import (
@@ -159,22 +158,25 @@ class CaptionDatasetRegistryTests(unittest.TestCase):
         with self.assertRaises(CaptionDatasetNotFoundError):
             self.registry.get_snapshot(first.dataset.id)
 
-    def test_absolute_and_parent_traversal_paths_cannot_escape_selected_root(self) -> None:
-        outside = self.temp_path / "outside"
+    def test_absolute_and_parent_paths_can_select_a_dataset_outside_browse_root(self) -> None:
+        outside = self.workspace / "outside"
         outside.mkdir()
         Image.new("RGB", (8, 8)).save(outside / "outside.png")
 
-        with self.assertRaises(CaptionDatasetPathError):
-            self.inspect(path="../outside")
-        with self.assertRaises(CaptionDatasetPathError):
-            self.inspect(path=str(outside))
+        relative = self.inspect(path="../outside")
+        absolute = self.inspect(path=str(outside))
+
+        self.assertEqual(relative.dataset.total, 1)
+        self.assertEqual(relative.dataset.path, outside.resolve().as_posix())
+        self.assertEqual(absolute.dataset.total, 1)
+        self.assertEqual(absolute.dataset.path, outside.resolve().as_posix())
 
         inside = self.train / "inside"
         inside.mkdir()
         allowed = self.inspect(path=str(inside))
         self.assertEqual(allowed.dataset.path, "inside")
 
-    def test_symbolic_links_are_not_followed_and_escape_path_is_rejected(self) -> None:
+    def test_symbolic_links_are_skipped_during_scan_but_can_be_selected_directly(self) -> None:
         outside = self.temp_path / "outside"
         outside.mkdir()
         Image.new("RGB", (8, 8)).save(outside / "outside.png")
@@ -186,8 +188,9 @@ class CaptionDatasetRegistryTests(unittest.TestCase):
 
         response = self.inspect()
         self.assertEqual(response.dataset.total, 0)
-        with self.assertRaises(CaptionDatasetPathError):
-            self.inspect(path="linked")
+        selected = self.inspect(path="linked")
+        self.assertEqual(selected.dataset.total, 1)
+        self.assertEqual(selected.dataset.path, outside.resolve().as_posix())
 
     def test_caption_extension_is_normalized_and_utf8_bom_is_read(self) -> None:
         image = self.make_image("unicode.png")

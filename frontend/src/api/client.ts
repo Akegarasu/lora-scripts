@@ -11,6 +11,7 @@ import type {
   CaptionJobSummary,
   CaptionModelsResponse,
   CompileResult,
+  FileManagerCapability,
   FilesResponse,
   GpuInfo,
   HealthResponse,
@@ -22,6 +23,7 @@ import type {
   JobMetricStateEvent,
   JobRecord,
   JobStartResult,
+  RevealOutputPathResponse,
   SafetensorsMetadataResponse,
   TagEditorApplyRequest,
   TagEditorChangeSetListResponse,
@@ -171,6 +173,15 @@ export const apiClient = {
       path: options.path || '',
     })
     return request<FilesResponse>(`/api/v2/files?${params.toString()}`)
+  },
+  getFileManagerCapability() {
+    return request<FileManagerCapability>('/api/v2/files/file-manager-capability')
+  },
+  revealOutputPath(path: string) {
+    const params = new URLSearchParams({ path })
+    return request<RevealOutputPathResponse>(`/api/v2/files/reveal?${params.toString()}`, {
+      method: 'POST',
+    })
   },
   getSafetensorsMetadata(path: string) {
     const params = new URLSearchParams({ path })
