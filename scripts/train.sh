@@ -2,7 +2,7 @@
 # LoRA train script by @Akegarasu
 
 # Train data path | 设置训练用模型、图片
-pretrained_model="./sd-models/model.ckpt" # base model path | 底模路径
+pretrained_model="./models/model.ckpt" # base model path | 底模路径
 model_type="sd1.5"                        # option: sd1.5 sd2.0 sdxl flux | 可选 sd1.5 sd2.0 sdxl flux。SD2.0模型下 clip_skip 默认无效
 parameterization=0                        # parameterization | 参数化 本参数需要在 model_type 为 sd2.0 时才可启用
 

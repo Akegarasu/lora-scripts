@@ -124,9 +124,9 @@ services:
     #volumes:
       # - "/data/srv/lora-scripts:/app/lora-scripts"
       # 共享 comfyui 大模型
-      # - "/data/srv/comfyui/models/checkpoints:/app/lora-scripts/sd-models/comfyui"
+      # - "/data/srv/comfyui/models/checkpoints:/app/lora-scripts/models/comfyui"
       # 共享 sd-webui 大模型
-      # - "/data/srv/stable-diffusion-webui/models/Stable-diffusion:/app/lora-scripts/sd-models/sd-webui"
+      # - "/data/srv/stable-diffusion-webui/models/Stable-diffusion:/app/lora-scripts/models/sd-webui"
     environment:
       - HF_HOME=huggingface
       - PYTHONUTF8=1

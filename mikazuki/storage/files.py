@@ -22,8 +22,7 @@ class FileItem(BaseModel):
 
 
 ROOTS: Dict[str, Path] = {
-    "models": app_root() / "sd-models",
-    "sd-models": app_root() / "sd-models",
+    "models": app_root() / "models",
     "datasets": app_root() / "train",
     "train": app_root() / "train",
     "outputs": app_root() / "output",

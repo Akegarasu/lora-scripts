@@ -37,7 +37,6 @@ const canSelectDirectory = computed(() => isFolderMode.value || !!props.allowDir
 const rootLabel = computed(() => {
   const labels: Record<string, string> = {
     models: '模型目录',
-    'sd-models': '模型目录',
     train: '数据集目录',
     datasets: '数据集目录',
     output: '输出目录',
@@ -49,8 +48,7 @@ const rootLabel = computed(() => {
 })
 const rootFallbackPath = computed(() => {
   const paths: Record<string, string> = {
-    models: 'sd-models',
-    'sd-models': 'sd-models',
+    models: 'models',
     train: 'train',
     datasets: 'train',
     output: 'output',

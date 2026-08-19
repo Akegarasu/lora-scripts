@@ -21,13 +21,13 @@ wd14_tagger_model
 
 train/*
 logs/*
-sd-models/*
+models/*
 toml/autosave/*
 config/autosave/*
 config/runs/*
 config/presets/test*.toml
 
-!sd-models/put stable diffusion model here.txt
+!models/put stable diffusion model here.txt
 !logs/.keep
 
 tests/

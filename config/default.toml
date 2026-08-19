@@ -1,7 +1,7 @@
 [model]
 v2 = false
 v_parameterization = false
-pretrained_model_name_or_path = "./sd-models/model.ckpt"
+pretrained_model_name_or_path = "./models/model.ckpt"
 
 [dataset]
 train_data_dir = "./train/input"
