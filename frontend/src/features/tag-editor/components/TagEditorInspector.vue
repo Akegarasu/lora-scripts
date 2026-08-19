@@ -13,13 +13,15 @@ import { ElAutocomplete, ElImageViewer } from 'element-plus'
 import { computed, nextTick, ref, watch } from 'vue'
 
 import { apiAssetUrl } from '@/api/client'
-import type { TagEditorItem } from '@/api/types'
+import SegmentedControl from '@/components/SegmentedControl.vue'
+import type { TagEditorItem, TagEditorTagCount } from '@/api/types'
 
 const props = defineProps<{
   item: TagEditorItem | null
   draftText: string
   mode: 'tags' | 'text'
-  commonTags: Array<{ text: string; count: number }>
+  commonTags: TagEditorTagCount[]
+  fetchTagSuggestions?: (query: string) => Promise<TagEditorTagCount[]>
   loading: boolean
   error?: string
   readonly?: boolean
@@ -41,6 +43,11 @@ const previewFailed = ref(false)
 const undoStack = ref<string[]>([])
 const redoStack = ref<string[]>([])
 const textInput = ref<{ focus?: () => void } | null>(null)
+let suggestionRequestVersion = 0
+const editorModeOptions = [
+  { label: '标签', value: 'tags' },
+  { label: '自然语言', value: 'text' },
+] as const
 
 const tags = computed(() => parseTags(props.draftText))
 const existingTagSet = computed(() => new Set(tags.value.map((tag) => tag.toLowerCase())))
@@ -103,13 +110,23 @@ function removeTag(index: number) {
   pushUpdate(next.join(', '))
 }
 
-function fetchSuggestions(query: string, callback: (items: Array<{ value: string; count: number }>) => void) {
+async function fetchSuggestions(query: string, callback: (items: Array<{ value: string }>) => void) {
+  const requestVersion = ++suggestionRequestVersion
   const normalized = query.trim().toLowerCase()
-  const candidates = props.commonTags
+  let source = props.commonTags
+  if (props.fetchTagSuggestions) {
+    try {
+      source = await props.fetchTagSuggestions(query.trim())
+    } catch {
+      source = props.commonTags
+    }
+  }
+  if (requestVersion !== suggestionRequestVersion) return
+  const candidates = source
     .filter((tag) => !existingTagSet.value.has(tag.text.toLowerCase()))
     .filter((tag) => !normalized || tag.text.toLowerCase().includes(normalized))
     .slice(0, 20)
-    .map((tag) => ({ value: tag.text, count: tag.count }))
+    .map((tag) => ({ value: tag.text }))
   callback(candidates)
 }
 
@@ -222,16 +239,14 @@ defineExpose({ undo, redo, focusEditor })
       </el-alert>
 
       <div class="editor-toolbar">
-        <el-radio-group
+        <SegmentedControl
           :model-value="mode"
-          size="small"
+          class="mode-switch"
+          :options="editorModeOptions"
           :disabled="!canEdit"
-          aria-label="编辑模式"
-          @update:model-value="(value: string | number | boolean) => emit('update:mode', value as 'tags' | 'text')"
-        >
-          <el-radio-button value="tags">标签</el-radio-button>
-          <el-radio-button value="text">自然语言</el-radio-button>
-        </el-radio-group>
+          accessible-label="编辑模式"
+          @update:model-value="(value) => emit('update:mode', value as 'tags' | 'text')"
+        />
 
         <div class="history-actions">
           <el-tooltip content="撤销" placement="top">
@@ -284,7 +299,10 @@ defineExpose({ undo, redo, focusEditor })
         <ElAutocomplete
           v-model="tagInput"
           :fetch-suggestions="fetchSuggestions"
+          :debounce="160"
           :disabled="!canEdit"
+          :trigger-on-focus="true"
+          highlight-first-item
           clearable
           placeholder="输入标签"
           aria-label="输入并补全标签"
@@ -292,10 +310,6 @@ defineExpose({ undo, redo, focusEditor })
           @keyup.enter.prevent="addTag()"
         >
           <template #suffix><el-icon><Plus /></el-icon></template>
-          <template #default="{ item: suggestion }">
-            <span>{{ suggestion.value }}</span>
-            <small>{{ suggestion.count }}</small>
-          </template>
         </ElAutocomplete>
 
         <div v-if="quickTags.length" class="quick-tags" aria-label="常用标签">
@@ -390,12 +404,6 @@ defineExpose({ undo, redo, focusEditor })
 
 .inspector-header > div {
   min-width: 0;
-}
-
-.section-kicker {
-  color: var(--brand-strong);
-  font-size: 12px;
-  font-weight: 700;
 }
 
 .inspector-header h2 {

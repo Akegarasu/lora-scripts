@@ -51,7 +51,7 @@ const meta = computed(() => (props.state ? META[props.state] : undefined))
 <style scoped>
 .state-badge {
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
 }
 
 .state-dot {

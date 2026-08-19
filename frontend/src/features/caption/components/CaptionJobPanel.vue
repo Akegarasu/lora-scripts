@@ -593,20 +593,13 @@ function policyLabel(policy: CaptionConflictPolicy) {
   min-width: 0;
 }
 
-.eyebrow {
-  color: var(--brand-strong);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
 .job-title-row h1 {
   margin: 3px 0 0;
   color: var(--text-strong);
   font-family: var(--font-display);
   font-size: var(--font-page-title);
-  font-weight: 730;
-  letter-spacing: -0.025em;
+  font-weight: 560;
+  letter-spacing: 0;
 }
 
 .job-title-row p {

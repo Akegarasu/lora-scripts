@@ -322,14 +322,6 @@ async function copyPreview() {
   font-size: 9px;
 }
 
-.eyebrow {
-  color: var(--text-muted);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
 h2 {
   margin: 3px 0 0;
   color: var(--text-strong);
@@ -620,7 +612,6 @@ pre {
   font-size: 12px;
 }
 
-.eyebrow,
 .check-item small,
 .issue-line small,
 .stale-notice,

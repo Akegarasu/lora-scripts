@@ -146,6 +146,17 @@ class TagEditorServiceTests(unittest.TestCase):
         suggestions = self.service.suggest_tags(dataset_id, query="cat")
         self.assertEqual([(item.text, item.count) for item in suggestions.suggestions], [("cat", 2)])
 
+    def test_tag_suggestions_search_beyond_common_tags(self) -> None:
+        tags = [f"tag_{index:03d}" for index in range(205)]
+        self.make_caption("many-tags.png", ", ".join(tags))
+
+        inspected = self.inspect()
+
+        self.assertEqual(len(inspected.commonTags), 200)
+        self.assertNotIn("tag_204", {item.text for item in inspected.commonTags})
+        suggestions = self.service.suggest_tags(inspected.dataset.id, query="tag_204")
+        self.assertEqual([(item.text, item.count) for item in suggestions.suggestions], [("tag_204", 1)])
+
     def test_explicit_and_filter_minus_exclusions_scopes_are_frozen_without_writes(self) -> None:
         existing = self.make_caption("existing.png", "old")
         missing_a = self.make_image("missing-a.png").with_suffix(".txt")

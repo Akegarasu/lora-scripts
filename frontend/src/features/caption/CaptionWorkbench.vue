@@ -23,6 +23,7 @@ import type {
 } from '@/api/types'
 import FilePicker from '@/components/FilePicker.vue'
 import InfoHint from '@/components/InfoHint.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import { useCaptionStore } from '@/stores/caption'
 
 import CaptionDatasetPanel from './components/CaptionDatasetPanel.vue'
@@ -112,6 +113,12 @@ const routeJobId = computed(() => {
 })
 const showingJob = computed(() => route.path.startsWith('/caption/jobs/') && !!routeJobId.value)
 const selectedModel = computed(() => caption.models.find((model) => model.id === draft.modelId) || null)
+const outputModeOptions = computed(() =>
+  (selectedModel.value?.outputModes || []).map((mode) => ({
+    label: outputModeLabel(mode),
+    value: mode,
+  })),
+)
 const modelReady = computed(
   () => selectedModel.value && !['unavailable', 'misconfigured'].includes(selectedModel.value.status),
 )
@@ -681,11 +688,12 @@ function openHistoryJob(jobId: string) {
 
             <label v-if="selectedModel && selectedModel.outputModes.length > 1" class="field field-wide">
               <span class="field-label">输出形式</span>
-              <el-radio-group v-model="draft.outputMode">
-                <el-radio-button v-for="mode in selectedModel.outputModes" :key="mode" :value="mode">
-                  {{ outputModeLabel(mode) }}
-                </el-radio-button>
-              </el-radio-group>
+              <SegmentedControl
+                :model-value="draft.outputMode"
+                :options="outputModeOptions"
+                accessible-label="输出形式"
+                @update:model-value="(value) => (draft.outputMode = value as CaptionOutputMode)"
+              />
               <small>标签适合动漫 LoRA；自然描述适合写实素材和语义更丰富的训练。</small>
             </label>
           </div>
@@ -1059,20 +1067,13 @@ function openHistoryJob(jobId: string) {
   margin-bottom: 22px;
 }
 
-.eyebrow {
-  color: var(--brand-strong);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
 .page-heading h1 {
   margin: 4px 0 0;
   color: var(--text-strong);
   font-family: var(--font-display);
   font-size: var(--font-page-title);
-  font-weight: 740;
-  letter-spacing: -0.03em;
+  font-weight: 560;
+  letter-spacing: 0;
 }
 
 .page-heading p {

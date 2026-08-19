@@ -599,7 +599,7 @@ function saveCurve() {
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 680;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
 }
 
 .custom-curve-item {

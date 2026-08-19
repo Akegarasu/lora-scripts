@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { Delete, Plus, Search } from '@element-plus/icons-vue'
+import { Collection, Delete, Plus, Search, Select } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import type { TagEditorOperation } from '@/api/types'
 
 const props = defineProps<{
   modelValue: boolean
   operations: TagEditorOperation[]
+  scopeMode: 'all' | 'selection'
+  totalCount: number
   selectedCount: number
   allFiltered: boolean
   pendingItemCount: number
@@ -17,6 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
   'update:operations': [value: TagEditorOperation[]]
+  'update:scopeMode': [value: 'all' | 'selection']
   preview: []
 }>()
 
@@ -25,6 +29,12 @@ const visible = computed({
   set: (value) => emit('update:modelValue', value),
 })
 const operationType = ref<'add' | 'remove' | 'replace' | 'normalize'>('add')
+const operationTypeOptions = [
+  { label: '添加', value: 'add' },
+  { label: '删除', value: 'remove' },
+  { label: '替换', value: 'replace' },
+  { label: '整理', value: 'normalize' },
+] as const
 const tagText = ref('')
 const replaceForm = reactive({
   find: '',
@@ -39,7 +49,12 @@ const normalizeForm = reactive({
   sort: false,
 })
 
-const hasEffectiveScope = computed(() => props.selectedCount > 0 || props.pendingItemCount > 0)
+const hasEffectiveScope = computed(() =>
+  props.scopeMode === 'all' ? props.totalCount > 0 : props.selectedCount > 0,
+)
+const effectiveCount = computed(() =>
+  props.scopeMode === 'all' ? props.totalCount : props.selectedCount,
+)
 
 watch(operationType, () => {
   tagText.value = ''
@@ -156,20 +171,50 @@ function operationLabel(operation: TagEditorOperation) {
     :append-to-body="true"
   >
     <div class="batch-content">
-      <div class="scope-summary">
-        <div>
-          <span>作用范围</span>
-          <strong>
-            {{ allFiltered ? `当前筛选全部 ${selectedCount} 项` : `已选择 ${selectedCount} 项` }}
-          </strong>
+      <section class="scope-section" aria-labelledby="batch-scope-title">
+        <div class="section-heading">
+          <div>
+            <h3 id="batch-scope-title">处理范围</h3>
+            <span>“全部图片”不受图库分页和当前筛选影响。</span>
+          </div>
+          <el-tag v-if="pendingItemCount" type="warning">另有 {{ pendingItemCount }} 项手动修改</el-tag>
         </div>
-        <el-tag v-if="pendingItemCount" type="warning">另有 {{ pendingItemCount }} 项手动修改</el-tag>
-      </div>
+
+        <div class="scope-options" role="radiogroup" aria-label="批量处理范围">
+          <button
+            type="button"
+            role="radio"
+            class="scope-option"
+            :class="{ active: scopeMode === 'all' }"
+            :aria-checked="scopeMode === 'all'"
+            :disabled="totalCount === 0"
+            @click="emit('update:scopeMode', 'all')"
+          >
+            <span class="scope-option-icon"><el-icon><Collection /></el-icon></span>
+            <span><strong>全部图片</strong><small>{{ totalCount }} 张 · 跨分页处理</small></span>
+          </button>
+          <button
+            type="button"
+            role="radio"
+            class="scope-option"
+            :class="{ active: scopeMode === 'selection' }"
+            :aria-checked="scopeMode === 'selection'"
+            :disabled="selectedCount === 0"
+            @click="emit('update:scopeMode', 'selection')"
+          >
+            <span class="scope-option-icon"><el-icon><Select /></el-icon></span>
+            <span>
+              <strong>{{ allFiltered ? '当前筛选的图片' : '已选图片' }}</strong>
+              <small>{{ selectedCount ? `${selectedCount} 张` : '尚未选择' }}</small>
+            </span>
+          </button>
+        </div>
+      </section>
 
       <el-alert
         v-if="!hasEffectiveScope"
         type="warning"
-        title="请先选择要处理的图片"
+        :title="scopeMode === 'all' ? '当前数据集没有可处理的图片' : '请先选择要处理的图片'"
         :closable="false"
         show-icon
       />
@@ -182,12 +227,13 @@ function operationLabel(operation: TagEditorOperation) {
           <el-tag type="info">按顺序执行</el-tag>
         </div>
 
-        <el-radio-group v-model="operationType" aria-label="批量操作类型">
-          <el-radio-button value="add">添加</el-radio-button>
-          <el-radio-button value="remove">删除</el-radio-button>
-          <el-radio-button value="replace">替换</el-radio-button>
-          <el-radio-button value="normalize">整理</el-radio-button>
-        </el-radio-group>
+        <SegmentedControl
+          class="operation-type-switch"
+          :model-value="operationType"
+          :options="operationTypeOptions"
+          accessible-label="批量操作类型"
+          @update:model-value="(value) => (operationType = value as typeof operationType)"
+        />
 
         <div v-if="operationType === 'add' || operationType === 'remove'" class="operation-form">
           <label>
@@ -256,7 +302,7 @@ function operationLabel(operation: TagEditorOperation) {
 
     <template #footer>
       <div class="drawer-footer">
-        <span>预览不会写入文件</span>
+        <span>将预览 {{ effectiveCount }} 张图片，不会立即写入文件</span>
         <div>
           <el-button @click="visible = false">关闭</el-button>
           <el-button
@@ -279,7 +325,6 @@ function operationLabel(operation: TagEditorOperation) {
   gap: 18px;
 }
 
-.scope-summary,
 .section-heading,
 .drawer-footer,
 .drawer-footer > div {
@@ -289,25 +334,84 @@ function operationLabel(operation: TagEditorOperation) {
   gap: 12px;
 }
 
-.scope-summary {
-  padding: 2px 0 6px;
-}
-
-.scope-summary > div {
-  display: grid;
-  gap: 2px;
-}
-
-.scope-summary span,
 .section-heading span,
 .drawer-footer > span {
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.scope-summary strong {
+.scope-section {
+  display: grid;
+  gap: 12px;
+}
+
+.scope-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.scope-option {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.scope-option:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--brand) 48%, var(--border));
+  background: var(--surface-hover);
+}
+
+.scope-option.active {
+  border-color: var(--brand);
+  background: var(--brand-softer);
+}
+
+.scope-option:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.scope-option > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.scope-option strong {
   color: var(--text-strong);
-  font-size: 15px;
+  font-size: 14px;
+}
+
+.scope-option small {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.scope-option-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 17px;
+}
+
+.scope-option.active .scope-option-icon {
+  background: var(--brand-soft);
+  color: var(--brand-strong);
 }
 
 .operation-builder,
@@ -328,6 +432,10 @@ function operationLabel(operation: TagEditorOperation) {
 .operation-form > label {
   display: grid;
   gap: 7px;
+}
+
+.operation-type-switch {
+  justify-self: start;
 }
 
 .operation-form > label > span,
@@ -416,10 +524,16 @@ function operationLabel(operation: TagEditorOperation) {
 }
 
 @media (max-width: 680px) {
+  .scope-options,
   .replace-form,
   .switch-grid,
   .normalize-form {
     grid-template-columns: 1fr;
+  }
+
+  .operation-type-switch {
+    width: 100%;
+    overflow-x: auto;
   }
 
   .drawer-footer {

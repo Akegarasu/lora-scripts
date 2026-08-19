@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Picture, ZoomIn } from '@element-plus/icons-vue'
+import { Check, Picture, ZoomIn } from '@element-plus/icons-vue'
 import { ElImageViewer } from 'element-plus'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RecycleScroller } from 'vue-virtual-scroller'
@@ -39,10 +39,10 @@ let resizeObserver: ResizeObserver | undefined
 
 const columnCount = computed(() => {
   if (containerWidth.value < 520) return 1
-  return Math.max(1, Math.min(5, Math.floor(containerWidth.value / 228)))
+  return Math.max(2, Math.min(6, Math.floor(containerWidth.value / 150)))
 })
-const rowHeight = computed(() => (columnCount.value === 1 ? 320 : 294))
-const cellWidth = computed(() => Math.max(188, Math.floor(containerWidth.value / columnCount.value)))
+const rowHeight = computed(() => (columnCount.value === 1 ? 320 : 260))
+const cellWidth = computed(() => Math.max(150, Math.floor(containerWidth.value / columnCount.value)))
 const rowCount = computed(() => Math.ceil(props.items.length / columnCount.value))
 const scrollerHeight = computed(() => {
   const maximum = containerWidth.value < 680 ? 560 : 680
@@ -195,7 +195,7 @@ function openViewer(item: TagEditorItem) {
               <div class="image-wrap">
                 <img
                   v-if="!failedImages.has(item.id)"
-                  :src="sizedAssetUrl(item.thumbnailUrl, 480)"
+                  :src="sizedAssetUrl(item.thumbnailUrl, 360)"
                   :alt="item.name"
                   loading="lazy"
                   @error="markImageFailed(item.id)"
@@ -206,14 +206,18 @@ function openViewer(item: TagEditorItem) {
                   <span>无法预览</span>
                 </div>
 
-                <el-checkbox
-                  class="item-check"
-                  :model-value="isSelected(item.id)"
+                <button
+                  type="button"
+                  class="select-button"
+                  :class="{ selected: isSelected(item.id) }"
                   :disabled="!item.writable || !!item.error"
+                  :aria-pressed="isSelected(item.id)"
                   :aria-label="`选择 ${item.name}`"
-                  @click.stop
-                  @change="(checked: boolean | string | number) => emit('toggle', item, Boolean(checked))"
-                />
+                  @click.stop="emit('toggle', item, !isSelected(item.id))"
+                >
+                  <el-icon v-if="isSelected(item.id)"><Check /></el-icon>
+                  <span v-else class="selection-ring" aria-hidden="true" />
+                </button>
                 <button
                   class="zoom-button"
                   type="button"
@@ -331,7 +335,7 @@ function openViewer(item: TagEditorItem) {
 
 .gallery-scroller {
   width: 100%;
-  min-height: 294px;
+  min-height: 260px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -376,7 +380,7 @@ function openViewer(item: TagEditorItem) {
 
 .image-wrap {
   position: relative;
-  height: 154px;
+  height: 126px;
   overflow: hidden;
   background: var(--surface-sunken);
 }
@@ -402,36 +406,55 @@ function openViewer(item: TagEditorItem) {
   font-size: 25px;
 }
 
-.item-check,
+.select-button,
 .zoom-button {
   position: absolute;
   top: 8px;
-  min-width: 40px;
-  min-height: 40px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid rgb(255 255 255 / 66%);
-  border-radius: 7px;
-  background: rgb(20 20 20 / 64%);
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 46%);
+  border-radius: 50%;
+  background: rgb(24 24 27 / 68%);
   color: white;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 16%);
+  backdrop-filter: blur(6px);
+  transition: transform 140ms ease, background-color 140ms ease, opacity 140ms ease;
 }
 
-.item-check {
+.select-button {
   left: 8px;
+  cursor: pointer;
 }
 
-.item-check :deep(.el-checkbox__label) {
-  display: none;
+.select-button:hover:not(:disabled),
+.zoom-button:hover {
+  transform: translateY(-1px);
+  background: rgb(24 24 27 / 86%);
+}
+
+.select-button.selected {
+  border-color: color-mix(in srgb, var(--brand) 78%, white);
+  background: var(--brand);
+}
+
+.select-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.selection-ring {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
 }
 
 .zoom-button {
   right: 8px;
-  padding: 0;
   cursor: zoom-in;
-}
-
-.zoom-button:hover {
-  background: rgb(20 20 20 / 82%);
 }
 
 .resolution {
@@ -448,8 +471,8 @@ function openViewer(item: TagEditorItem) {
 
 .card-body {
   display: grid;
-  gap: 7px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
 }
 
 .item-heading {
@@ -464,7 +487,7 @@ function openViewer(item: TagEditorItem) {
   min-width: 0;
   overflow: hidden;
   color: var(--text-strong);
-  font-size: 14px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -489,7 +512,7 @@ function openViewer(item: TagEditorItem) {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.5;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -506,7 +529,7 @@ function openViewer(item: TagEditorItem) {
 
 .card-meta {
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .empty-result {

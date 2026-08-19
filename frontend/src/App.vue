@@ -207,7 +207,7 @@ watch(
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 720;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .primary-nav {

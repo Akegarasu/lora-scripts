@@ -929,8 +929,8 @@ onMounted(() => {
   font-family: var(--font-display);
   font-size: var(--font-page-title);
   line-height: 1.15;
-  font-weight: 730;
-  letter-spacing: -0.035em;
+  font-weight: 560;
+  letter-spacing: 0;
 }
 
 .header-actions {

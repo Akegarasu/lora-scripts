@@ -186,12 +186,6 @@ function changePageSize(size: number) {
   gap: 20px;
 }
 
-.section-kicker {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 650;
-}
-
 .dataset-summary h3 {
   margin: 3px 0 0;
   color: var(--text-strong);

@@ -26,6 +26,7 @@ import ModelAssetForm from '@/components/ModelAssetForm.vue'
 import ParamControl from '@/components/ParamControl.vue'
 import ParamSearch from '@/components/ParamSearch.vue'
 import InfoHint from '@/components/InfoHint.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import type { ParamDefinition, ParamGroup } from '@/api/types'
 import { useCatalogStore } from '@/stores/catalog'
 import { useDevicesStore } from '@/stores/devices'
@@ -48,6 +49,10 @@ const editorColumn = ref<HTMLElement | null>(null)
 const initialized = ref(false)
 const hydrating = ref(false)
 const savePending = ref(false)
+const densityOptions = [
+  { label: '引导', value: 'recommended' },
+  { label: '专家', value: 'advanced' },
+] as const
 let saveTimer: number | undefined
 let sectionFrame: number | undefined
 let sectionObserver: IntersectionObserver | undefined
@@ -646,24 +651,13 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="density-switch" role="group" aria-label="参数密度">
-        <button
-          type="button"
-          :class="{ active: catalog.view === 'recommended' }"
-          :aria-pressed="catalog.view === 'recommended'"
-          @click="catalog.view = 'recommended'"
-        >
-          引导
-        </button>
-        <button
-          type="button"
-          :class="{ active: catalog.view === 'advanced' }"
-          :aria-pressed="catalog.view === 'advanced'"
-          @click="catalog.view = 'advanced'"
-        >
-          专家
-        </button>
-      </div>
+      <SegmentedControl
+        class="density-switch"
+        :model-value="catalog.view"
+        :options="densityOptions"
+        accessible-label="参数密度"
+        @update:model-value="(value) => (catalog.view = value as 'recommended' | 'advanced')"
+      />
 
       <div class="page-actions">
         <el-button text :icon="Search" @click="searchVisible = true">搜索参数</el-button>
@@ -1040,14 +1034,6 @@ onBeforeUnmount(() => {
   gap: 24px;
 }
 
-.page-eyebrow,
-.section-kicker {
-  color: var(--brand-strong);
-  font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.12em;
-}
-
 .title-line {
   display: flex;
   align-items: center;
@@ -1060,8 +1046,8 @@ onBeforeUnmount(() => {
   color: var(--text-strong);
   font-family: var(--font-display);
   font-size: var(--font-page-title);
-  font-weight: 730;
-  letter-spacing: -0.035em;
+  font-weight: 560;
+  letter-spacing: 0;
   line-height: 1.15;
 }
 
@@ -1126,34 +1112,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 0;
   left: 50%;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(82px, 1fr));
-  padding: 3px;
-  border-radius: 999px;
-  background: var(--surface-sunken);
   transform: translateX(-50%);
-}
-
-.density-switch button {
-  min-height: 34px;
-  padding: 6px 18px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.density-switch button:hover {
-  color: var(--text-strong);
-}
-
-.density-switch button.active {
-  background: var(--surface);
-  color: var(--text-strong);
-  box-shadow: 0 1px 4px rgb(0 0 0 / 12%);
 }
 
 .catalog-alert {
@@ -1934,8 +1893,6 @@ onBeforeUnmount(() => {
 }
 
 /* Readability baseline: supporting information stays compact, never microscopic. */
-.page-eyebrow,
-.section-kicker,
 .draft-state,
 .trainer-control > label > small,
 .trainer-option small,

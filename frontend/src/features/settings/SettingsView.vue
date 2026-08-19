@@ -348,23 +348,13 @@ onMounted(() => {
   min-width: 0;
 }
 
-.eyebrow {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--brand);
-  font-size: 11px;
-  font-weight: 720;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
 .page-heading h1 {
   margin: 0;
   color: var(--text-strong);
   font-family: var(--font-display);
   font-size: var(--font-page-title);
-  font-weight: 740;
-  letter-spacing: -0.035em;
+  font-weight: 560;
+  letter-spacing: 0;
   line-height: 1.12;
 }
 
@@ -485,7 +475,7 @@ onMounted(() => {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 690;
-  letter-spacing: -0.012em;
+  letter-spacing: 0;
 }
 
 .panel-title p {
@@ -619,7 +609,7 @@ onMounted(() => {
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 620;
-  letter-spacing: 0.035em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -702,7 +692,7 @@ onMounted(() => {
   color: var(--info);
   font-size: 9px;
   font-weight: 740;
-  letter-spacing: 0.09em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -720,7 +710,7 @@ onMounted(() => {
   font-family: var(--font-mono);
   font-size: 17px;
   font-weight: 700;
-  letter-spacing: -0.04em;
+  letter-spacing: 0;
 }
 
 .gpu-card.is-warning .usage-value {
@@ -946,7 +936,6 @@ onMounted(() => {
   }
 }
 
-.eyebrow,
 .service-summary small,
 .fact dt,
 .gpu-index,

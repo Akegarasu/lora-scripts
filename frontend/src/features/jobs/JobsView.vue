@@ -933,24 +933,14 @@ watch(
   min-width: 0;
 }
 
-.eyebrow {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--brand-strong);
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-}
-
 .page-heading h1 {
   margin: 0;
   color: var(--text-strong);
   font-family: var(--font-display);
   font-size: var(--font-page-title);
   line-height: 1.2;
-  font-weight: 730;
-  letter-spacing: -0.025em;
+  font-weight: 560;
+  letter-spacing: 0;
 }
 
 .page-heading p {
@@ -1226,8 +1216,8 @@ watch(
   font-family: var(--font-display);
   font-size: clamp(22px, 2vw, 30px);
   line-height: 1.25;
-  font-weight: 720;
-  letter-spacing: -0.025em;
+  font-weight: 560;
+  letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1278,7 +1268,7 @@ watch(
   color: var(--text-muted);
   font-size: 12px;
   font-weight: 650;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .summary-item strong,
@@ -1672,10 +1662,6 @@ watch(
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.log-heading .eyebrow {
-  margin-bottom: 2px;
-}
-
 .log-heading p {
   margin-top: 2px;
 }
@@ -1978,7 +1964,6 @@ watch(
   }
 }
 
-.eyebrow,
 .job-id,
 .summary-item span,
 .command-section summary small,

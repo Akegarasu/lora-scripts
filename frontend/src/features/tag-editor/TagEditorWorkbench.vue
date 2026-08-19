@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   FolderOpened,
+  MagicStick,
   Refresh,
   Search,
   Setting,
@@ -12,6 +13,7 @@ import { onBeforeRouteLeave } from 'vue-router'
 
 import FilePicker from '@/components/FilePicker.vue'
 import InfoHint from '@/components/InfoHint.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import type {
   TagEditorChangeSetSummary,
   TagEditorDatasetItem,
@@ -22,6 +24,7 @@ import type {
   TagEditorRoot,
   TagEditorScope,
   TagEditorSort,
+  TagEditorTagCount,
 } from '@/api/types'
 import { useTagEditorStore } from '@/stores/tagEditor'
 
@@ -44,6 +47,11 @@ const viewportWidth = ref(typeof window === 'undefined' ? 1200 : window.innerWid
 const draftText = ref('')
 const draftItemId = ref('')
 const editorMode = ref<'tags' | 'text'>('tags')
+const editorModeOptions = [
+  { label: '标签', value: 'tags' },
+  { label: '自然语言', value: 'text' },
+] as const
+const batchScopeMode = ref<'all' | 'selection'>('all')
 const queryInput = ref('')
 const stateInput = ref<TagEditorItemState>('all')
 const sortInput = ref<TagEditorSort>('path_asc')
@@ -77,6 +85,11 @@ const hasStagedSingleChange = computed(
 const hasUnsaved = computed(() => hasDraft.value || editor.pendingOperations.length > 0)
 const pendingIds = computed(() => (hasDraft.value && draftItemId.value ? [draftItemId.value] : []))
 const selectionScope = computed<TagEditorScope | null>(() => editor.selectionScope)
+const batchScope = computed<TagEditorScope | null>(() => {
+  if (batchScopeMode.value === 'selection') return selectionScope.value
+  if (!dataset.value?.total) return null
+  return { mode: 'filter', query: '', state: 'all', exclusions: [] }
+})
 const previewForDialog = computed<PreviewWithWarnings | null>(() => {
   if (!previewBase.value) return null
   const current = editor.currentChange
@@ -304,9 +317,9 @@ async function previewSingle() {
   previewVisible.value = true
 }
 
-function openBatchDrawer() {
-  if (!editor.selectionScope) {
-    ElMessage.warning('请先选择图片或选择当前筛选全部')
+function openBatchDrawer(scope: 'all' | 'selection' = 'all') {
+  if (scope === 'selection' && !editor.selectionScope) {
+    ElMessage.warning('请先选择图片')
     return
   }
   if (hasStagedSingleChange.value) {
@@ -317,19 +330,20 @@ function openBatchDrawer() {
     ElMessage.warning('请先预览当前图片的单项修改，再开始批量处理')
     return
   }
+  batchScopeMode.value = scope
   batchVisible.value = true
 }
 
 async function previewBatch() {
-  if (!selectionScope.value) {
-    ElMessage.warning('请先选择图片')
+  if (!batchScope.value) {
+    ElMessage.warning(batchScopeMode.value === 'all' ? '当前数据集没有可处理的图片' : '请先选择图片')
     return
   }
   if (!editor.pendingOperations.length) {
     ElMessage.warning('请先添加至少一个批量操作')
     return
   }
-  const response = await editor.previewPendingChanges({ scope: selectionScope.value, sampleLimit: 30 })
+  const response = await editor.previewPendingChanges({ scope: batchScope.value, sampleLimit: 30 })
   if (!response) {
     ElMessage.error(editor.previewError || '无法生成变更预览')
     return
@@ -337,6 +351,11 @@ async function previewBatch() {
   previewBase.value = response
   batchVisible.value = false
   previewVisible.value = true
+}
+
+async function fetchDatasetTagSuggestions(query: string): Promise<TagEditorTagCount[]> {
+  const response = await editor.loadTagSuggestions(query, 200)
+  return response?.suggestions || []
 }
 
 async function applyPreview(backupExisting: boolean) {
@@ -558,7 +577,7 @@ onBeforeUnmount(() => {
           <el-switch v-model="source.recursive" />
         </label>
         <div class="scan-action">
-          <el-button type="primary" :icon="Search" :loading="editor.inspecting" :disabled="!source.path.trim()" @click="inspectDataset">扫描数据集</el-button>
+          <el-button :type="dataset ? 'default' : 'primary'" :icon="Search" :loading="editor.inspecting" :disabled="!source.path.trim()" @click="inspectDataset">扫描数据集</el-button>
           <span v-if="editor.inspectError" class="error-text"><el-icon><WarningFilled /></el-icon>{{ editor.inspectError }}</span>
         </div>
       </div>
@@ -585,6 +604,22 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
+      <section class="batch-priority" aria-labelledby="batch-priority-title">
+        <span class="batch-priority-icon" aria-hidden="true"><el-icon><MagicStick /></el-icon></span>
+        <div class="batch-priority-copy">
+          <strong id="batch-priority-title">批量处理</strong>
+          <span>直接处理整个数据集，无需在每一页重复选择。</span>
+        </div>
+        <div class="batch-priority-actions">
+          <el-button v-if="editor.selectionCount" @click="openBatchDrawer('selection')">
+            处理已选 {{ editor.selectionCount }} 项
+          </el-button>
+          <el-button type="primary" size="large" :disabled="dataset.total === 0" @click="openBatchDrawer('all')">
+            处理全部 {{ dataset.total }} 张
+          </el-button>
+        </div>
+      </section>
+
       <section class="editor-toolbar" aria-label="筛选和编辑工具">
         <el-input v-model="queryInput" class="query-input" :prefix-icon="Search" clearable placeholder="搜索文件名、路径、Caption 或标签" aria-label="搜索图片和 Caption" />
         <el-select v-model="stateInput" aria-label="筛选 Caption 状态">
@@ -593,11 +628,13 @@ onBeforeUnmount(() => {
         <el-select v-model="sortInput" aria-label="排序图片">
           <el-option v-for="option in sortOptions" :key="option.value" :label="option.label" :value="option.value" />
         </el-select>
-        <el-radio-group v-model="editorMode" size="small" aria-label="默认编辑模式">
-          <el-radio-button value="tags">标签</el-radio-button>
-          <el-radio-button value="text">文本</el-radio-button>
-        </el-radio-group>
-        <el-button type="primary" :disabled="!editor.selectionScope" @click="openBatchDrawer">批量处理</el-button>
+        <SegmentedControl
+          class="mode-switch"
+          :model-value="editorMode"
+          :options="editorModeOptions"
+          accessible-label="默认编辑模式"
+          @update:model-value="(value) => (editorMode = value as 'tags' | 'text')"
+        />
       </section>
 
       <div class="scope-line" aria-live="polite">
@@ -607,6 +644,28 @@ onBeforeUnmount(() => {
       </div>
 
       <section class="editor-layout">
+        <aside class="desktop-inspector">
+          <TagEditorInspector
+            :item="activeItem"
+            :draft-text="draftText"
+            :mode="editorMode"
+            :common-tags="editor.commonTags"
+            :fetch-tag-suggestions="fetchDatasetTagSuggestions"
+            :loading="editor.detailLoading"
+            :error="editor.detailError"
+            :pending="hasDraft"
+            @update:draft-text="updateDraftText"
+            @update:mode="(value) => (editorMode = value)"
+            @reset="resetDraft"
+            @previous="() => navigateItem(-1)"
+            @next="() => navigateItem(1)"
+          />
+          <div class="inspector-actions">
+            <el-button :disabled="!hasDraft" @click="resetDraft">撤销本项修改</el-button>
+            <el-button type="primary" :loading="editor.previewing" :disabled="!hasDraft" @click="previewSingle">预览单项写入</el-button>
+          </div>
+        </aside>
+
         <main class="gallery-panel">
           <TagEditorGallery
             :items="editor.items"
@@ -628,27 +687,6 @@ onBeforeUnmount(() => {
             @page-size-change="handlePageSizeChange"
           />
         </main>
-
-        <aside class="desktop-inspector">
-          <TagEditorInspector
-            :item="activeItem"
-            :draft-text="draftText"
-            :mode="editorMode"
-            :common-tags="editor.commonTags"
-            :loading="editor.detailLoading"
-            :error="editor.detailError"
-            :pending="hasDraft"
-            @update:draft-text="updateDraftText"
-            @update:mode="(value) => (editorMode = value)"
-            @reset="resetDraft"
-            @previous="() => navigateItem(-1)"
-            @next="() => navigateItem(1)"
-          />
-          <div class="inspector-actions">
-            <el-button :disabled="!hasDraft" @click="resetDraft">撤销本项修改</el-button>
-            <el-button type="primary" :loading="editor.previewing" :disabled="!hasDraft" @click="previewSingle">预览单项写入</el-button>
-          </div>
-        </aside>
       </section>
 
       <div v-if="hasDraft" class="pending-bar" role="status" aria-live="polite">
@@ -679,10 +717,13 @@ onBeforeUnmount(() => {
     <BatchChangeDrawer
       v-model="batchVisible"
       :operations="editor.pendingOperations"
+      :scope-mode="batchScopeMode"
+      :total-count="dataset?.total || 0"
       :selected-count="editor.selectionCount"
       :all-filtered="editor.selectionMode === 'filter'"
       :pending-item-count="hasDraft ? 1 : 0"
       :loading="editor.previewing"
+      @update:scope-mode="(value) => (batchScopeMode = value)"
       @update:operations="editor.setPendingOperations"
       @preview="previewBatch"
     />
@@ -718,6 +759,7 @@ onBeforeUnmount(() => {
         :draft-text="draftText"
         :mode="editorMode"
         :common-tags="editor.commonTags"
+        :fetch-tag-suggestions="fetchDatasetTagSuggestions"
         :loading="editor.detailLoading"
         :error="editor.detailError"
         :readonly="!mobileEditing"
@@ -752,6 +794,7 @@ onBeforeUnmount(() => {
 .source-heading,
 .source-actions,
 .dataset-summary,
+.batch-priority,
 .summary-stats,
 .editor-toolbar,
 .scope-line,
@@ -782,8 +825,6 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-.eyebrow,
-.section-kicker,
 .source-heading > div > span,
 .dataset-path > span {
   color: var(--brand-strong);
@@ -800,7 +841,7 @@ onBeforeUnmount(() => {
   color: var(--text-strong);
   font-family: var(--font-display);
   font-size: 30px;
-  font-weight: 740;
+  font-weight: 560;
 }
 
 .page-heading p {
@@ -822,6 +863,7 @@ onBeforeUnmount(() => {
 
 .source-section,
 .dataset-summary,
+.batch-priority,
 .gallery-panel,
 .desktop-inspector {
   border: 1px solid var(--border-subtle);
@@ -936,6 +978,50 @@ onBeforeUnmount(() => {
   padding: 14px 0;
 }
 
+.batch-priority {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 0;
+  background: var(--surface-sunken);
+}
+
+.batch-priority-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-size: 20px;
+}
+
+.batch-priority-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.batch-priority-copy strong {
+  color: var(--text-strong);
+  font-size: 16px;
+}
+
+.batch-priority-copy span {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.batch-priority-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .dataset-path {
   min-width: 0;
   display: grid;
@@ -976,12 +1062,16 @@ onBeforeUnmount(() => {
 
 .editor-toolbar {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) 160px 150px auto auto;
-  margin-top: 16px;
+  grid-template-columns: minmax(200px, 1fr) 160px 150px auto;
+  margin-top: 10px;
   padding: 10px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
+}
+
+.mode-switch {
+  justify-self: end;
 }
 
 .query-input {
@@ -1003,7 +1093,7 @@ onBeforeUnmount(() => {
 .editor-layout {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 410px;
+  grid-template-columns: minmax(340px, 2fr) minmax(0, 3fr);
   align-items: start;
   gap: 16px;
 }
@@ -1086,7 +1176,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1180px) {
   .editor-layout {
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(320px, 2fr) minmax(0, 3fr);
   }
 
   .source-grid {
@@ -1099,10 +1189,6 @@ onBeforeUnmount(() => {
 
   .editor-toolbar {
     grid-template-columns: minmax(180px, 1fr) 150px 140px auto;
-  }
-
-  .editor-toolbar > :last-child {
-    grid-column: 4;
   }
 }
 
@@ -1118,6 +1204,15 @@ onBeforeUnmount(() => {
   .source-grid,
   .editor-toolbar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .batch-priority {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .batch-priority-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
   }
 
   .source-grid .field-wide,
@@ -1139,6 +1234,7 @@ onBeforeUnmount(() => {
   .page-header,
   .source-heading,
   .dataset-summary,
+  .batch-priority,
   .pending-bar {
     align-items: stretch;
     flex-direction: column;
@@ -1150,9 +1246,18 @@ onBeforeUnmount(() => {
   }
 
   .source-grid .field-wide,
-  .editor-toolbar .query-input,
-  .editor-toolbar > :last-child {
+  .editor-toolbar .query-input {
     grid-column: auto;
+  }
+
+  .batch-priority-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .mode-switch {
+    justify-self: stretch;
   }
 
   .scan-action,
