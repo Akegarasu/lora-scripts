@@ -3,6 +3,15 @@ export type ParamPriority = 'required' | 'recommended' | 'advanced' | 'dangerous
 export interface HealthResponse {
   status: string
   version: string
+  channel: 'development' | 'prerelease' | 'stable'
+  tag: string
+  frontend: {
+    requiredVersion: string
+    installedVersion?: string | null
+    buildCommit?: string | null
+    builtAt?: string | null
+    source?: string | null
+  }
   python: string
   devMode: boolean
 }

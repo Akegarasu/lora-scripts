@@ -194,6 +194,14 @@ onMounted(() => {
             <dd>{{ settings.health?.python || '—' }}</dd>
           </div>
           <div class="fact">
+            <dt>前端版本</dt>
+            <dd>{{ settings.health?.frontend.installedVersion || '—' }}</dd>
+          </div>
+          <div class="fact">
+            <dt>前端来源</dt>
+            <dd>{{ settings.health?.frontend.source || (settings.health?.devMode ? '本地构建' : '—') }}</dd>
+          </div>
+          <div class="fact">
             <dt>运行模式</dt>
             <dd>
               <span

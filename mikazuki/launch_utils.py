@@ -20,12 +20,6 @@ def base_dir_path():
     return Path(__file__).parents[1].absolute()
 
 
-def check_frontend_build() -> None:
-    frontend_path = base_dir_path() / "frontend" / "dist"
-    if not os.path.exists(frontend_path):
-        log.warning("frontend/dist not found. Run frontend build before using the bundled WebUI.")
-
-
 def check_dirs(dirs: List):
     for d in dirs:
         if not os.path.exists(d):
@@ -257,8 +251,6 @@ def prepare_environment(
 
     if not os.environ.get("PATH"):
         os.environ["PATH"] = os.path.dirname(sys.executable)
-
-    check_frontend_build()
 
     check_dirs(["logs"])
 

@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
 from mikazuki.catalog import get_catalog_service
 from mikazuki.compiler import TrainDraft, compile_draft
+from mikazuki.frontend_release import release_version_payload
 from mikazuki.jobs import get_job_runner, get_job_store
 from mikazuki.jobs.logs import read_log_from, tail_log
 from mikazuki.jobs.metrics import get_job_metrics_service, parse_tag_filter
@@ -34,9 +35,10 @@ router = APIRouter()
 
 @router.get("/health")
 async def health():
+    release = release_version_payload()
     return {
         "status": "ok",
-        "version": "2.0.0-dev",
+        **release,
         "python": platform.python_version(),
         "devMode": os.environ.get("MIKAZUKI_DEV", "0") == "1",
     }

@@ -78,6 +78,9 @@ git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 运行 `run_gui.ps1`，程序将自动打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)
 
+执行 `git pull` 后，启动器会在需要时自动获取与当前代码版本匹配的前端。默认使用 GitHub
+Release，也可切换 Jihulab 国内源或静态镜像。详见[前端版本与分发说明](docs/frontend-releases.md)。
+
 ### Linux
 
 #### 安装
@@ -190,3 +193,7 @@ source venv/bin/activate
 | `--skip-prepare-onnxruntime` | bool  | false        | 跳过 ONNX Runtime 准备                          |
 | `--disable-auto-mirror`      | bool  | false        | 禁用自动软件源镜像选择                          |
 | `--dev`                      | bool  | false        | 启用开发模式和自动重载                          |
+| `--frontend-source`          | str   | github       | 前端源：github、jihulab/cn、static、auto 或 off |
+| `--frontend-static-base-url` | str   | —            | 静态前端制品镜像的根地址                        |
+| `--skip-frontend-download`   | bool  | false        | 跳过前端自动下载                                |
+| `--force-frontend-download`  | bool  | false        | 强制下载并重新安装匹配前端                      |

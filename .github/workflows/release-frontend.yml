@@ -1,0 +1,80 @@
+name: Release frontend
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10.26.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm run build
+
+      - name: Package frontend
+        run: >-
+          python -m mikazuki.scripts.package_frontend_release
+          --output release
+          --expected-tag "${{ github.ref_name }}"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          release_args=(--verify-tag --generate-notes)
+          channel="$(python -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["channel"])')"
+          if [[ "$channel" != "stable" ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "${{ github.ref_name }}" \
+            release/frontend-dist.zip \
+            release/frontend-dist.zip.sha256 \
+            "${release_args[@]}"
+
+      - name: Publish Jihulab generic package
+        env:
+          JIHULAB_PROJECT_ID: ${{ vars.JIHULAB_PROJECT_ID }}
+          JIHULAB_PACKAGE: ${{ vars.JIHULAB_FRONTEND_PACKAGE }}
+          JIHULAB_TOKEN: ${{ secrets.JIHULAB_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -z "$JIHULAB_PROJECT_ID" || -z "$JIHULAB_TOKEN" ]]; then
+            echo "Jihulab variables are not configured; skipping CN package upload."
+            exit 0
+          fi
+
+          package="${JIHULAB_PACKAGE:-lora-scripts-frontend}"
+          version="$(python -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["frontend"]["version"])')"
+          endpoint="https://jihulab.com/api/v4/projects/${JIHULAB_PROJECT_ID}/packages/generic/${package}/${version}"
+
+          for file in release/frontend-dist.zip release/frontend-dist.zip.sha256; do
+            curl --fail-with-body --location --retry 3 \
+              --header "PRIVATE-TOKEN: ${JIHULAB_TOKEN}" \
+              --upload-file "$file" \
+              "${endpoint}/$(basename "$file")"
+          done

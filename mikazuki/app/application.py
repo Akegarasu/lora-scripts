@@ -3,7 +3,6 @@ import os
 import sys
 import webbrowser
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,10 +13,12 @@ from starlette.exceptions import HTTPException
 from mikazuki.app.api_v2 import router as api_v2_router
 from mikazuki.app.caption_api import router as caption_api_router
 from mikazuki.app.tag_editor_api import router as tag_editor_api_router
+from mikazuki.storage.paths import app_root
 
 mimetypes.add_type("application/javascript", ".js")
 mimetypes.add_type("text/css", ".css")
-FRONTEND_DIST = Path("frontend/dist")
+FRONTEND_DIST = app_root() / "frontend" / "dist"
+FAVICON = app_root() / "assets" / "favicon.ico"
 
 
 class SPAStaticFiles(StaticFiles):
@@ -81,7 +82,7 @@ async def index():
 
 @app.get("/favicon.ico", response_class=FileResponse)
 async def favicon():
-    return FileResponse("assets/favicon.ico")
+    return FileResponse(FAVICON)
 
 if FRONTEND_DIST.exists():
     app.mount("/", SPAStaticFiles(directory=str(FRONTEND_DIST), html=True), name="static")

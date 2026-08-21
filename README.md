@@ -79,6 +79,10 @@ If you are in China mainland, please use `install-cn.ps1`
 
 run `run_gui.ps1`, then program will open [http://127.0.0.1:28000](http://127.0.0.1:28000) automanticlly
 
+After a `git pull`, the launcher automatically obtains the matching frontend release when needed.
+GitHub Release is the default source; Jihulab and static mirrors are also supported. See
+[frontend versioning and distribution](docs/frontend-releases.md).
+
 ### Linux
 
 #### Installation
@@ -134,3 +138,7 @@ TensorBoard Web UI.
 | `--skip-prepare-onnxruntime`  | bool  | false         | Skip ONNX Runtime preparation                    |
 | `--disable-auto-mirror`       | bool  | false         | Disable automatic package mirror selection       |
 | `--dev`                       | bool  | false         | Enable development mode and auto reload          |
+| `--frontend-source`           | str   | github        | Frontend source: github, jihulab/cn, static, auto, or off |
+| `--frontend-static-base-url`  | str   | —             | Base URL for a static frontend artifact mirror   |
+| `--skip-frontend-download`    | bool  | false         | Skip automatic frontend download                 |
+| `--force-frontend-download`   | bool  | false         | Download and reinstall the matching frontend     |
