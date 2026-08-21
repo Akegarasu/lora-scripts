@@ -26,7 +26,7 @@ config/frontend-download.json
 !models/put stable diffusion model here.txt
 !logs/.keep
 
-tests/
+temp/
 
 huggingface/hub/models*
 huggingface/hub/version_diffusers_cache.txt
