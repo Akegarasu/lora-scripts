@@ -378,21 +378,13 @@ export function openJobEvents(jobId: string, handlers: JobEventHandlers): EventS
   source.onopen = () => handlers.onOpen?.()
 
   source.addEventListener('log', (event) => {
-    try {
-      const data = JSON.parse((event as MessageEvent).data)
-      if (typeof data.line === 'string') handlers.onLog?.(data.line)
-    } catch {
-      /* ignore malformed frame */
-    }
+    const data = parseEventFrame<{ line?: string }>(event)
+    if (typeof data?.line === 'string') handlers.onLog?.(data.line)
   })
 
   source.addEventListener('state', (event) => {
-    try {
-      const data = JSON.parse((event as MessageEvent).data) as JobRecord
-      handlers.onState?.(data)
-    } catch {
-      /* ignore malformed frame */
-    }
+    const data = parseEventFrame<JobRecord>(event)
+    if (data) handlers.onState?.(data)
   })
 
   source.onerror = (event) => handlers.onError?.(event)
@@ -408,7 +400,7 @@ export interface JobMetricEventHandlers {
   onError?: (event: Event) => void
 }
 
-function parseMetricFrame<T>(event: Event): T | null {
+function parseEventFrame<T>(event: Event): T | null {
   const raw = (event as MessageEvent).data
   if (typeof raw !== 'string' || !raw.trim()) return null
   try {
@@ -438,20 +430,20 @@ export function openJobMetricEvents(
 
   source.onopen = () => handlers.onOpen?.()
   source.addEventListener('snapshot', (event) => {
-    const payload = parseMetricFrame<JobMetricsResponse>(event)
+    const payload = parseEventFrame<JobMetricsResponse>(event)
     if (payload) handlers.onSnapshot?.(payload)
   })
   source.addEventListener('metric', (event) => {
-    const payload = parseMetricFrame<JobMetricBatch>(event)
+    const payload = parseEventFrame<JobMetricBatch>(event)
     if (payload) handlers.onMetric?.(payload)
   })
   source.addEventListener('state', (event) => {
-    const payload = parseMetricFrame<JobMetricStateEvent>(event)
+    const payload = parseEventFrame<JobMetricStateEvent>(event)
     if (payload) handlers.onState?.(payload)
   })
   source.addEventListener('heartbeat', () => handlers.onHeartbeat?.())
   source.onmessage = (event) => {
-    const payload = parseMetricFrame<JobMetricBatch>(event)
+    const payload = parseEventFrame<JobMetricBatch>(event)
     if (payload) handlers.onMetric?.(payload)
   }
   source.onerror = (event) => handlers.onError?.(event)
@@ -464,16 +456,6 @@ export interface CaptionJobEventHandlers {
   onState?: (job: CaptionJobSummary) => void
   onHeartbeat?: () => void
   onError?: (event: Event) => void
-}
-
-function parseCaptionFrame(event: Event): CaptionJobSummary | null {
-  const raw = (event as MessageEvent).data
-  if (typeof raw !== 'string' || !raw.trim()) return null
-  try {
-    return JSON.parse(raw) as CaptionJobSummary
-  } catch {
-    return null
-  }
 }
 
 /** Open the resumable Caption task progress stream. */
@@ -490,11 +472,11 @@ export function openCaptionJobEvents(
   )
   source.onopen = () => handlers.onOpen?.()
   source.addEventListener('progress', (event) => {
-    const job = parseCaptionFrame(event)
+    const job = parseEventFrame<CaptionJobSummary>(event)
     if (job) handlers.onProgress?.(job)
   })
   source.addEventListener('state', (event) => {
-    const job = parseCaptionFrame(event)
+    const job = parseEventFrame<CaptionJobSummary>(event)
     if (job) handlers.onState?.(job)
   })
   source.addEventListener('heartbeat', () => handlers.onHeartbeat?.())

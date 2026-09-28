@@ -189,6 +189,27 @@ class CaptionApiTests(unittest.IsolatedAsyncioTestCase):
                 )
         self.assertEqual(raised.exception.status_code, 400)
 
+    async def test_job_thumbnail_rejects_oversized_images_with_bad_request(self) -> None:
+        with (
+            patch("mikazuki.app.caption_api.get_caption_store", return_value=self.store),
+            patch("PIL.Image.MAX_IMAGE_PIXELS", 1),
+        ):
+            with self.assertRaises(HTTPException) as raised:
+                await caption_api.get_caption_job_item_thumbnail("caption_api", "item_api", size=128)
+        self.assertEqual(raised.exception.status_code, 400)
+
+    async def test_terminal_job_events_emit_progress_state_and_disable_buffering(self) -> None:
+        with patch("mikazuki.app.caption_api.get_caption_store", return_value=self.store):
+            response = await caption_api.get_caption_job_events(
+                "caption_api", after=0, last_event_id="invalid"
+            )
+            chunks = [chunk async for chunk in response.body_iterator]
+        self.assertEqual(len(chunks), 2)
+        self.assertTrue(chunks[0].startswith("id: 1\nevent: progress\ndata: "))
+        self.assertTrue(chunks[1].startswith("event: state\ndata: "))
+        self.assertIn('"state": "awaiting_review"', chunks[0])
+        self.assertEqual(response.headers["X-Accel-Buffering"], "no")
+
 
 if __name__ == "__main__":
     unittest.main()

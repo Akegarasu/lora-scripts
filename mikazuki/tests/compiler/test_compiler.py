@@ -68,6 +68,67 @@ class CompilerParameterChainTests(unittest.TestCase):
                 self.assertEqual(values["learning_rate"], learning_rate)
                 self.assertNotEqual(values["learning_rate"], 0)
 
+    def test_large_integer_seed_survives_toml_serialization(self) -> None:
+        seed = 2**53 + 1
+        for value in (seed, str(seed), f"{seed}.0", f"{seed}e0"):
+            with self.subTest(value=value):
+                result = compile_draft(
+                    make_draft(params={"seed": value}),
+                    persist=False,
+                    validate_paths=False,
+                )
+
+                self.assertEqual(result.errors, [])
+                self.assertEqual(flatten_toml(result.trainConfig or "")["seed"], seed)
+
+    def test_integral_decimal_and_scientific_seed_remain_supported(self) -> None:
+        for value, expected in (("1.0", 1), ("1e3", 1000)):
+            with self.subTest(value=value):
+                result = compile_draft(
+                    make_draft(params={"seed": value}),
+                    persist=False,
+                    validate_paths=False,
+                )
+
+                self.assertEqual(result.errors, [])
+                self.assertEqual(flatten_toml(result.trainConfig or "")["seed"], expected)
+
+    def test_fractional_or_non_finite_seed_strings_are_rejected(self) -> None:
+        for value in (
+            "1.5", "1.1e0", "9007199254740993.1", "nan", "inf",
+            "1e99999999999", "-1e99999999999",
+        ):
+            with self.subTest(value=value):
+                result = compile_draft(
+                    make_draft(params={"seed": value}),
+                    persist=False,
+                    validate_paths=False,
+                )
+
+                self.assertTrue(any(
+                    error.code == "param.invalid" and error.field == "params.seed"
+                    for error in result.errors
+                ))
+
+    def test_non_finite_parameters_are_rejected_before_persisting(self) -> None:
+        for name in ("learning_rate", "lr_warmup_steps"):
+            for value in ("nan", "inf", "-inf"):
+                with self.subTest(name=name, value=value):
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        root = Path(temp_dir)
+                        result = compile_draft(
+                            make_draft(params={name: value}),
+                            base_dir=root,
+                            validate_paths=False,
+                        )
+
+                        self.assertTrue(any(
+                            error.code == "param.invalid" and error.field == f"params.{name}"
+                            for error in result.errors
+                        ))
+                        self.assertIsNone(result.runId)
+                        self.assertFalse((root / "config" / "runs").exists())
+
     def test_hard_parser_choice_still_rejects_an_unknown_value(self) -> None:
         result = compile_draft(
             make_draft(params={"mixed_precision": "float16"}),

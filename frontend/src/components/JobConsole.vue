@@ -28,6 +28,7 @@ const visibleLines = computed(() => {
   return props.lines.filter((line) => line.toLocaleLowerCase().includes(normalizedQuery.value))
 })
 const isFiltered = computed(() => normalizedQuery.value.length > 0)
+const visibleText = computed(() => visibleLines.value.join('\n'))
 const effectiveStatus = computed<JobStreamStatus>(
   () => props.connectionStatus || (props.streaming ? 'live' : 'ended'),
 )
@@ -76,7 +77,7 @@ function clearFilter() {
 async function copyVisibleLogs() {
   if (visibleLines.value.length === 0) return
   try {
-    await navigator.clipboard.writeText(visibleLines.value.join('\n'))
+    await navigator.clipboard.writeText(visibleText.value)
     ElMessage.success(isFiltered.value ? `已复制 ${visibleLines.value.length} 行筛选结果` : '日志已复制')
   } catch {
     ElMessage.error('复制失败，请检查浏览器的剪贴板权限')
@@ -84,19 +85,14 @@ async function copyVisibleLogs() {
 }
 
 watch(
-  () => props.lines.length,
+  visibleText,
   async () => {
     if (!follow.value) return
     await nextTick()
     scrollToBottom()
   },
+  { immediate: true },
 )
-
-watch(query, async () => {
-  if (!follow.value) return
-  await nextTick()
-  scrollToBottom()
-})
 </script>
 
 <template>
@@ -204,7 +200,7 @@ watch(query, async () => {
         <span>换一个关键词，或清除当前筛选。</span>
         <el-button class="empty-action" size="small" text @click="clearFilter">清除筛选</el-button>
       </div>
-      <pre v-else class="console-text">{{ visibleLines.join('\n') }}</pre>
+      <pre v-else class="console-text">{{ visibleText }}</pre>
     </div>
   </div>
 </template>

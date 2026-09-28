@@ -48,6 +48,7 @@ export const useJobsStore = defineStore('jobs', {
   actions: {
     async loadJobs(options: { silent?: boolean } = {}) {
       const silent = options.silent ?? false
+      const version = selectionVersion
       if (!silent) {
         this.loading = true
         this.error = ''
@@ -57,6 +58,7 @@ export const useJobsStore = defineStore('jobs', {
         const data = await apiClient.listJobs()
         this.jobs = data.jobs
         this.lastListLoadedAt = eventTimestamp()
+        if (version !== selectionVersion) return
         if (!this.selectedJobId && data.jobs.length > 0) {
           await this.selectJob(data.jobs[0].id)
           return
@@ -65,7 +67,6 @@ export const useJobsStore = defineStore('jobs', {
         const selectedJob = data.jobs.find((job) => job.id === this.selectedJobId)
         if (selectedJob) this.selectedJob = selectedJob
         if (selectedJob && isTerminal(selectedJob.state) && this.streamStatus !== 'ended') {
-          this.selectedJob = selectedJob
           this.disconnect('ended')
           this.streamError = ''
           void this.loadStaticLogs(selectedJob.id)
@@ -84,7 +85,6 @@ export const useJobsStore = defineStore('jobs', {
 
     async selectJob(jobId: string) {
       if (!jobId) {
-        selectionVersion += 1
         this.disconnect('disconnected')
         this.selectedJobId = ''
         this.selectedJob = null
@@ -108,8 +108,9 @@ export const useJobsStore = defineStore('jobs', {
       }
 
       this.disconnect('disconnected')
-      const currentSelectionVersion = ++selectionVersion
+      const currentSelectionVersion = selectionVersion
       this.selectedJobId = jobId
+      this.selectedJob = null
       this.logLines = []
       this.error = ''
       this.lastEventAt = ''
@@ -135,11 +136,12 @@ export const useJobsStore = defineStore('jobs', {
     },
 
     async loadStaticLogs(jobId: string) {
+      const version = selectionVersion
       try {
         const logs = await apiClient.getJobLogs(jobId, MAX_STATIC_LOG_TAIL)
-        if (this.selectedJobId === jobId) this.logLines = logs.lines
+        if (version === selectionVersion && this.selectedJobId === jobId) this.logLines = logs.lines
       } catch (error) {
-        if (this.selectedJobId === jobId) {
+        if (version === selectionVersion && this.selectedJobId === jobId) {
           this.error = error instanceof Error ? error.message : String(error)
         }
       }
@@ -177,10 +179,10 @@ export const useJobsStore = defineStore('jobs', {
             this.patchJob(job)
             this.selectedJob = job
             if (isTerminal(job.state)) {
-              // Reconcile against the authoritative log, then close the stream.
+              // Close the stream before loading the authoritative log snapshot.
               // A terminal stream is complete, not disconnected.
-              void this.loadStaticLogs(jobId)
               this.disconnect('ended')
+              void this.loadStaticLogs(jobId)
               this.streamError = ''
               return
             }
@@ -209,6 +211,7 @@ export const useJobsStore = defineStore('jobs', {
     },
 
     disconnect(status?: JobStreamStatus) {
+      selectionVersion += 1
       if (activeEvents) {
         activeEvents.close()
         activeEvents = null
@@ -222,8 +225,8 @@ export const useJobsStore = defineStore('jobs', {
       const jobId = this.selectedJobId
       if (!jobId) return
 
-      const reconnectVersion = ++selectionVersion
       this.disconnect()
+      const reconnectVersion = selectionVersion
       this.streamStatus = 'connecting'
       this.streamError = ''
 

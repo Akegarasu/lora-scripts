@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from PIL import Image, ImageOps
 
 from .adapters import get_caption_model_manager
+from .datasets import _read_caption_bytes
 from .store import CaptionStore
 from .writer import (
     CaptionWriteConflict,
@@ -238,6 +239,7 @@ def _save_prediction(
     if not generated:
         raise RuntimeError("模型返回了空 Caption")
 
+    _validate_merge_source(row, source_root, request.output.conflictPolicy)
     final_text, should_write = merge_caption(
         row.existing_text,
         generated,
@@ -338,6 +340,7 @@ def commit_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
             final_text = row.final_text
             should_write = True
             if not row.edited:
+                _validate_merge_source(row, source_root, policy)
                 final_text, should_write = merge_caption(
                     row.existing_text,
                     row.generated_text,
@@ -394,6 +397,32 @@ def commit_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
         final_state = "succeeded"
         message = "已安全写入所选 Caption。"
     store.update_job(job_id, state=final_state, endedAt=_now(), message=message)
+
+
+def _validate_merge_source(row: Any, source_root: Path, policy: str) -> None:
+    # An undecodable caption has an empty text snapshot but nonempty bytes.
+    # Policies that retain existing content must not mistake that for empty.
+    fingerprint = _json_value(row.existing_fingerprint)
+    if (
+        policy not in {"append", "prepend", "fill_empty"}
+        or row.existing_text
+        or not fingerprint
+        or not fingerprint.get("size")
+    ):
+        return
+    caption_path = Path(row.caption_path).resolve()
+    try:
+        caption_path.relative_to(source_root.resolve())
+    except ValueError as exc:
+        raise CaptionWriteConflict("Caption 输出路径已离开获准的数据集目录。") from exc
+    content = _read_caption_bytes(caption_path)
+    if content is not None:
+        try:
+            content.decode("utf-8-sig")
+        except UnicodeError as exc:
+            raise CaptionWriteConflict(
+                "现有 Caption 不是有效的 UTF-8，请先手动修复或明确选择覆盖策略。"
+            ) from exc
 
 
 def _validated_image_path(path: Path, source_root: Path) -> Path:

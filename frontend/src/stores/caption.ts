@@ -295,7 +295,7 @@ export const useCaptionStore = defineStore('caption', {
 
     async selectJob(jobId: string) {
       this.stopObservation('idle')
-      const version = ++observationVersion
+      const version = observationVersion
       this.currentJobId = jobId
       this.currentJob = null
       this.currentItems = []
@@ -304,10 +304,6 @@ export const useCaptionStore = defineStore('caption', {
       this.currentItemsQuery = ''
       this.currentItemsState = ''
       currentItemsRequestVersion += 1
-      if (resultRefreshTimer !== undefined) {
-        window.clearTimeout(resultRefreshTimer)
-        resultRefreshTimer = undefined
-      }
       lastResultRefreshAt = 0
       this.currentLogs = []
       this.currentLogsCursor = 0
@@ -327,6 +323,7 @@ export const useCaptionStore = defineStore('caption', {
         this.currentJob = job
         this.patchJob(job)
         refreshedItemsRevision = job.revision
+        this.currentLoading = false
         if (isTerminal(job.state)) {
           this.streamStatus = 'ended'
         } else {
@@ -420,18 +417,19 @@ export const useCaptionStore = defineStore('caption', {
 
     async refreshCurrentJob(options: { silent?: boolean } = {}) {
       const jobId = this.currentJobId
+      const version = observationVersion
       if (!jobId) return null
       if (!options.silent) this.currentLoading = true
       this.currentError = ''
       try {
         const job = await apiClient.getCaptionJob(jobId)
-        if (this.currentJobId !== jobId) return null
+        if (version !== observationVersion || this.currentJobId !== jobId) return null
         this.patchJob(job)
         await Promise.all([
           this.loadCurrentItems({ offset: this.currentItemsOffset, silent: true }),
           this.loadCurrentLogs({ silent: true }),
         ])
-        if (isTerminal(job.state)) this.stopObservation('ended')
+        if (version === observationVersion && isTerminal(job.state)) this.stopObservation('ended')
         return job
       } catch (error) {
         if (this.currentJobId === jobId) this.currentError = message(error)
@@ -479,6 +477,8 @@ export const useCaptionStore = defineStore('caption', {
 
     connect(jobId: string) {
       this.stopObservation('connecting')
+      const version = observationVersion
+      const isCurrent = () => version === observationVersion && this.currentJobId === jobId
       if (typeof EventSource === 'undefined') {
         this.startPolling(jobId, '浏览器不支持实时事件，已切换为轮询。')
         return
@@ -488,20 +488,22 @@ export const useCaptionStore = defineStore('caption', {
       try {
         activeEvents = openCaptionJobEvents(jobId, this.currentJob?.revision || 0, {
           onOpen: () => {
-            if (this.currentJobId !== jobId) return
+            if (!isCurrent()) return
             this.streamStatus = 'live'
             this.streamError = ''
             this.lastEventAt = nowIso()
           },
-          onProgress: (job) => this.ingestProgress(job),
+          onProgress: (job) => {
+            if (isCurrent()) this.ingestProgress(job)
+          },
           onState: (job) => {
-            if (job?.modelId) this.ingestProgress(job)
+            if (isCurrent() && job?.modelId) this.ingestProgress(job)
           },
           onHeartbeat: () => {
-            if (this.currentJobId === jobId) this.lastEventAt = nowIso()
+            if (isCurrent()) this.lastEventAt = nowIso()
           },
           onError: () => {
-            if (this.currentJobId !== jobId || isTerminal(this.currentJob?.state)) return
+            if (!isCurrent() || isTerminal(this.currentJob?.state)) return
             this.startPolling(jobId, '实时连接已中断，正在使用可靠轮询继续更新。')
           },
         })
@@ -511,37 +513,37 @@ export const useCaptionStore = defineStore('caption', {
     },
 
     startPolling(jobId: string, reason = '') {
-      if (activeEvents) {
-        activeEvents.close()
-        activeEvents = null
-      }
-      if (pollTimer !== undefined) window.clearInterval(pollTimer)
-      this.streamStatus = 'polling'
+      this.stopObservation('polling')
+      const version = observationVersion
+      const isCurrent = () => version === observationVersion && this.currentJobId === jobId
       this.streamError = reason
 
       const poll = async () => {
-        if (this.currentJobId !== jobId) return
+        if (!isCurrent()) return
         try {
           const job = await apiClient.getCaptionJob(jobId)
-          if (this.currentJobId !== jobId) return
+          if (!isCurrent()) return
           this.ingestProgress(job)
         } catch (error) {
-          if (this.currentJobId !== jobId) return
+          if (!isCurrent()) return
           this.streamStatus = 'error'
           this.streamError = `轮询失败：${message(error)}`
+        } finally {
+          if (isCurrent()) pollTimer = window.setTimeout(() => void poll(), POLL_INTERVAL)
         }
       }
       void poll()
-      pollTimer = window.setInterval(poll, POLL_INTERVAL)
     },
 
     stopObservation(status: CaptionStreamStatus = 'idle') {
+      observationVersion += 1
+      this.currentLoading = false
       if (activeEvents) {
         activeEvents.close()
         activeEvents = null
       }
       if (pollTimer !== undefined) {
-        window.clearInterval(pollTimer)
+        window.clearTimeout(pollTimer)
         pollTimer = undefined
       }
       if (resultRefreshTimer !== undefined) {
@@ -571,12 +573,15 @@ export const useCaptionStore = defineStore('caption', {
     async commitCurrentJob(request: CaptionCommitRequest) {
       if (!this.currentJobId) return null
       const jobId = this.currentJobId
+      const version = observationVersion
       this.committing = true
       this.currentError = ''
       try {
         const job = await apiClient.commitCaptionJob(jobId, request)
         this.patchJob(job)
-        if (!isTerminal(job.state)) this.connect(jobId)
+        if (version === observationVersion && this.currentJobId === jobId && !isTerminal(job.state)) {
+          this.connect(jobId)
+        }
         return job
       } catch (error) {
         this.currentError = message(error)
@@ -588,12 +593,16 @@ export const useCaptionStore = defineStore('caption', {
 
     async cancelCurrentJob() {
       if (!this.currentJobId) return null
+      const jobId = this.currentJobId
+      const version = observationVersion
       this.canceling = true
       this.currentError = ''
       try {
-        const job = await apiClient.cancelCaptionJob(this.currentJobId)
+        const job = await apiClient.cancelCaptionJob(jobId)
         this.patchJob(job)
-        if (isTerminal(job.state)) this.stopObservation('ended')
+        if (version === observationVersion && this.currentJobId === jobId && isTerminal(job.state)) {
+          this.stopObservation('ended')
+        }
         return job
       } catch (error) {
         this.currentError = message(error)

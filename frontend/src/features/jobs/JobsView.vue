@@ -108,6 +108,7 @@ let listTimer: number | undefined
 let clockTimer: number | undefined
 let suppressNextRouteDetailFocus = false
 let observedMetricJobId = ''
+let disposed = false
 
 const selected = computed(() => jobs.selectedJobFromList)
 const canTerminate = computed(
@@ -419,13 +420,16 @@ onMounted(async () => {
   // before the deep link is honoured.
   if (id) jobs.selectedJobId = id
   await jobs.loadJobs()
-  if (id) {
+  if (disposed) return
+  if (id && routeId() === id) {
     await jobs.selectJob(id)
+    if (disposed) return
     await focusDetailOnMobile(id)
-  } else if (jobs.selectedJobId && !window.matchMedia('(max-width: 900px)').matches) {
+  } else if (!routeId() && jobs.selectedJobId && !window.matchMedia('(max-width: 900px)').matches) {
     suppressNextRouteDetailFocus = true
     await router.replace({ name: 'jobs', params: { id: jobs.selectedJobId } })
   }
+  if (disposed) return
 
   // The list is polled only for summary changes; the selected job keeps using SSE.
   listTimer = window.setInterval(() => void jobs.loadJobs({ silent: true }), 5000)
@@ -435,6 +439,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  disposed = true
   if (listTimer !== undefined) window.clearInterval(listTimer)
   if (clockTimer !== undefined) window.clearInterval(clockTimer)
   jobs.disconnect()
@@ -454,6 +459,7 @@ watch(
       return
     }
     if (id !== jobs.selectedJobId) await jobs.selectJob(id)
+    if (disposed || routeId() !== id) return
     const job = selected.value
     if (job?.id === id && metrics.jobId !== id) {
       observedMetricJobId = id

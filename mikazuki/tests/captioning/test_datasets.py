@@ -236,10 +236,15 @@ class CaptionDatasetRegistryTests(unittest.TestCase):
         image = self.make_image("long.png")
         image.with_suffix(".txt").write_text("界" * 100_001, encoding="utf-8")
 
-        item = self.inspect().items[0]
+        inspected = self.inspect()
+        item = inspected.items[0]
 
         self.assertTrue(item.captionTruncated)
         self.assertEqual(len(item.captionText), 100_000)
+        self.assertEqual(
+            self.registry.get_record(inspected.dataset.id, item.id).existing_text,
+            "界" * 100_001,
+        )
 
     def test_manual_save_can_repair_invalid_utf8_with_backup(self) -> None:
         image = self.make_image("repair.png")

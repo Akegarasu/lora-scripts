@@ -29,6 +29,7 @@ imagesize==1.4.1
 # for T5XXL tokenizer (SD3/FLUX)
 sentencepiece==0.2.1
 # for ui
+packaging>=20.0
 rich==14.1.0
 pandas
 scipy

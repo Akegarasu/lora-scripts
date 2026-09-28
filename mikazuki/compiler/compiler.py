@@ -1,7 +1,9 @@
 import json
+import math
 import secrets
 import sys
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -470,7 +472,7 @@ def _normalize_param_value(
         if param.choices is not None and normalized != "" and not param.extra.get("allowCustomChoice"):
             normalized = _match_choice(normalized, param.choices)
         return normalized, _validate_numeric_bounds(param, normalized, field)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         return value, ValidationMessage(
             severity="error",
             code="param.invalid",
@@ -485,6 +487,22 @@ def _cast_scalar(param_type: str, value: Any) -> Any:
     if param_type == "integer":
         if isinstance(value, bool):
             raise ValueError("需要整数")
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                number = Decimal(value)
+            except InvalidOperation as exc:
+                raise ValueError("需要整数") from exc
+            # Preserve exact digits while rejecting exponents the previous
+            # float parser could not represent, before allocating an integer.
+            if (
+                not number.is_finite()
+                or not math.isfinite(float(number))
+                or number != number.to_integral_value()
+            ):
+                raise ValueError("需要整数")
+            return int(number)
         number = float(value)
         if not number.is_integer():
             raise ValueError("需要整数")
@@ -539,6 +557,13 @@ def _validate_numeric_bounds(
 ) -> Optional[ValidationMessage]:
     values = value if isinstance(value, list) else [value]
     numeric_values = [item for item in values if isinstance(item, (int, float)) and not isinstance(item, bool)]
+    if any(isinstance(item, float) and not math.isfinite(item) for item in numeric_values):
+        return ValidationMessage(
+            severity="error",
+            code="param.invalid",
+            field=field,
+            message=f"{param.label or param.name} 必须是有限数值。",
+        )
     if param.min is not None and any(item < param.min for item in numeric_values):
         return ValidationMessage(
             severity="error",

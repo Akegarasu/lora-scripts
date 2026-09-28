@@ -289,15 +289,13 @@ class TagEditorService:
                     stable_fingerprint = file_fingerprint(record.caption_path)
                     if record.caption_path.is_symlink() or stable_fingerprint != record.fingerprint:
                         raise TagEditorConflictError("Caption 已被外部修改")
-                    before = record.existing_text
+                    before = record.existing_text[:MAX_CAPTION_CHARS]
                 else:
                     before, stable_fingerprint = _stable_text(record)
             except TagEditorConflictError:
                 conflicts += 1
                 _add_preview_issue(issues, record, "Caption 已在扫描后被外部修改")
                 continue
-            if protected_source:
-                before = record.existing_text
             try:
                 after = _apply_operations(before, request.operations, compiled)
                 _validate_output_text(after)
@@ -760,8 +758,9 @@ class TagEditorService:
         *,
         detail: bool = False,
     ) -> TagEditorDatasetItem:
-        caption_text = record.existing_text if detail else record.existing_text[:MAX_LIST_CAPTION_CHARS]
-        tags = _split_tags(record.existing_text)
+        preview_text = record.existing_text[:MAX_CAPTION_CHARS]
+        caption_text = preview_text if detail else preview_text[:MAX_LIST_CAPTION_CHARS]
+        tags = _split_tags(preview_text)
         model = TagEditorItemDetail if detail else TagEditorDatasetItem
         return model(
             id=record.id,
@@ -801,7 +800,7 @@ class TagEditorService:
         }
         tags = Counter()
         for record in source.items.values():
-            tags.update(set(_split_tags(record.existing_text)))
+            tags.update(set(_split_tags(record.existing_text[:MAX_CAPTION_CHARS])))
         snapshot.tag_counts = dict(tags)
         snapshot.common_tags = sorted(
             tags.items(), key=lambda item: (-item[1], item[0].casefold(), item[0])
@@ -914,7 +913,7 @@ class TagEditorService:
                 content = record.caption_path.read_bytes()
                 text = content.decode("utf-8-sig")
                 record.caption_exists = True
-                record.existing_text = text[:MAX_CAPTION_CHARS]
+                record.existing_text = text
                 record.caption_truncated = len(text) > MAX_CAPTION_CHARS
                 record.fingerprint = file_fingerprint(record.caption_path)
                 if record.error_code == "caption.invalid":

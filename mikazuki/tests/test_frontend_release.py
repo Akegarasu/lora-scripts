@@ -259,6 +259,44 @@ class FrontendReleaseTests(unittest.TestCase):
         self.assertEqual((dist / "index.html").read_text(encoding="utf-8"), "old frontend")
         self.assertEqual(load_frontend_build_info(dist).frontend_version, "2.0.0")
 
+    def test_malformed_checksum_can_fall_back_to_another_provider(self) -> None:
+        for content in (b"sha256:", b"\xff"):
+            with self.subTest(content=content):
+                self.write_dist("2.0.0")
+                archive, checksum = self.make_artifact()
+                malformed = self.root / "malformed.sha256"
+                malformed.write_bytes(content)
+                first = _FixedProvider(archive, malformed)
+                first.name = "first"
+                second = _FixedProvider(archive, checksum)
+                second.name = "second"
+
+                result = ensure_frontend_release(self.root, providers=[first, second])
+
+                self.assertEqual(result.source, "second")
+
+    def test_corrupt_zip_entry_preserves_previous_frontend(self) -> None:
+        dist = self.write_dist("2.0.0", marker="old frontend")
+        archive, checksum = self.make_artifact()
+        data = bytearray(archive.read_bytes())
+        # Corrupt the first entry's CRC in its central-directory header while
+        # keeping the downloaded archive's own SHA-256 valid.
+        header = data.index(b"PK\x01\x02")
+        data[header + 16] ^= 0xff
+        archive.write_bytes(data)
+        checksum.write_text(hashlib.sha256(data).hexdigest(), encoding="utf-8")
+
+        with self.assertRaises(FrontendDownloadError):
+            ensure_frontend_release(self.root, providers=[_FixedProvider(archive, checksum)])
+
+        self.assertEqual((dist / "index.html").read_text(encoding="utf-8"), "old frontend")
+
+    def test_invalid_build_info_encoding_is_treated_as_missing(self) -> None:
+        dist = self.write_dist("2.1.0")
+        (dist / "build-info.json").write_bytes(b"\xff")
+
+        self.assertIsNone(load_frontend_build_info(dist))
+
     def test_unsafe_zip_path_is_rejected_without_touching_previous_frontend(self) -> None:
         dist = self.write_dist("2.0.0", marker="old frontend")
         entries = {

@@ -5,7 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 from typing import Any, Dict, Optional
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from mikazuki.catalog.models import TrainerDefinition
 from mikazuki.compiler.compiler import _build_command
@@ -225,14 +225,17 @@ class RunnerStartChainTests(unittest.TestCase):
 
         class FakeProcess:
             pid = 12345
-            stdout = iter(["training started\n", "training finished\n"])
 
             def wait(self) -> int:
                 return 0
 
+        def launch(*args, **kwargs):
+            kwargs["stdout"].write("training started\ntraining finished\n")
+            return FakeProcess()
+
         with tempfile.TemporaryDirectory() as temp_dir:
             log_path = Path(temp_dir) / "job.log"
-            with patch("mikazuki.jobs.runner.subprocess.Popen", return_value=FakeProcess()) as popen:
+            with patch("mikazuki.jobs.runner.subprocess.Popen", side_effect=launch) as popen:
                 self.runner._run_sync(job.id, job.command, {}, log_path)
 
             popen.assert_called_once()
@@ -245,6 +248,32 @@ class RunnerStartChainTests(unittest.TestCase):
         self.assertEqual(finished.exitCode, 0)
         self.assertIsNotNone(finished.startedAt)
         self.assertIsNotNone(finished.endedAt)
+
+    def test_worker_exception_stops_process_before_releasing_gpu(self) -> None:
+        job = make_job(job_id="job_wait_failure")
+        self.store.create_job(job)
+        process = Mock(pid=12345)
+        process.wait.side_effect = [OSError("process wait failed"), -9]
+        process.poll.return_value = None
+
+        def stop_process(*args, **kwargs):
+            self.assertFalse(self.runner._slot.acquire(blocking=False))
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with (
+                patch("mikazuki.jobs.runner.subprocess.Popen", return_value=process),
+                patch("mikazuki.jobs.runner.kill_proc_tree", side_effect=stop_process) as kill,
+            ):
+                self.runner._run_sync(job.id, job.command, {}, Path(temp_dir) / "job.log")
+
+        kill.assert_called_once_with(process.pid, including_parent=True)
+        self.assertEqual(process.wait.call_count, 2)
+        finished = self.store.get_job(job.id)
+        self.assertEqual(finished.state, "failed")
+        self.assertIn("process wait failed", finished.errorMessage)
+        self.assertNotIn(job.id, self.runner._processes)
+        self.assertTrue(self.runner._slot.acquire(blocking=False))
+        self.runner._slot.release()
 
 
 if __name__ == "__main__":

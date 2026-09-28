@@ -183,7 +183,7 @@ def load_release_info(path: Optional[Path] = None) -> ReleaseInfo:
     metadata_path = Path(path) if path is not None else project_root() / "version.json"
     try:
         payload = json.loads(metadata_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as error:
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
         raise FrontendReleaseConfigError(f"无法读取版本信息 {metadata_path}: {error}") from error
     if not isinstance(payload, dict):
         raise FrontendReleaseConfigError("version.json 顶层必须是对象")
@@ -230,7 +230,7 @@ def load_frontend_build_info(frontend_dir: Path) -> Optional[FrontendBuildInfo]:
     path = Path(frontend_dir) / BUILD_INFO_FILE
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    except (OSError, UnicodeError, json.JSONDecodeError):
         return None
     if not isinstance(payload, dict):
         return None
@@ -285,7 +285,7 @@ def load_download_config(
     if config_path.exists():
         try:
             loaded = json.loads(config_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError) as error:
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
             raise FrontendReleaseConfigError(f"无法读取下载源配置 {config_path}: {error}") from error
         if not isinstance(loaded, dict):
             raise FrontendReleaseConfigError("frontend-download.json 顶层必须是对象")
@@ -592,8 +592,11 @@ def _safe_extract_zip(archive: Path, destination: Path) -> Path:
                 target.mkdir(parents=True, exist_ok=True)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
-            with bundle.open(item) as source, target.open("wb") as output:
-                shutil.copyfileobj(source, output, length=1024 * 1024)
+            try:
+                with bundle.open(item) as source, target.open("wb") as output:
+                    shutil.copyfileobj(source, output, length=1024 * 1024)
+            except (OSError, zipfile.BadZipFile, RuntimeError, NotImplementedError) as error:
+                raise FrontendArchiveError(f"无法解压前端文件 {item.filename}：{error}") from error
 
     if (destination / "index.html").is_file():
         return destination
@@ -650,9 +653,10 @@ def _update_lock(path: Path) -> Iterator[None]:
 def _parse_sha256_file(path: Path) -> str:
     try:
         text = path.read_text(encoding="utf-8").strip()
-    except OSError as error:
+    except (OSError, UnicodeError) as error:
         raise FrontendDownloadError(f"无法读取 SHA-256 文件：{error}") from error
-    token = text.removeprefix("sha256:").split()[0] if text else ""
+    tokens = text.removeprefix("sha256:").split()
+    token = tokens[0] if tokens else ""
     if not SHA256_TOKEN.fullmatch(token):
         raise FrontendDownloadError("SHA-256 文件格式无效")
     return token.lower()

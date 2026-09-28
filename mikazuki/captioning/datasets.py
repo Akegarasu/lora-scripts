@@ -438,7 +438,7 @@ class CaptionDatasetRegistry:
             width=record.width,
             height=record.height,
             captionExists=record.caption_exists,
-            captionText=record.existing_text,
+            captionText=record.existing_text[:MAX_CAPTION_CHARS],
             captionTruncated=record.caption_truncated,
             writable=record.writable,
             error=record.error,
@@ -471,7 +471,7 @@ class CaptionDatasetRegistry:
     def _refresh_record_caption(self, record: CaptionDatasetRecord, content: bytes) -> None:
         text = content.decode("utf-8")
         record.caption_exists = True
-        record.existing_text = text[:MAX_CAPTION_CHARS]
+        record.existing_text = text
         record.caption_truncated = len(text) > MAX_CAPTION_CHARS
         record.fingerprint = file_fingerprint(record.caption_path)
         if record.error_code == "caption.invalid":
@@ -532,17 +532,14 @@ def _enumerate_images(
 def _read_caption(
     path: Path,
 ) -> tuple[str, bool, bool, Optional[Dict[str, object]]]:
-    if not path.exists():
+    content = _read_caption_bytes(path)
+    if content is None:
         return "", False, False, None
-    if not path.is_file():
-        raise OSError("caption path is not a regular file")
-
-    if path.stat().st_size > MAX_CAPTION_BYTES:
-        raise OSError(f"caption exceeds the {MAX_CAPTION_BYTES}-byte safety limit")
-    with path.open("r", encoding="utf-8-sig", newline="") as handle:
-        text = handle.read(MAX_CAPTION_CHARS + 1)
+    # Keep the complete, byte-bounded source for append/prepend jobs. Only
+    # API previews are truncated; using a preview for a write loses data.
+    text = content.decode("utf-8-sig")
     truncated = len(text) > MAX_CAPTION_CHARS
-    return text[:MAX_CAPTION_CHARS], True, truncated, file_fingerprint(path)
+    return text, True, truncated, file_fingerprint(path)
 
 
 def _read_caption_bytes(path: Path) -> Optional[bytes]:
@@ -550,9 +547,11 @@ def _read_caption_bytes(path: Path) -> Optional[bytes]:
         return None
     if not path.is_file():
         raise OSError("caption path is not a regular file")
-    if path.stat().st_size > MAX_CAPTION_BYTES:
+    with path.open("rb") as handle:
+        content = handle.read(MAX_CAPTION_BYTES + 1)
+    if len(content) > MAX_CAPTION_BYTES:
         raise OSError(f"caption exceeds the {MAX_CAPTION_BYTES}-byte safety limit")
-    return path.read_bytes()
+    return content
 
 
 def _mark_caption_collisions(records: Iterable[CaptionDatasetRecord]) -> None:

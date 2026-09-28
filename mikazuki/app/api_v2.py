@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import platform
 import time
@@ -8,6 +7,11 @@ from typing import Optional
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 
+from mikazuki.app.events import (
+    SSE_HEADERS,
+    format_sse as _format_sse,
+    resolve_event_cursor as _resolve_metric_cursor,
+)
 from mikazuki.catalog import get_catalog_service
 from mikazuki.compiler import TrainDraft, compile_draft
 from mikazuki.frontend_release import release_version_payload
@@ -207,11 +211,7 @@ async def get_job_metric_events(
     return StreamingResponse(
         metric_event_stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=SSE_HEADERS,
     )
 
 
@@ -226,52 +226,22 @@ async def get_job_events(job_id: str):
         while True:
             job = get_job_store().get_job(job_id)
             if job is None:
-                yield "event: state\ndata: {\"state\":\"missing\"}\n\n"
+                yield _format_sse("state", {"state": "missing"})
                 break
 
             if job.state != last_state:
-                payload = json.dumps(job.dict(exclude_none=True), ensure_ascii=False)
-                yield f"event: state\ndata: {payload}\n\n"
+                yield _format_sse("state", job.dict(exclude_none=True))
                 last_state = job.state
 
             cursor, lines = read_log_from(job.logPath or "", cursor=cursor)
             for line in lines:
-                payload = json.dumps({"line": line, "cursor": cursor}, ensure_ascii=False)
-                yield f"event: log\ndata: {payload}\n\n"
+                yield _format_sse("log", {"line": line, "cursor": cursor})
 
             if job.state in TERMINAL_STATES:
                 break
             await asyncio.sleep(1)
 
-    return StreamingResponse(event_stream(), media_type="text/event-stream")
-
-
-def _resolve_metric_cursor(
-    cursor: Optional[int],
-    last_event_id: Optional[str],
-) -> int:
-    # EventSource retains the original query string when it reconnects but
-    # advances Last-Event-ID after every received metric frame. Prefer that
-    # header whenever it is valid to avoid replaying from the initial cursor.
-    if last_event_id is not None:
-        try:
-            resumed_cursor = int(last_event_id)
-            if resumed_cursor >= 0:
-                return resumed_cursor
-        except (TypeError, ValueError):
-            pass
-    if cursor is not None:
-        return max(0, cursor)
-    return 0
-
-
-def _format_sse(event: str, payload, *, event_id: Optional[int] = None) -> str:
-    parts = []
-    if event_id is not None:
-        parts.append(f"id: {event_id}")
-    parts.append(f"event: {event}")
-    parts.append(f"data: {json.dumps(payload, ensure_ascii=False, allow_nan=False)}")
-    return "\n".join(parts) + "\n\n"
+    return StreamingResponse(event_stream(), media_type="text/event-stream", headers=SSE_HEADERS)
 
 
 @router.post("/jobs/{job_id}/terminate")

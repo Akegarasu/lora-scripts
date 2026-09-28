@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import asyncio
 import io
-import json
 import time
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Header, HTTPException, Query
 from fastapi.responses import Response, StreamingResponse
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageOps
 
+from mikazuki.app.events import (
+    SSE_HEADERS,
+    format_sse as _sse,
+    resolve_event_cursor as _event_cursor,
+)
 from mikazuki.captioning.adapters import get_caption_model_manager
 from mikazuki.captioning.catalog import get_caption_model_catalog
 from mikazuki.captioning.datasets import (
@@ -189,7 +193,7 @@ async def get_caption_job_item_thumbnail(
             source_root,
             size,
         )
-    except (OSError, ValueError, UnidentifiedImageError) as exc:
+    except (OSError, ValueError, Image.DecompressionBombError) as exc:
         raise HTTPException(status_code=400, detail=f"无法读取缩略图：{exc}") from exc
     return Response(content=content, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=300"})
 
@@ -263,7 +267,7 @@ async def get_caption_job_events(
                 break
             if first or job.revision > current:
                 current = job.revision
-                payload = json.loads(job.json())
+                payload = job.dict()
                 yield _sse("progress", payload, event_id=current)
                 if job.state != last_state:
                     yield _sse("state", payload)
@@ -280,11 +284,7 @@ async def get_caption_job_events(
     return StreamingResponse(
         stream(),
         media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
+        headers=SSE_HEADERS,
     )
 
 
@@ -297,23 +297,3 @@ def _thumbnail_for_job_item(path: Path, source_root: Path, size: int) -> bytes:
         output = io.BytesIO()
         image.save(output, format="JPEG", quality=86, optimize=True)
         return output.getvalue()
-
-
-def _event_cursor(after: int, last_event_id: Optional[str]) -> int:
-    if last_event_id:
-        try:
-            value = int(last_event_id)
-            if value >= 0:
-                return value
-        except ValueError:
-            pass
-    return max(0, int(after))
-
-
-def _sse(event: str, payload, *, event_id: Optional[int] = None) -> str:
-    parts = []
-    if event_id is not None:
-        parts.append(f"id: {event_id}")
-    parts.append(f"event: {event}")
-    parts.append(f"data: {json.dumps(payload, ensure_ascii=False, allow_nan=False)}")
-    return "\n".join(parts) + "\n\n"

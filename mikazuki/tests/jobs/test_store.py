@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from mikazuki.jobs.models import JobRecord
 from mikazuki.jobs.store import JobStore
@@ -57,6 +58,38 @@ class JobStoreTests(unittest.TestCase):
 
         restarted_again = JobStore(self.root)
         self.assertEqual(restarted_again.get_job("job_run_persistence").state, "failed")
+
+    def test_corrupt_manifest_does_not_hide_valid_history(self) -> None:
+        store = JobStore(self.root)
+        store.create_job(_job(state="succeeded"))
+        corrupt_dir = self.root / "corrupt"
+        corrupt_dir.mkdir()
+        (corrupt_dir / "job.json").write_text("{broken", encoding="utf-8")
+
+        with self.assertLogs("sd-trainer", level="WARNING"):
+            restarted = JobStore(self.root)
+
+        self.assertEqual([job.id for job in restarted.list_jobs()], ["job_run_persistence"])
+        self.assertEqual((corrupt_dir / "job.json").read_text(encoding="utf-8"), "{broken")
+
+    def test_failed_create_does_not_leave_an_unpersisted_job(self) -> None:
+        store = JobStore(self.root)
+        with patch.object(store, "_persist_job", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                store.create_job(_job())
+
+        self.assertEqual(store.list_jobs(), [])
+
+    def test_failed_update_keeps_last_persisted_state(self) -> None:
+        store = JobStore(self.root)
+        job = _job(state="succeeded")
+        store.create_job(job)
+        with patch.object(store, "_persist_job", side_effect=OSError("disk full")):
+            with self.assertRaises(OSError):
+                store.update_job(job.id, state="failed")
+
+        self.assertEqual(store.get_job(job.id).state, "succeeded")
+        self.assertEqual(JobStore(self.root).get_job(job.id).state, "succeeded")
 
 
 if __name__ == "__main__":

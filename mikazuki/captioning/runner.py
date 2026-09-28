@@ -190,16 +190,17 @@ class CaptionRunner:
                 job_id,
                 state="failed",
                 endedAt=_now(),
-                message="Caption worker 启动失败。",
+                message="Caption worker 运行失败。",
                 errorMessage=str(error),
             )
 
     def _run_process(self, job_id: str, action: str, use_gpu: bool) -> None:
         acquired = False
+        process: Optional[subprocess.Popen] = None
         if use_gpu:
             acquired = self._gpu_lease.acquire(blocking=False)
             if not acquired:
-                self.store.update_job(job_id, state="queued", message="正在等待 GPU 资源…")
+                self.store.update_job(job_id, message="正在等待 GPU 资源…")
                 self._gpu_lease.acquire()
                 acquired = True
 
@@ -260,10 +261,15 @@ class CaptionRunner:
                     errorMessage=f"worker exit code: {exit_code}",
                 )
         finally:
-            with self._process_lock:
-                self._processes.pop(job_id, None)
-            if acquired:
-                self._gpu_lease.release()
+            try:
+                if process is not None and process.poll() is None:
+                    kill_proc_tree(process.pid, including_parent=True)
+                    process.wait()
+            finally:
+                with self._process_lock:
+                    self._processes.pop(job_id, None)
+                if acquired:
+                    self._gpu_lease.release()
 
     def _compact_direct_details(self, job_id: str) -> None:
         request = self.store.get_request(job_id)

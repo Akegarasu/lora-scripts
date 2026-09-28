@@ -59,6 +59,7 @@ let sectionObserver: IntersectionObserver | undefined
 let sectionScrollTarget: { id: string; expiresAt: number } | undefined
 let hydrationVersion = 0
 let manuallyRefreshingView = false
+let disposed = false
 
 const GROUP_META: Record<string, { description: string; icon: Component }> = {
   training: { description: '训练轮次、批次、精度与随机性。', icon: TrendCharts },
@@ -572,10 +573,12 @@ function onBeforeUnload() {
 
 onMounted(async () => {
   await catalog.loadTrainers()
+  if (disposed) return
   if (catalog.selectedTrainerId) {
     void devices.loadGpus()
     await loadTrainerDraft(catalog.selectedTrainerId)
   }
+  if (disposed) return
   initialized.value = true
   window.addEventListener('beforeunload', onBeforeUnload)
   window.addEventListener('keydown', onGlobalKeydown)
@@ -621,6 +624,8 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  disposed = true
+  hydrationVersion += 1
   if (saveTimer !== undefined) window.clearTimeout(saveTimer)
   if (sectionFrame !== undefined) window.cancelAnimationFrame(sectionFrame)
   if (catalog.selectedTrainerId) persistTrainerDraft(catalog.selectedTrainerId)

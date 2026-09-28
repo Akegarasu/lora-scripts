@@ -107,6 +107,7 @@ class JobRunner:
                 log_file.write(f"$ {' '.join(command)}\n")
                 log_file.flush()
 
+                process = None
                 try:
                     with self._process_lock:
                         if self._finish_if_not_startable(job_id):
@@ -116,20 +117,11 @@ class JobRunner:
                             command,
                             cwd=str(app_root()),
                             env=env,
-                            stdout=subprocess.PIPE,
+                            stdout=log_file,
                             stderr=subprocess.STDOUT,
-                            text=True,
-                            encoding="utf-8",
-                            errors="replace",
-                            bufsize=1,
                         )
                         self._processes[job_id] = process
                         self.store.update_job(job_id, state="running", startedAt=_now())
-
-                    assert process.stdout is not None
-                    for line in process.stdout:
-                        log_file.write(line)
-                        log_file.flush()
 
                     exit_code = process.wait()
                     current = self.store.get_job(job_id)
@@ -139,8 +131,15 @@ class JobRunner:
                         final_state = "succeeded" if exit_code == 0 else "failed"
                     self.store.update_job(job_id, state=final_state, endedAt=_now(), exitCode=exit_code)
                 except Exception as exc:
-                    self.store.update_job(job_id, state="failed", endedAt=_now(), errorMessage=str(exc))
-                    log_file.write(f"\n[runner] {exc}\n")
+                    error = str(exc)
+                    if process is not None and process.poll() is None:
+                        try:
+                            kill_proc_tree(process.pid, including_parent=True)
+                            process.wait()
+                        except Exception as cleanup_error:
+                            error = f"{error}; process cleanup failed: {cleanup_error}"
+                    self.store.update_job(job_id, state="failed", endedAt=_now(), errorMessage=error)
+                    log_file.write(f"\n[runner] {error}\n")
         finally:
             with self._process_lock:
                 self._processes.pop(job_id, None)

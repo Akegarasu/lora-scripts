@@ -4,9 +4,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from mikazuki.log import log
 from mikazuki.storage.paths import runs_dir
 
-from .models import JobRecord
+from .models import JobRecord, TERMINAL_STATES
 
 
 class JobStore:
@@ -25,8 +26,8 @@ class JobStore:
 
     def create_job(self, job: JobRecord) -> None:
         with self._lock:
-            self._jobs[job.id] = job
             self._persist_job(job)
+            self._jobs[job.id] = job
 
     def update_job(self, job_id: str, **fields: Any) -> Optional[JobRecord]:
         with self._lock:
@@ -36,8 +37,8 @@ class JobStore:
             data = job.dict()
             data.update(fields)
             updated = JobRecord(**data)
-            self._jobs[job_id] = updated
             self._persist_job(updated)
+            self._jobs[job_id] = updated
             return updated
 
     def get_job(self, job_id: str) -> Optional[JobRecord]:
@@ -55,8 +56,12 @@ class JobStore:
 
     def _load_jobs(self) -> None:
         for path in self.root.glob("*/job.json"):
-            job = JobRecord.parse_raw(path.read_text(encoding="utf-8"))
-            if job.state not in {"succeeded", "failed", "terminated", "canceled"}:
+            try:
+                job = JobRecord.parse_raw(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError) as exc:
+                log.warning("Unable to load job manifest %s: %s", path, exc)
+                continue
+            if job.state not in TERMINAL_STATES:
                 job = job.copy(
                     update={
                         "state": "failed",

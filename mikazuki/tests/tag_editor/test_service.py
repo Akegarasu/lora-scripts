@@ -254,6 +254,7 @@ class TagEditorServiceTests(unittest.TestCase):
 
         self.assertTrue(detail.sourceTruncated)
         self.assertEqual(len(detail.captionText), 100_000)
+        self.assertEqual(detail.tags, ["a" * 100_000])
         protected = self.preview(
             inspected,
             [item_id],

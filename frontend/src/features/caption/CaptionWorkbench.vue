@@ -106,6 +106,7 @@ const lastScanKey = ref('')
 const paramsByModel = ref<Record<string, Record<string, unknown>>>({})
 let previousModelId = ''
 let jobsTimer: number | undefined
+let disposed = false
 
 const routeJobId = computed(() => {
   const value = route.params.id
@@ -213,6 +214,7 @@ watch(routeJobId, (jobId) => {
 
 onMounted(async () => {
   await Promise.all([caption.loadModels(), caption.loadJobs()])
+  if (disposed) return
   const savedModelExists = caption.models.some((model) => model.id === draft.modelId)
   if (!savedModelExists) {
     draft.params = {}
@@ -237,10 +239,12 @@ onMounted(async () => {
   }
   previousModelId = draft.modelId
   if (showingJob.value && routeJobId.value) await caption.selectJob(routeJobId.value)
+  if (disposed) return
   jobsTimer = window.setInterval(() => void caption.loadJobs({ silent: true }), 10_000)
 })
 
 onBeforeUnmount(() => {
+  disposed = true
   caption.stopObservation('idle')
   if (jobsTimer !== undefined) window.clearInterval(jobsTimer)
 })

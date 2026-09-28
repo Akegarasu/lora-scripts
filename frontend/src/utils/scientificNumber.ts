@@ -40,6 +40,7 @@ function hasNonZeroSignificand(parts: DecimalParts) {
 function normalizedDecimal(raw: string): string | null {
   const parts = decimalParts(raw)
   if (!parts) return null
+  if (!hasNonZeroSignificand(parts)) return '0'
 
   const digits = `${parts.integer}${parts.fraction}`
   const decimalPosition = parts.integer.length + parts.exponent
@@ -57,7 +58,7 @@ function normalizedDecimal(raw: string): string | null {
   const integer = rawInteger.replace(/^0+(?=\d)/, '') || '0'
   const fraction = rawFraction.replace(/0+$/, '')
   const magnitude = fraction ? `${integer}.${fraction}` : integer
-  const sign = parts.negative && hasNonZeroSignificand(parts) ? '-' : ''
+  const sign = parts.negative ? '-' : ''
   return `${sign}${magnitude}`
 }
 

@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1 --port 8004",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1 --port 8004",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "vue-tsc --noEmit",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

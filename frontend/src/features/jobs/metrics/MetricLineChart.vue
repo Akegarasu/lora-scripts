@@ -8,7 +8,7 @@ import {
 } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import type { MetricGroupId, DisplayMetricSeries } from './useMetricCurves'
 
@@ -182,8 +182,7 @@ function scheduleRender() {
   })
 }
 
-onMounted(async () => {
-  await nextTick()
+onMounted(() => {
   renderChart()
   if (chartElement.value) {
     resizeObserver = new ResizeObserver(() => chart?.resize())
