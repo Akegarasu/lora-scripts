@@ -149,6 +149,75 @@ class CatalogIntegrationTests(unittest.TestCase):
             + ", ".join(missing),
         )
 
+    def test_recommended_view_focuses_on_training_controls_for_each_model(self) -> None:
+        for summary in self.catalog.list_trainers():
+            with self.subTest(trainer=summary.id):
+                names = {
+                    param["name"]
+                    for group in self.catalog.get_param_groups(summary.id, view="recommended")
+                    for param in group["params"]
+                }
+                self.assertTrue({
+                    "learning_rate", "max_train_steps", "max_train_epochs",
+                    "save_every_n_steps", "gradient_accumulation_steps",
+                    "gradient_checkpointing", "cache_latents",
+                }.issubset(names))
+                self.assertTrue({
+                    "network_module", "save_precision", "max_grad_norm",
+                    "model_prediction_type", "guidance_scale", "show_timesteps",
+                }.isdisjoint(names))
+                is_sd = summary.id in {"sd.lora", "sdxl.lora"}
+                for name in ("text_encoder_lr", "unet_lr", "min_snr_gamma"):
+                    self.assertEqual(name in names, is_sd, name)
+                self.assertEqual("no_half_vae" in names, summary.id == "sdxl.lora")
+                self.assertEqual(
+                    "fp8_base" in names,
+                    summary.id in {"flux.lora", "chroma.lora", "sd3.lora"},
+                )
+
+    def test_diagnostic_and_experimental_options_remain_opt_in(self) -> None:
+        for summary in self.catalog.list_trainers():
+            trainer = self.catalog.get_trainer(summary.id)
+            assert trainer is not None
+            with self.subTest(trainer=summary.id):
+                module = trainer.params["network_module"]
+                self.assertEqual(module.effectiveDefault, trainer.defaultNetworkModule)
+                self.assertFalse(module.required)
+                if "show_timesteps" in trainer.params:
+                    supports_preview = summary.id in {"flux.lora", "chroma.lora", "anima.lora"}
+                    self.assertEqual(
+                        trainer.params["show_timesteps"].priority,
+                        "dangerous" if supports_preview else "hidden",
+                    )
+                    for name in ("show_timesteps", "show_timesteps_resolution", "show_timesteps_offset"):
+                        self.assertEqual(trainer.params[name].hidden, not supports_preview)
+                        self.assertIsNone(trainer.params[name].effectiveDefault)
+
+        anima = self.catalog.get_trainer("anima.lora")
+        assert anima is not None
+        self.assertEqual(anima.params["compile_dynamic"].choices, ["true", "false", "auto"])
+        for name in (
+            "compile", "compile_backend", "compile_mode", "compile_dynamic",
+            "compile_fullgraph", "compile_cache_size_limit", "cuda_allow_tf32",
+            "cuda_cudnn_benchmark", "qwen_image_vae_2d",
+        ):
+            with self.subTest(parameter=name):
+                self.assertEqual(anima.params[name].priority, "advanced")
+                self.assertIsNone(anima.params[name].effectiveDefault)
+
+    def test_anima_finetune_only_rates_are_preserved_but_not_offered_for_lora(self) -> None:
+        def names(view: str) -> set:
+            return {
+                param["name"]
+                for group in self.catalog.get_param_groups("anima.lora", view=view)
+                for param in group["params"]
+            }
+
+        finetune_rates = {"self_attn_lr", "cross_attn_lr", "mlp_lr", "mod_lr", "llm_adapter_lr"}
+        self.assertTrue(finetune_rates.issubset(names("all")))
+        self.assertTrue(finetune_rates.isdisjoint(names("advanced")))
+        self.assertIn("network_args", names("advanced"))
+
     def test_overlays_only_reference_real_parser_parameters(self) -> None:
         params_by_trainer = {
             summary.id: set(self.catalog.get_trainer(summary.id).params)

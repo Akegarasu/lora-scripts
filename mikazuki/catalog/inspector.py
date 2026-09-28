@@ -199,10 +199,18 @@ def generate_manifest(scripts_root: Path) -> Dict[str, Any]:
         "sharedParams": {},
         "trainers": trainers,
     }
+    upstream_path = scripts_root / "UPSTREAM.json"
+    if upstream_path.is_file():
+        upstream = json.loads(upstream_path.read_text(encoding="utf-8"))
+        if not isinstance(upstream, dict):
+            raise ValueError(f"{upstream_path} must contain an object")
+        manifest["upstream"] = upstream
     semantic_payload = {
         "schemaVersion": manifest["schemaVersion"],
         "trainers": manifest["trainers"],
     }
+    if "upstream" in manifest:
+        semantic_payload["upstream"] = manifest["upstream"]
     manifest["manifestHash"] = hashlib.sha256(
         json.dumps(semantic_payload, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     ).hexdigest()

@@ -37,7 +37,7 @@ params:
   cache_latents_to_disk:
     effectiveDefault: true
   cache_text_encoder_outputs:
-    description: 缓存 CLIP-L 与 T5-XXL 的编码结果以降低训练显存与计算量；缓存后不能训练相应文本编码器 LoRA。
+    description: 缓存文本编码结果以降低显存与计算量；训练 CLIP-L LoRA 时可仅复用 T5 缓存。若通过 network_args 的 train_t5xxl=True 训练 T5-XXL，则必须关闭文本编码器输出缓存及其磁盘缓存。
     effectiveDefault: true
   cache_text_encoder_outputs_to_disk:
     effectiveDefault: true
@@ -61,14 +61,14 @@ params:
     effectiveDefault: flux
   guidance_scale:
     label: 嵌入式 Guidance
-    description: 写入 FLUX.1 dev 的蒸馏 Guidance 条件；训练时设为 1.0 表示关闭其影响，Schnell 通常会忽略该值。
+    description: 写入 FLUX.1 dev 的蒸馏 Guidance 条件，官方训练配方使用 1.0；Schnell 通常忽略该值。这不是生成样图时使用的 CFG。
     group: model_specific
-    priority: recommended
+    priority: advanced
     control: number
     effectiveDefault: 1.0
   timestep_sampling:
     label: 时间步采样
-    description: 选择 FLUX.1 训练噪声时间步的分布；flux_shift 会按分辨率偏移，shift 才会使用离散 Flow Shift。
+    description: 选择 FLUX.1 训练噪声时间步的分布；flux_shift 会按分辨率偏移，sigma 和 shift 使用离散 Flow Shift。
     group: model_specific
     priority: recommended
     control: select
@@ -77,16 +77,27 @@ params:
     label: 预测类型
     description: 选择如何处理 FLUX.1 模型输出；推荐 raw 直接使用预测值，additive 会加回带噪输入，sigma_scaled 会按 Sigma 缩放。
     group: model_specific
-    priority: recommended
+    priority: advanced
     control: select
     effectiveDefault: raw
   discrete_flow_shift:
     label: 离散 Flow Shift
-    description: 设置 Flow Matching 调度器的离散偏移；仅在时间步采样选择 shift 时生效，flux_shift 等模式会忽略。
+    description: 设置 Flow Matching 的离散偏移；仅在时间步采样选择 sigma 或 shift 时生效，flux_shift、sigmoid 等模式会忽略。
     group: model_specific
     priority: advanced
     control: number
     effectiveDefault: 3.0
+  fp8_base:
+    priority: recommended
+  show_timesteps:
+    priority: dangerous
+    hidden: false
+  show_timesteps_resolution:
+    priority: advanced
+    hidden: false
+  show_timesteps_offset:
+    priority: advanced
+    hidden: false
   t5xxl_max_token_length:
     label: T5 最大 Token 长度
     description: T5-XXL tokenizer 对每条 Caption 保留的最大 Token 数；留空时 Schnell 使用 256，FLUX.1 dev 使用 512。

@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/kohya-ss/sd-scripts",
+  "ref": "main",
+  "commit": "690ea7f96c23182352ec63def76d431c6120bd2f",
+  "committedAt": "2026-09-24T10:34:44Z",
+  "version": "0.12.0",
+  "previousCommit": "b8d1eb067eba32bb105984678b97f05b11452940",
+  "excludedPaths": [".ai/", ".github/", "tests/"],
+  "localPatches": []
+}

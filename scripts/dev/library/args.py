@@ -686,6 +686,37 @@ def add_dit_training_arguments(parser: argparse.ArgumentParser):
         default=1.29,
         help="Scale of mode weighting scheme. Only effective when using the `'mode'` as the `weighting_scheme` / モード重み付けスキームのスケール",
     )
+    parser.add_argument(
+        "--show_timesteps",
+        type=str,
+        default=None,
+        choices=["console", "image"],
+        help="visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. "
+        "'console' prints an ASCII histogram, 'image' shows a matplotlib plot. "
+        "Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px. "
+        " / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。"
+        "'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+    )
+    parser.add_argument(
+        "--show_timesteps_resolution",
+        type=str,
+        default="1024",
+        help="image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). "
+        "Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024. "
+        " / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。"
+        "カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+    )
+    parser.add_argument(
+        "--show_timesteps_offset",
+        type=float,
+        default=0.0,
+        help="timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with "
+        "custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). "
+        "Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0. "
+        " / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を"
+        "指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。"
+        "timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
+    )
 
     # offloading
     parser.add_argument(
@@ -807,6 +838,12 @@ def verify_training_args(args: argparse.Namespace):
         logger.warning(
             "cache_latents_to_disk is enabled, so cache_latents is also enabled / cache_latents_to_diskが有効なため、cache_latentsを有効にします"
         )
+
+    if getattr(args, "sample_prompts", None) and getattr(args, "sample_sampler", None):
+        # e.g. lms needs scipy: fail here rather than at the first sample generation after loading the models
+        from library.sampling import check_sampler_requirements
+
+        check_sampler_requirements(args.sample_sampler)
 
     if getattr(args, "train_inpainting", False) and getattr(args, "cache_latents", False):
         raise ValueError(

@@ -92,14 +92,14 @@ params:
     effectiveDefault: sigma
   discrete_flow_shift:
     label: 离散 Flow Shift
-    description: 设置 HunyuanImage Flow Matching 调度器的离散偏移，脚本默认 5.0。
+    description: 设置 HunyuanImage Flow Matching 的离散偏移，默认 5.0；在 sigma 或 shift 时间步采样下生效，当前默认 sigma 会使用此值。
     group: model_specific
-    priority: recommended
+    priority: advanced
     effectiveDefault: 5.0
   model_prediction_type:
     description: 选择如何处理 HunyuanImage 模型输出；脚本默认并推荐 raw 直接使用预测值。
     group: model_specific
-    priority: recommended
+    priority: advanced
   vae_chunk_size:
     label: VAE 分块尺寸
     description: 分块执行 HunyuanImage VAE 编解码以降低峰值显存；留空表示不分块，启用时建议从 16 开始，值越大越快但越占显存。

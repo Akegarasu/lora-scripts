@@ -1,3 +1,5 @@
+# priority controls UI visibility, not whether a flag is enabled.
+# Evidence and model-specific decisions: docs/sd-scripts-catalog-review.md.
 groups:
   - id: model
     title: 模型
@@ -191,14 +193,14 @@ params:
     label: 保存格式
     description: 选择模型输出格式；默认使用 safetensors。
     group: save
-    priority: recommended
+    priority: advanced
     control: select
     effectiveDefault: safetensors
   save_precision:
     label: 保存精度
     description: 指定保存权重时采用的精度；它只影响输出文件，不等同于训练时的混合精度。
     group: save
-    priority: recommended
+    priority: advanced
     control: select
     effectiveDefault: fp16
   save_every_n_epochs:
@@ -214,7 +216,7 @@ params:
     label: 每 N step 保存
     description: 每经过指定数量的训练 step 保存一次 checkpoint；可与按 epoch 保存同时使用，分别在两种时机触发保存。
     group: save
-    priority: advanced
+    priority: recommended
     control: number
     min: 1
     step: 1
@@ -250,9 +252,9 @@ params:
     step: 1
   max_train_steps:
     label: 最大步数
-    description: 按优化器更新步数限制训练时长；sd-scripts 同时收到最大 Epoch 时会由 Epoch 换算值覆盖，工作台中建议二选一。
+    description: 按优化器更新步数限制训练时长；使用前请清空“最大 Epoch”，两者同时设置时工作台会报冲突。适合按固定训练量比较不同数据集或重复次数。
     group: training
-    priority: advanced
+    priority: recommended
     control: number
     min: 1
     step: 1
@@ -277,9 +279,9 @@ params:
     priority: recommended
   gradient_accumulation_steps:
     label: 梯度累积步数
-    description: 累积指定次数的前向与反向结果后再更新权重；有效批量大小会随该值增大。
+    description: 累积指定次数的前向与反向结果后再更新权重；单卡有效批量为数据集 Batch Size × 本值。显存不足时可减小 Batch Size 再增加累积次数，但它不会消除单次前向的显存需求。
     group: training
-    priority: advanced
+    priority: recommended
     control: number
     effectiveDefault: 1
     min: 1
@@ -294,7 +296,7 @@ params:
     label: 最大梯度范数
     description: 设为 0 可关闭梯度裁剪。
     group: optimizer
-    priority: recommended
+    priority: advanced
     control: number
     min: 0
     step: 0.1
@@ -302,7 +304,7 @@ params:
     label: U-Net / DiT 学习率
     description: 单独设置 U-Net 或 DiT 部分的学习率；留空时使用总学习率。
     group: optimizer
-    priority: recommended
+    priority: advanced
     control: input
   text_encoder_lr:
     label: 文本编码器学习率
@@ -402,9 +404,9 @@ params:
         warmup_stable_decay: warmup_stable_decay 预热 + 稳定 + 衰减
   lr_warmup_steps:
     label: 预热步数
-    description: 学习率从较低值预热到目标值所需的步数；小于 1 的小数按总训练步数比例解释。
+    description: 学习率预热步数；小于 1 的小数按总训练步数比例解释，例如 0.1 为 10%。仅适用于支持预热的调度器；constant 不使用预热，Adafactor 相对步长和 Schedule-Free 需遵循其各自设置。
     group: optimizer
-    priority: advanced
+    priority: recommended
     control: number
   lr_scheduler_num_cycles:
     label: 重启次数
@@ -422,11 +424,11 @@ params:
     control: switch
   network_module:
     label: 网络模块
-    description: 指定要训练的网络实现模块；不同模型族应使用其对应的 LoRA 模块。
+    description: 工作台已按模型族自动选择 LoRA 模块，通常无需修改；只有切换兼容的网络实现（如 OFTv2、BOFT 或 LyCORIS）时才需连同 network_args 一起调整。
     group: network
-    priority: required
+    priority: advanced
     control: input
-    required: true
+    required: false
   network_weights:
     label: 继续训练 LoRA
     description: 加载已有网络权重作为本次训练的初始值；这与恢复包含优化器的训练 state 不同。
@@ -475,7 +477,7 @@ params:
     label: 仅训练 U-Net / DiT
     description: 只训练 U-Net 或 DiT 相关网络模块，不更新文本编码器部分。
     group: network
-    priority: recommended
+    priority: advanced
   network_train_text_encoder_only:
     label: 仅训练文本编码器
     description: 只训练文本编码器相关网络模块，不更新 U-Net 或 DiT 部分。
@@ -488,7 +490,7 @@ params:
     priority: recommended
   cache_latents_to_disk:
     label: 潜变量缓存到磁盘
-    description: 将 VAE 潜变量缓存到磁盘以减少内存占用；会自动依赖潜变量缓存，且不能配合图像增强。
+    description: 将 VAE 潜变量缓存到磁盘，减少内存占用并供后续训练复用；自动启用潜变量缓存，不能配合 Color Aug 或 Random Crop。水平翻转有独立缓存，磁盘较慢时可能降低读取速度。
     group: memory
     priority: recommended
   cache_text_encoder_outputs:
@@ -557,7 +559,7 @@ params:
     label: 底模使用 FP8
     description: 以 FP8 加载或运行底模以降低显存占用；仅适用于明确支持该模式的模型。
     group: memory
-    priority: recommended
+    priority: advanced
   fp8_base_unet:
     label: U-Net / DiT 使用 FP8
     description: 仅让 U-Net 或 DiT 使用 FP8，文本编码器仍使用 fp16 或 bf16。
@@ -645,7 +647,7 @@ params:
     label: 日志基目录
     description: 选择训练日志的基目录。任务中心会在其下为每个任务创建独立目录，并从兼容事件文件实时绘制曲线；不需要启动 TensorBoard 服务。
     group: logging
-    priority: recommended
+    priority: advanced
     control: folder
     effectiveDefault: ./logs
   log_with:
@@ -700,7 +702,7 @@ params:
     control: number
   min_snr_gamma:
     label: Min SNR Gamma 阈值
-    description: 对高损失时间步降低权重；值越低作用越强，5 是经典扩散模型常见起点但不是脚本默认。Flow Matching 模型应优先使用各自的时间步与权重策略。
+    description: 按信噪比平衡各时间步的损失；5 是经典扩散模型常见起点但不是脚本默认。Flow Matching 模型应优先使用各自的时间步与权重策略。
     group: training
     priority: advanced
     control: number
@@ -1543,3 +1545,24 @@ params:
     priority: advanced
     control: folder
     fileKind: folder
+  show_timesteps:
+    label: 仅预览时间步分布
+    description: 仅 FLUX、Chroma、Anima 入口支持：输出时间步分布和损失权重后退出，不会训练；console 输出文字直方图，image 打开图窗。其他入口虽解析此项但不会执行预览，正常训练请保持为空。
+    group: advanced
+    priority: hidden
+    hidden: true
+    control: select
+  show_timesteps_resolution:
+    label: 时间步预览分辨率
+    description: 仅供时间步分布预览估算与分辨率相关的采样；填写单个尺寸或 H,W，例如 1024 或 768,1024。不会修改数据集训练分辨率。
+    group: advanced
+    priority: hidden
+    hidden: true
+    control: input
+  show_timesteps_offset:
+    label: 时间步预览偏移
+    description: 仅在时间步预览中模拟数据子集的采样偏移，适用于 sigmoid、shift 和 flux_shift；实际训练需在数据集 custom_attributes.timestep_sampling.offset 中设置，本项不会改变训练分布。
+    group: advanced
+    priority: hidden
+    hidden: true
+    control: number

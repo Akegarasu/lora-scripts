@@ -16,6 +16,8 @@ params:
     fileKind: null
   network_module:
     effectiveDefault: networks.lora
+  network_train_unet_only:
+    priority: recommended
   network_dim:
     effectiveDefault: 32
   network_alpha:
@@ -23,8 +25,10 @@ params:
   learning_rate:
     effectiveDefault: 0.0001
   unet_lr:
+    priority: recommended
     effectiveDefault: 0.0001
   text_encoder_lr:
+    priority: recommended
     description: 设置 SD 单个 CLIP 文本编码器 LoRA 的学习率；当前默认网络模块只使用数组第一项，留空时沿用总学习率。
     effectiveDefault:
       - 0.00001
@@ -48,3 +52,6 @@ params:
     choices: [1, 2]
     extra:
       allowCustomChoice: true
+  min_snr_gamma:
+    priority: recommended
+    description: 按信噪比平衡各时间步的损失；常见 SD LoRA 配方使用 5，但并非所有数据都更好。留空保持关闭，与其他损失加权组合时需单独比较效果。

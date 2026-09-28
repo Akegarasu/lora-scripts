@@ -37,12 +37,12 @@ params:
   gradient_checkpointing:
     effectiveDefault: true
   network_train_unet_only:
-    description: 只训练 SD3 MMDiT 的 LoRA；关闭后可训练 CLIP-L/CLIP-G LoRA，但当前脚本始终不训练 T5-XXL LoRA。
+    description: 只训练 SD3 MMDiT 的 LoRA；关闭后可训练 CLIP-L/CLIP-G LoRA。训练 T5-XXL 还需在 network_args 中设置 train_t5xxl=True，并关闭文本编码器输出缓存及其磁盘缓存。
     effectiveDefault: true
   cache_latents:
     effectiveDefault: true
   cache_text_encoder_outputs:
-    description: 缓存 CLIP-L、CLIP-G 与 T5-XXL 输出以显著减少显存和计算量；启用后不能训练文本编码器 LoRA。
+    description: 缓存文本编码结果以降低显存与计算量；训练 CLIP LoRA 时支持仅复用 T5 的部分缓存。训练 T5-XXL LoRA 时必须关闭本项，缓存期间不能使用会改变 Caption 的增强。
     effectiveDefault: true
   sdpa:
     description: SD3 当前实现内部固定使用 Torch Attention，此通用开关不会改变 MMDiT 实现。
@@ -56,7 +56,7 @@ params:
     label: T5 最大 Token 长度
     description: T5-XXL tokenizer 对每条 Caption 保留的最大 Token 数，SD3 默认 256。
     group: model_specific
-    priority: recommended
+    priority: advanced
     control: number
     effectiveDefault: 256
   apply_lg_attn_mask:
@@ -117,7 +117,9 @@ params:
     max: 1
     step: 0.05
   text_encoder_lr:
-    description: 依次设置 CLIP-L、CLIP-G、T5-XXL 的 LoRA 学习率；一个值会复制到三者，两个值时第二个同时用于 CLIP-G 与 T5-XXL，但当前脚本不会训练 T5-XXL LoRA。
+    description: 依次设置 CLIP-L、CLIP-G、T5-XXL 的 LoRA 学习率；一个值会复制到三者，两个值时第二个同时用于 CLIP-G 与 T5-XXL。T5 仅在 network_args 设置 train_t5xxl=True 时参与训练。
+  fp8_base:
+    priority: recommended
   save_clip:
     label: 保存 CLIP（未支持）
     description: 计划用于把 CLIP 写入统一 checkpoint，但当前 SD3 训练器尚未实现，启用不会得到预期结果。

@@ -16,6 +16,8 @@ params:
     fileKind: null
   network_module:
     effectiveDefault: networks.lora
+  network_train_unet_only:
+    priority: recommended
   network_dim:
     effectiveDefault: 32
   network_alpha:
@@ -23,8 +25,10 @@ params:
   learning_rate:
     effectiveDefault: 0.0001
   unet_lr:
+    priority: recommended
     effectiveDefault: 0.0001
   text_encoder_lr:
+    priority: recommended
     description: 设置 SDXL 两个文本编码器 LoRA 的学习率；当前默认 networks.lora 模块把数组第一项用于两者，附加值仅供支持多文本编码器学习率的自定义网络模块使用。
     effectiveDefault:
       - 0.00001
@@ -43,13 +47,14 @@ params:
   sdpa:
     effectiveDefault: true
   no_half_vae:
+    priority: recommended
     description: 即使训练使用 fp16/bf16，也强制 SDXL VAE 以 float32 运行；使用 fp16 时可避免部分 VAE 数值不稳定问题，但会增加显存。
   v2:
     description: SD1.x/2.x 模型类型开关，SDXL 训练器已经固定使用 SDXL 架构，请勿启用。
     priority: dangerous
   v_parameterization:
-    description: SD1.x/2.x 的 v-parameterization 开关，SDXL 训练通常不使用，请勿启用。
-    priority: dangerous
+    description: 为 v-prediction 底模使用匹配的训练目标；SDXL 已支持此项，但普通 epsilon 底模应保持关闭。请按底模说明选择，不能把它当作通用画质增强开关。
+    priority: advanced
   clip_skip:
     description: SD1.x/2.x 的 CLIP 层跳过参数，SDXL 训练器通常不使用，请保持为空。
     priority: dangerous
@@ -61,3 +66,6 @@ params:
   noise_offset:
     description: SDXL 底模训练使用过 Noise Offset，官方高级指南建议启用并以 0.0357 为示例；可按数据集亮暗分布调整或关闭。
     effectiveDefault: 0.0357
+  min_snr_gamma:
+    priority: recommended
+    description: 按信噪比平衡各时间步的损失；SDXL 社区配方常会调节此项，但不存在适合所有底模和数据的固定值。留空保持关闭，请对照验证样图评估。

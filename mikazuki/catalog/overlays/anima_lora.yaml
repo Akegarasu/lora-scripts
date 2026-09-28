@@ -65,12 +65,12 @@ params:
     priority: dangerous
   timestep_sampling:
     label: 时间步采样
-    description: 选择 Anima Rectified Flow 的时间步分布；默认 sigmoid，选择 shift 时才会使用离散 Flow Shift。
+    description: 选择 Anima Rectified Flow 的时间步分布；默认 sigmoid，选择 sigma 或 shift 时使用离散 Flow Shift。
     group: model_specific
     priority: recommended
     effectiveDefault: sigmoid
   discrete_flow_shift:
-    description: 设置 Anima Rectified Flow 的时间步偏移，默认 1.0；仅在时间步采样选择 shift 时生效。
+    description: 设置 Anima Rectified Flow 的时间步偏移，默认 1.0；仅在时间步采样选择 sigma 或 shift 时生效，默认 sigmoid 会忽略此项。
     group: model_specific
     priority: advanced
   qwen3_max_token_length:
@@ -132,26 +132,95 @@ params:
     priority: advanced
   self_attn_lr:
     label: Self Attention 学习率
-    description: Anima Self Attention 层的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    description: 仅用于 Anima 全量微调，当前 LoRA 训练器不读取此项；LoRA 分层学习率请使用 network_args 的 network_reg_lrs。
     group: optimizer
-    priority: advanced
+    priority: hidden
+    hidden: true
   cross_attn_lr:
     label: Cross Attention 学习率
-    description: Anima Cross Attention 层的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    description: 仅用于 Anima 全量微调，当前 LoRA 训练器不读取此项；LoRA 分层学习率请使用 network_args 的 network_reg_lrs。
     group: optimizer
-    priority: advanced
+    priority: hidden
+    hidden: true
   mlp_lr:
     label: MLP 学习率
-    description: Anima MLP 层的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    description: 仅用于 Anima 全量微调，当前 LoRA 训练器不读取此项；LoRA 分层学习率请使用 network_args 的 network_reg_lrs。
     group: optimizer
-    priority: advanced
+    priority: hidden
+    hidden: true
   mod_lr:
     label: AdaLN 调制层学习率
-    description: Anima AdaLN 调制层的独立学习率；留空沿用总学习率，设为 0 表示冻结。这些层默认不在 LoRA 目标中。
+    description: 仅用于 Anima 全量微调，当前 LoRA 训练器不读取此项；调制层默认也不属于 LoRA 训练目标。
     group: optimizer
-    priority: advanced
+    priority: hidden
+    hidden: true
   llm_adapter_lr:
     label: LLM Adapter 学习率
-    description: Anima LLM Adapter 的独立学习率；留空沿用总学习率，设为 0 表示冻结。主要用于全量微调，LoRA 请优先用 network_args 的 network_reg_lrs。
+    description: 仅用于 Anima 全量微调，当前 LoRA 训练器不读取此项；LoRA Adapter 分层学习率请使用 network_args 的 network_reg_lrs。
     group: optimizer
+    priority: hidden
+    hidden: true
+  compile:
+    label: 按 Block 编译 DiT
+    description: 使用 torch.compile 逐个编译 Anima DiT Block，可与 Block Swap 配合；需要兼容的 Triton，首次运行和切换 Bucket 时可能较慢。不能与通用 torch_compile 同时启用。
+    group: memory
     priority: advanced
+    control: switch
+  show_timesteps:
+    priority: dangerous
+    hidden: false
+  show_timesteps_resolution:
+    priority: advanced
+    hidden: false
+  show_timesteps_offset:
+    priority: advanced
+    hidden: false
+  compile_backend:
+    label: Block 编译后端
+    description: 选择 Anima 按 Block 编译使用的后端；默认 inductor，仅在启用按 Block 编译时生效。
+    group: memory
+    priority: advanced
+    control: input
+  compile_mode:
+    label: Block 编译模式
+    description: 选择编译优化策略；训练通常使用 default。max-autotune 等模式可能增加启动耗时或与部分配置不兼容，仅在按 Block 编译时生效。
+    group: memory
+    priority: advanced
+    control: select
+  compile_dynamic:
+    label: 编译动态形状
+    description: 控制按 Block 编译时的动态形状处理；留空等同 auto。true 可减少分辨率变化导致的重编译，但 Windows 上需要 Visual Studio 2022 C++ 编译环境。
+    group: memory
+    priority: advanced
+    control: select
+  compile_fullgraph:
+    label: 完整图编译
+    description: 对 Anima Block 启用完整图编译；仅在按 Block 编译时生效，不能同时启用拆分 Attention（split_attn）。
+    group: memory
+    priority: advanced
+    control: switch
+  compile_cache_size_limit:
+    label: 编译缓存条目上限
+    description: 设置 Torch Dynamo 的编译缓存条目数；留空使用 PyTorch 默认。多 Bucket 训练可按需增加，官方示例使用 32，以减少缓存淘汰后的重复编译。
+    group: memory
+    priority: advanced
+    control: number
+    step: 1
+  cuda_allow_tf32:
+    label: 允许 TF32 计算
+    description: 在 Ampere 或更新的 NVIDIA GPU 上允许 TF32 矩阵与卷积计算，以部分 FP32 精度换取速度；独立于按 Block 编译开关。
+    group: memory
+    priority: advanced
+    control: switch
+  cuda_cudnn_benchmark:
+    label: cuDNN 算法测速
+    description: 让 cuDNN 通过测速选择卷积算法；重复形状可能受益，频繁切换分辨率时会增加首次测速开销。此项独立于按 Block 编译开关。
+    group: memory
+    priority: advanced
+    control: switch
+  qwen_image_vae_2d:
+    label: 图像专用 2D VAE
+    description: 使用实验性的图像专用 Qwen-Image 2D VAE 实现，加载时转换官方 VAE 权重；仅适用于图像训练，请与原实现对照验证编码与采样效果。
+    group: memory
+    priority: advanced
+    control: switch

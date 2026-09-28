@@ -909,7 +909,7 @@ class LoRANetwork(torch.nn.Module):
                             split_dims = None
                             if is_flux and split_qkv:
                                 if "double" in lora_name and "qkv" in lora_name:
-                                    (split_dims,) = self.get_qkv_mlp_split_dims()[:3]  # qkv only
+                                    split_dims = self.get_qkv_mlp_split_dims()[:3]  # qkv only
                                 elif "single" in lora_name and "linear1" in lora_name:
                                     split_dims = self.get_qkv_mlp_split_dims()  # qkv + mlp
 

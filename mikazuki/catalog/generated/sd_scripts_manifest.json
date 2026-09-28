@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-30T08:27:20.674917+00:00",
+  "generatedAt": "2026-09-28T08:44:02.379005+00:00",
   "scriptsRoot": "scripts/dev",
   "sharedParams": {},
   "trainers": {
@@ -11636,6 +11636,66 @@
             "function": "setup_parser"
           }
         },
+        "show_timesteps": {
+          "name": "show_timesteps",
+          "flags": [
+            "--show_timesteps"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "console",
+            "image"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. 'console' prints an ASCII histogram, 'image' shows a matplotlib plot. Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px.  / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+          "source": {
+            "script": "scripts/dev/sd3_train_network.py",
+            "module": "sd3_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_resolution": {
+          "name": "show_timesteps_resolution",
+          "flags": [
+            "--show_timesteps_resolution"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "1024",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024.  / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+          "source": {
+            "script": "scripts/dev/sd3_train_network.py",
+            "module": "sd3_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_offset": {
+          "name": "show_timesteps_offset",
+          "flags": [
+            "--show_timesteps_offset"
+          ],
+          "type": "number",
+          "itemType": null,
+          "default": 0.0,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0.  / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
+          "source": {
+            "script": "scripts/dev/sd3_train_network.py",
+            "module": "sd3_train_network",
+            "function": "setup_parser"
+          }
+        },
         "blocks_to_swap": {
           "name": "blocks_to_swap",
           "flags": [
@@ -15924,6 +15984,66 @@
             "function": "setup_parser"
           }
         },
+        "show_timesteps": {
+          "name": "show_timesteps",
+          "flags": [
+            "--show_timesteps"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "console",
+            "image"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. 'console' prints an ASCII histogram, 'image' shows a matplotlib plot. Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px.  / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+          "source": {
+            "script": "scripts/dev/flux_train_network.py",
+            "module": "flux_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_resolution": {
+          "name": "show_timesteps_resolution",
+          "flags": [
+            "--show_timesteps_resolution"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "1024",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024.  / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+          "source": {
+            "script": "scripts/dev/flux_train_network.py",
+            "module": "flux_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_offset": {
+          "name": "show_timesteps_offset",
+          "flags": [
+            "--show_timesteps_offset"
+          ],
+          "type": "number",
+          "itemType": null,
+          "default": 0.0,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0.  / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
+          "source": {
+            "script": "scripts/dev/flux_train_network.py",
+            "module": "flux_train_network",
+            "function": "setup_parser"
+          }
+        },
         "blocks_to_swap": {
           "name": "blocks_to_swap",
           "flags": [
@@ -20162,6 +20282,66 @@
           "action": "store",
           "required": false,
           "help": "Scale of mode weighting scheme. Only effective when using the `'mode'` as the `weighting_scheme` / モード重み付けスキームのスケール",
+          "source": {
+            "script": "scripts/dev/flux_train_network.py",
+            "module": "flux_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps": {
+          "name": "show_timesteps",
+          "flags": [
+            "--show_timesteps"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "console",
+            "image"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. 'console' prints an ASCII histogram, 'image' shows a matplotlib plot. Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px.  / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+          "source": {
+            "script": "scripts/dev/flux_train_network.py",
+            "module": "flux_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_resolution": {
+          "name": "show_timesteps_resolution",
+          "flags": [
+            "--show_timesteps_resolution"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "1024",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024.  / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+          "source": {
+            "script": "scripts/dev/flux_train_network.py",
+            "module": "flux_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_offset": {
+          "name": "show_timesteps_offset",
+          "flags": [
+            "--show_timesteps_offset"
+          ],
+          "type": "number",
+          "itemType": null,
+          "default": 0.0,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0.  / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
           "source": {
             "script": "scripts/dev/flux_train_network.py",
             "module": "flux_train_network",
@@ -24412,6 +24592,66 @@
             "function": "setup_parser"
           }
         },
+        "show_timesteps": {
+          "name": "show_timesteps",
+          "flags": [
+            "--show_timesteps"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "console",
+            "image"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. 'console' prints an ASCII histogram, 'image' shows a matplotlib plot. Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px.  / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+          "source": {
+            "script": "scripts/dev/lumina_train_network.py",
+            "module": "lumina_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_resolution": {
+          "name": "show_timesteps_resolution",
+          "flags": [
+            "--show_timesteps_resolution"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "1024",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024.  / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+          "source": {
+            "script": "scripts/dev/lumina_train_network.py",
+            "module": "lumina_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_offset": {
+          "name": "show_timesteps_offset",
+          "flags": [
+            "--show_timesteps_offset"
+          ],
+          "type": "number",
+          "itemType": null,
+          "default": 0.0,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0.  / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
+          "source": {
+            "script": "scripts/dev/lumina_train_network.py",
+            "module": "lumina_train_network",
+            "function": "setup_parser"
+          }
+        },
         "blocks_to_swap": {
           "name": "blocks_to_swap",
           "flags": [
@@ -28610,6 +28850,66 @@
           "action": "store",
           "required": false,
           "help": "Scale of mode weighting scheme. Only effective when using the `'mode'` as the `weighting_scheme` / モード重み付けスキームのスケール",
+          "source": {
+            "script": "scripts/dev/hunyuan_image_train_network.py",
+            "module": "hunyuan_image_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps": {
+          "name": "show_timesteps",
+          "flags": [
+            "--show_timesteps"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "console",
+            "image"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. 'console' prints an ASCII histogram, 'image' shows a matplotlib plot. Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px.  / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+          "source": {
+            "script": "scripts/dev/hunyuan_image_train_network.py",
+            "module": "hunyuan_image_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_resolution": {
+          "name": "show_timesteps_resolution",
+          "flags": [
+            "--show_timesteps_resolution"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "1024",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024.  / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+          "source": {
+            "script": "scripts/dev/hunyuan_image_train_network.py",
+            "module": "hunyuan_image_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_offset": {
+          "name": "show_timesteps_offset",
+          "flags": [
+            "--show_timesteps_offset"
+          ],
+          "type": "number",
+          "itemType": null,
+          "default": 0.0,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0.  / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
           "source": {
             "script": "scripts/dev/hunyuan_image_train_network.py",
             "module": "hunyuan_image_train_network",
@@ -32844,6 +33144,66 @@
             "function": "setup_parser"
           }
         },
+        "show_timesteps": {
+          "name": "show_timesteps",
+          "flags": [
+            "--show_timesteps"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "console",
+            "image"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "visualize the actual sampled timestep distribution and loss weighting for the current settings, then exit. 'console' prints an ASCII histogram, 'image' shows a matplotlib plot. Resolution-dependent sampling (e.g. flux_shift) assumes ~1024px.  / 現在の設定で実際にサンプリングされるタイムステップ分布とloss weightingを可視化して終了する。'console'はASCIIヒストグラム、'image'はmatplotlibで表示。flux_shift等の解像度依存サンプリングは約1024px想定。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_resolution": {
+          "name": "show_timesteps_resolution",
+          "flags": [
+            "--show_timesteps_resolution"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "1024",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "image resolution (pixels) assumed by --show_timesteps for resolution-dependent sampling (e.g. flux_shift). Comma-separated: a single value is used for both H and W, two values are H,W (W,H gives the same result). Default: 1024.  / --show_timesteps が解像度依存サンプリング（flux_shift等）で想定する画像解像度（ピクセル）。カンマ区切りで、数値が1つならH/W両方に、2つならH,Wに使用（W,Hでも結果は同じ）。デフォルト: 1024。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "show_timesteps_offset": {
+          "name": "show_timesteps_offset",
+          "flags": [
+            "--show_timesteps_offset"
+          ],
+          "type": "number",
+          "itemType": null,
+          "default": 0.0,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "timestep sampling offset applied by --show_timesteps, to preview the distribution for a subset with custom_attributes.timestep_sampling.offset (see docs/timestep_sampling_offset.md). Only effective for timestep_sampling sigmoid/shift/flux_shift. Default: 0.0.  / --show_timesteps でタイムステップ分布に適用するオフセット。custom_attributes.timestep_sampling.offset を指定した subset の分布を事前確認するために使用（docs/timestep_sampling_offset.md 参照）。timestep_sampling が sigmoid/shift/flux_shift の場合のみ有効。デフォルト: 0.0。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
         "blocks_to_swap": {
           "name": "blocks_to_swap",
           "flags": [
@@ -33198,6 +33558,186 @@
             "function": "setup_parser"
           }
         },
+        "qwen_image_vae_2d": {
+          "name": "qwen_image_vae_2d",
+          "flags": [
+            "--qwen_image_vae_2d"
+          ],
+          "type": "boolean",
+          "itemType": null,
+          "default": false,
+          "choices": null,
+          "nargs": 0,
+          "action": "store_true",
+          "required": false,
+          "help": "Use the image-only 2D Qwen-Image VAE implementation. Official Qwen-Image VAE weights are converted on load. / 画像専用の2D Qwen-Image VAE実装を使用します。公式Qwen-Image VAEの重みはロード時に変換されます。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "compile": {
+          "name": "compile",
+          "flags": [
+            "--compile"
+          ],
+          "type": "boolean",
+          "itemType": null,
+          "default": false,
+          "choices": null,
+          "nargs": 0,
+          "action": "store_true",
+          "required": false,
+          "help": "Enable per-block torch.compile for the DiT (requires Triton). Cannot be used with --torch_compile. / DiTのブロック単位でtorch.compileを有効にする（Tritonが必要）。--torch_compileとは併用できません。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "compile_backend": {
+          "name": "compile_backend",
+          "flags": [
+            "--compile_backend"
+          ],
+          "type": "string",
+          "itemType": null,
+          "default": "inductor",
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "torch.compile backend (default: inductor) / torch.compileのバックエンド（デフォルト: inductor）",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "compile_mode": {
+          "name": "compile_mode",
+          "flags": [
+            "--compile_mode"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": "default",
+          "choices": [
+            "default",
+            "reduce-overhead",
+            "max-autotune",
+            "max-autotune-no-cudagraphs"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "torch.compile mode (default: default, recommended for training) / torch.compileのモード（デフォルト: default、学習に推奨）",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "compile_dynamic": {
+          "name": "compile_dynamic",
+          "flags": [
+            "--compile_dynamic"
+          ],
+          "type": "enum",
+          "itemType": null,
+          "default": null,
+          "choices": [
+            "true",
+            "false",
+            "auto"
+          ],
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "Dynamic shapes mode for torch.compile (default: None, same as auto). On Windows, 'true' requires the Visual Studio 2022 C++ compiler. / torch.compileの動的形状モード（デフォルト: None、autoと同じ）。Windowsで'true'を使うにはVisual Studio 2022のC++コンパイラが必要です。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "compile_fullgraph": {
+          "name": "compile_fullgraph",
+          "flags": [
+            "--compile_fullgraph"
+          ],
+          "type": "boolean",
+          "itemType": null,
+          "default": false,
+          "choices": null,
+          "nargs": 0,
+          "action": "store_true",
+          "required": false,
+          "help": "Enable fullgraph mode in torch.compile. Cannot be used with --split_attn. / torch.compileでフルグラフモードを有効にする。--split_attnとは併用できません。",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "compile_cache_size_limit": {
+          "name": "compile_cache_size_limit",
+          "flags": [
+            "--compile_cache_size_limit"
+          ],
+          "type": "integer",
+          "itemType": null,
+          "default": null,
+          "choices": null,
+          "nargs": null,
+          "action": "store",
+          "required": false,
+          "help": "Set torch._dynamo.config.cache_size_limit (default: PyTorch default, typically 8-32, recommended: 32) / torch._dynamo.config.cache_size_limitを設定（デフォルト: PyTorchのデフォルト、通常8-32、推奨: 32）",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "cuda_allow_tf32": {
+          "name": "cuda_allow_tf32",
+          "flags": [
+            "--cuda_allow_tf32"
+          ],
+          "type": "boolean",
+          "itemType": null,
+          "default": false,
+          "choices": null,
+          "nargs": 0,
+          "action": "store_true",
+          "required": false,
+          "help": "Allow TF32 precision on Ampere or newer GPUs (improves performance) / Ampere以降のGPUでTF32を許可する（パフォーマンス向上）",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
+        "cuda_cudnn_benchmark": {
+          "name": "cuda_cudnn_benchmark",
+          "flags": [
+            "--cuda_cudnn_benchmark"
+          ],
+          "type": "boolean",
+          "itemType": null,
+          "default": false,
+          "choices": null,
+          "nargs": 0,
+          "action": "store_true",
+          "required": false,
+          "help": "Enable cuDNN benchmark mode (may improve performance) / cuDNNのベンチマークモードを有効にする（パフォーマンスが向上する可能性がある）",
+          "source": {
+            "script": "scripts/dev/anima_train_network.py",
+            "module": "anima_train_network",
+            "function": "setup_parser"
+          }
+        },
         "unsloth_offload_checkpointing": {
           "name": "unsloth_offload_checkpointing",
           "flags": [
@@ -33220,5 +33760,19 @@
       }
     }
   },
-  "manifestHash": "737f4ed59e2a6920fc5c63236e12c6d2ebd366c3c91e29c228352ee62ce3c84a"
+  "upstream": {
+    "repository": "https://github.com/kohya-ss/sd-scripts",
+    "ref": "main",
+    "commit": "690ea7f96c23182352ec63def76d431c6120bd2f",
+    "committedAt": "2026-09-24T10:34:44Z",
+    "version": "0.12.0",
+    "previousCommit": "b8d1eb067eba32bb105984678b97f05b11452940",
+    "excludedPaths": [
+      ".ai/",
+      ".github/",
+      "tests/"
+    ],
+    "localPatches": []
+  },
+  "manifestHash": "bb5dc2baee5557f0e59bd65dc76bb6ec1e1496d2be8c952c4fc0b043b2829c09"
 }

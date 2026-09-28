@@ -144,7 +144,7 @@ class _ASPP(nn.Module):
 class _Conditioning1(nn.Module):
     """v2 conditioning trunk.
 
-    in (B,3,H,W)
+    in (B,C_in,H,W)
       -> Conv 4x4 s=4    + GN + SiLU      # cond_dim/2,  H/4
       -> Conv 3x3 s=1    + GN + SiLU      # cond_dim/2,  H/4   (受容野拡張)
       -> Conv 4x4 s=4    + GN + SiLU      # cond_dim,    H/16  (token 解像度)
@@ -152,6 +152,8 @@ class _Conditioning1(nn.Module):
       -> Conv 1x1                         # cond_emb_dim
       -> flatten (B, S, cond_emb_dim)
       -> LayerNorm
+
+    C_in は cond_in_channels で指定する。デフォルト 3 (RGB のみ)、4 で inpainting (RGB+mask) 等。
     """
 
     def __init__(
@@ -161,12 +163,15 @@ class _Conditioning1(nn.Module):
         n_resblocks: int,
         use_aspp: bool = False,
         aspp_dilations: Tuple[int, ...] = ASPP_DEFAULT_DILATIONS,
+        cond_in_channels: int = 3,
     ):
         super().__init__()
         assert cond_dim % 2 == 0, f"cond_dim must be even, got {cond_dim}"
+        assert cond_in_channels >= 1, f"cond_in_channels must be >= 1, got {cond_in_channels}"
         ch_half = cond_dim // 2
 
-        self.conv1 = nn.Conv2d(3, ch_half, kernel_size=4, stride=4, padding=0)
+        self.cond_in_channels = cond_in_channels
+        self.conv1 = nn.Conv2d(cond_in_channels, ch_half, kernel_size=4, stride=4, padding=0)
         self.norm1 = _gn(ch_half)
         self.conv2 = nn.Conv2d(ch_half, ch_half, kernel_size=3, stride=1, padding=1)
         self.norm2 = _gn(ch_half)
@@ -234,12 +239,16 @@ class LLLiteModuleDiT(nn.Module):
         nn.init.zeros_(self.up.weight)
         nn.init.zeros_(self.up.bias)
 
-        # 親 ControlNetLLLiteDiT が set_cond_image で注入する
+        # 親 ControlNetLLLiteDiT が set_cond_image で注入する。
+        # cond_emb は全モジュールで共有される cx (B, S, cond_emb_dim)、
+        # depth_emb はこのモジュール用の depth embedding (cond_emb_dim,)。
+        # cx を共有参照することで N コピーを避け、加算は forward 内で行う。
         self.cond_emb: Optional[torch.Tensor] = None
+        self.depth_emb: Optional[torch.Tensor] = None
 
-        # 親 ControlNetLLLiteDiT が __init__ 末尾で設定 (list 包みで Parameter 二重登録回避)
+        # 親 ControlNetLLLiteDiT が __init__ 末尾で layer_idx を設定する。
+        # depth embedding の index 参照は set_cond_image 側で行う (torch.compile 対策)。
         self.layer_idx: int = -1
-        self._depth_embeds_ref: List[nn.Parameter] = []
 
     def apply_to(self):
         self.org_forward = self.org_module[0].forward
@@ -259,23 +268,20 @@ class LLLiteModuleDiT(nn.Module):
             B, T, H, W, D = orig_shape
             x = x.reshape(B, T * H * W, D)
 
-        cx = self.cond_emb  # (B, H*W, cond_emb_dim)
+        # cond_emb は全モジュール共有の cx、depth_emb はこのモジュール用の depth vector。
+        # ここで加算することで cx の N コピーを避ける。整数 layer_idx は参照せず
+        # テンソル属性 depth_emb だけを足すので、torch.compile は単一グラフを維持する
+        # (gradient checkpointing 下では cond_local は領域内で再計算され retain されない)。
+        cond_local = self.cond_emb + self.depth_emb  # (B, H*W, cond_emb_dim)
 
         # CFG 推論用 (学習時は通らない想定)
-        if x.shape[0] // 2 == cx.shape[0]:
-            cx = cx.repeat(2, 1, 1)
+        if x.shape[0] // 2 == cond_local.shape[0]:
+            cond_local = cond_local.repeat(2, 1, 1)
 
         # T=1 固定前提なので S == H*W のはず
-        assert x.shape[1] == cx.shape[1], (
-            f"LLLite seq mismatch ({self.lllite_name}): x={x.shape[1]} vs cond_emb={cx.shape[1]}"
+        assert x.shape[1] == cond_local.shape[1], (
+            f"LLLite seq mismatch ({self.lllite_name}): x={x.shape[1]} vs cond_emb={cond_local.shape[1]}"
         )
-
-        # depth embedding を加算 (zero-init なので学習序盤は cx のまま)
-        if self._depth_embeds_ref:
-            depth_e = self._depth_embeds_ref[0][self.layer_idx]  # (cond_emb_dim,)
-            cond_local = cx + depth_e  # broadcast over (B, S)
-        else:
-            cond_local = cx
 
         h = F.silu(self.down(x))  # (B, S, mlp)
 
@@ -318,6 +324,8 @@ class ControlNetLLLiteDiT(nn.Module):
         cond_resblocks: int = 1,
         use_aspp: bool = False,
         aspp_dilations: Tuple[int, ...] = ASPP_DEFAULT_DILATIONS,
+        cond_in_channels: int = 3,
+        inpaint_masked_input: bool = False,
     ):
         super().__init__()
 
@@ -333,11 +341,16 @@ class ControlNetLLLiteDiT(nn.Module):
         self.cond_resblocks = cond_resblocks
         self.use_aspp = use_aspp
         self.aspp_dilations = tuple(aspp_dilations) if use_aspp else ()
+        # 4ch (RGB+mask) inpainting 用の付加情報。inpaint_masked_input は学習側の RGB マスキング方針を
+        # 記録するためのフラグで、モデル forward の挙動には影響しない (メタデータ復元用)。
+        self.cond_in_channels = cond_in_channels
+        self.inpaint_masked_input = inpaint_masked_input
 
-        # cond image (B,3,H*16,W*16) -> (B, S, cond_emb_dim)
+        # cond image (B, cond_in_channels, H*16, W*16) -> (B, S, cond_emb_dim)
         self.conditioning1 = _Conditioning1(
             cond_dim, cond_emb_dim, cond_resblocks,
             use_aspp=use_aspp, aspp_dilations=aspp_dilations,
+            cond_in_channels=cond_in_channels,
         )
 
         modules = self._create_modules(dit, cond_emb_dim, mlp_dim, atomics, dropout, multiplier)
@@ -348,14 +361,16 @@ class ControlNetLLLiteDiT(nn.Module):
         self.depth_embeds = nn.Parameter(torch.zeros(n, cond_emb_dim))
         for i, m in enumerate(self.lllite_modules):
             m.layer_idx = i
-            m._depth_embeds_ref = [self.depth_embeds]
 
         aspp_info = f"aspp={'on' + str(list(self.aspp_dilations)) if use_aspp else 'off'}"
+        inpaint_info = (
+            f", inpaint=on(masked_input={inpaint_masked_input})" if cond_in_channels == 4 else ""
+        )
         logger.info(
             f"ControlNet-LLLite (Anima v{LLLITE_ARCH_VERSION}): created {n} modules for "
             f"target={target_layers!r} (atomics={list(atomics)}), "
-            f"cond_dim={cond_dim}, cond_resblocks={cond_resblocks}, {aspp_info}, "
-            f"cond_emb_dim={cond_emb_dim}, mlp_dim={mlp_dim}"
+            f"cond_in_channels={cond_in_channels}, cond_dim={cond_dim}, cond_resblocks={cond_resblocks}, {aspp_info}, "
+            f"cond_emb_dim={cond_emb_dim}, mlp_dim={mlp_dim}{inpaint_info}"
         )
 
     @property
@@ -430,10 +445,21 @@ class ControlNetLLLiteDiT(nn.Module):
         if cond_image is None:
             for m in self.lllite_modules:
                 m.cond_emb = None
+                m.depth_emb = None
             return
         cx = self.conditioning1(cond_image)  # (B, S, cond_emb_dim)
         for m in self.lllite_modules:
-            m.cond_emb = cx
+            # 共有の cx を全モジュールに同一テンソルとして持たせ (N コピーを避ける)、
+            # depth embedding はこのモジュール用の (cond_emb_dim,) スライスだけを渡す。
+            # 加算は forward 内で行う (cx の N 倍メモリを回避するため)。
+            #
+            # depth_embeds[layer_idx] の index 参照はここ (compile 領域の外) で毎ステップ
+            # 行う。forward 内で整数 layer_idx を参照すると torch.compile がブロック毎に
+            # 別グラフを焼くため、参照はここに残す。また index 参照を毎ステップ行うことで
+            # SelectBackward が毎回張り直され、2 回目以降の backward でも depth_embeds へ
+            # 正しく勾配が流れる (__init__ で一度だけ index すると graph 再利用で破綻する)。
+            m.cond_emb = cx  # 全モジュールで共有 (同一テンソル)
+            m.depth_emb = self.depth_embeds[m.layer_idx]  # (cond_emb_dim,), broadcast over (B, S)
 
     def clear_cond_image(self):
         self.set_cond_image(None)
@@ -477,6 +503,11 @@ class AnimaControlNetLLLiteWrapper(nn.Module):
             assert cond_image.shape[-2] == expected_h and cond_image.shape[-1] == expected_w, (
                 f"cond_image HW mismatch: latent={x.shape[-2]}x{x.shape[-1]} -> expected "
                 f"{expected_h}x{expected_w}, got {cond_image.shape[-2]}x{cond_image.shape[-1]}"
+            )
+            expected_c = self.lllite.cond_in_channels
+            assert cond_image.shape[1] == expected_c, (
+                f"cond_image channel mismatch: expected {expected_c} (cond_in_channels), "
+                f"got {cond_image.shape[1]}"
             )
             self.lllite.set_cond_image(cond_image)
         return self.dit(x, timesteps, context, **kwargs)
@@ -763,6 +794,41 @@ if __name__ == "__main__":
     assert torch.allclose(y_a, y_a_ref), "ASPP-on zero-init forward mismatch"
     logger.info("  ASPP-on zero-init forward OK")
 
+    # 4ch (inpainting) パス: 構築 + conv1 入力チャネル + zero-init forward + save/load round-trip
+    dit_4ch = _DummyDiT(num_blocks=2, dim=64, ctx_dim=128)
+    lllite_4ch = ControlNetLLLiteDiT(
+        dit_4ch, cond_emb_dim=32, mlp_dim=64, target_layers="self_attn_q",
+        cond_dim=64, cond_resblocks=1, cond_in_channels=4, inpaint_masked_input=True,
+    )
+    assert lllite_4ch.cond_in_channels == 4
+    assert lllite_4ch.inpaint_masked_input is True
+    assert lllite_4ch.conditioning1.conv1.in_channels == 4
+    # 3ch 重みは 4ch モデルにそのまま load できないが、4ch round-trip は通る
+    lllite_4ch.apply_to()
+    wrapper_4ch = AnimaControlNetLLLiteWrapper(dit_4ch, lllite_4ch)
+    H4, W4 = 8, 8
+    cond4 = torch.randn(1, 4, H4 * 16, W4 * 16)
+    wrapper_4ch.lllite.set_cond_image(cond4)
+    cx4 = wrapper_4ch.lllite.lllite_modules[0].cond_emb
+    assert cx4 is not None and cx4.shape == (1, H4 * W4, 32), f"4ch cond_emb shape: {cx4.shape}"
+    # zero-init forward
+    mod4 = wrapper_4ch.lllite.lllite_modules[0]
+    x4 = torch.randn(1, H4 * W4, mod4.org_module[0].in_features)
+    y4 = mod4(x4)
+    y4_ref = mod4.org_forward(x4)
+    assert torch.allclose(y4, y4_ref), "4ch zero-init forward mismatch"
+    # Wrapper の cond_image チャネル assert: 3ch を渡すと AssertionError になる
+    x_lat = torch.randn(1, 16, 1, H4 * 2, W4 * 2)  # dummy latent
+    try:
+        # 3ch cond を渡すと拒否されるか
+        wrapper_4ch(x_lat, torch.zeros(1), torch.zeros(1, 1, 1), cond_image=torch.randn(1, 3, H4 * 16, W4 * 16))
+        raise AssertionError("expected channel mismatch assert")
+    except AssertionError as e:
+        msg = str(e)
+        if "channel mismatch" not in msg and "expected 4" not in msg:
+            raise
+    logger.info("  4ch (inpainting) build / forward / channel assert OK")
+
     # 非デフォルト dilations
     lllite_dil = ControlNetLLLiteDiT(
         _DummyDiT(num_blocks=2, dim=64, ctx_dim=128),
@@ -871,6 +937,36 @@ if __name__ == "__main__":
         for k in sd_orig:
             assert torch.allclose(sd_orig[k].float(), sd_loaded[k].float()), f"mismatch at {k}"
         logger.info("  save / load round-trip OK")
+
+        # 4ch round-trip
+        tmp4 = tmp + ".4ch.safetensors"
+        try:
+            meta4 = {
+                "lllite.version": LLLITE_ARCH_VERSION,
+                "lllite.cond_emb_dim": "32",
+                "lllite.mlp_dim": "64",
+                "lllite.target_layers": "self_attn_q",
+                "lllite.cond_dim": "64",
+                "lllite.cond_resblocks": "1",
+                "lllite.cond_in_channels": "4",
+                "lllite.inpaint_masked_input": "true",
+            }
+            save_lllite_model(tmp4, lllite_4ch, dtype=torch.float32, metadata=meta4)
+            dit_4ch_b = _DummyDiT(num_blocks=2, dim=64, ctx_dim=128)
+            lllite_4ch_b = ControlNetLLLiteDiT(
+                dit_4ch_b, cond_emb_dim=32, mlp_dim=64, target_layers="self_attn_q",
+                cond_dim=64, cond_resblocks=1, cond_in_channels=4, inpaint_masked_input=True,
+            )
+            load_lllite_weights(lllite_4ch_b, tmp4, strict=True)
+            sd_a = lllite_4ch.state_dict()
+            sd_b = lllite_4ch_b.state_dict()
+            assert set(sd_a.keys()) == set(sd_b.keys())
+            for k in sd_a:
+                assert torch.allclose(sd_a[k].float(), sd_b[k].float()), f"4ch round-trip mismatch at {k}"
+            logger.info("  4ch save / load round-trip OK")
+        finally:
+            if os.path.exists(tmp4):
+                os.unlink(tmp4)
 
         # 旧形式 (lllite_modules.* キー) は reject される
         legacy_sd = {"lllite_modules.0.up.weight": torch.zeros(1)}

@@ -42,7 +42,7 @@ params:
   gradient_checkpointing:
     effectiveDefault: true
   network_train_unet_only:
-    description: 只训练 Chroma Transformer 的 LoRA；Chroma 不训练 T5-XXL 文本编码器 LoRA。
+    description: 只训练 Chroma Transformer 的 LoRA；关闭后还需在 network_args 中设置 train_t5xxl=True 才会训练 T5-XXL，并必须同时关闭文本编码器输出缓存及其磁盘缓存。
     effectiveDefault: true
   cache_latents:
     effectiveDefault: true
@@ -65,7 +65,7 @@ params:
     label: 嵌入式 Guidance
     description: Chroma 不是 Guidance Distilled 模型，训练时必须设为 0.0 以关闭嵌入式 Guidance；采样时的 CFG 是另一项参数。
     group: model_specific
-    priority: recommended
+    priority: advanced
     effectiveDefault: 0.0
   timestep_sampling:
     label: 时间步采样
@@ -77,7 +77,7 @@ params:
     label: 预测类型
     description: 选择如何处理 Chroma 的模型输出；推荐 raw 直接使用预测值，additive 会加回带噪输入，sigma_scaled 会按 Sigma 缩放。
     group: model_specific
-    priority: recommended
+    priority: advanced
     effectiveDefault: raw
   apply_t5_attn_mask:
     label: T5 注意力掩码
@@ -86,6 +86,17 @@ params:
     priority: required
     effectiveDefault: true
     required: true
+  fp8_base:
+    priority: recommended
+  show_timesteps:
+    priority: dangerous
+    hidden: false
+  show_timesteps_resolution:
+    priority: advanced
+    hidden: false
+  show_timesteps_offset:
+    priority: advanced
+    hidden: false
   t5xxl_max_token_length:
     label: T5 最大 Token 长度
     description: T5-XXL tokenizer 对每条 Caption 保留的最大 Token 数；Chroma 留空时按非 Schnell 模型使用 512。
@@ -93,7 +104,7 @@ params:
     priority: advanced
     control: number
   discrete_flow_shift:
-    description: 设置 Flow Matching 调度器的偏移值；只有时间步采样选择 shift 时才生效，其他模式会忽略。
+    description: 设置 Flow Matching 的离散偏移；仅在时间步采样选择 sigma 或 shift 时生效，默认 sigmoid 会忽略此项。
     group: model_specific
     priority: advanced
   controlnet_model_name_or_path:

@@ -34,6 +34,7 @@ import re
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple, Union
 
+from library import cv2_compat  # noqa: F401 - must be imported before `import cv2`
 import cv2
 import imagesize
 import numpy as np
@@ -592,7 +593,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
                 flex_tokens = dropout_tags(flex_tokens)
 
-                caption = ", ".join(fixed_tokens + flex_tokens + fixed_suffix_tokens)
+                caption = f"{subset.caption_separator} ".join(fixed_tokens + flex_tokens + fixed_suffix_tokens)
 
             # process secondary separator
             if subset.secondary_separator:

@@ -44,14 +44,14 @@ params:
     effectiveDefault: nextdit_shift
   discrete_flow_shift:
     label: 离散 Flow Shift
-    description: 设置 Lumina Euler Flow Matching 调度器的离散偏移，脚本默认 6.0。
+    description: 设置 Lumina Flow Matching 的离散偏移，默认 6.0；仅在时间步采样选择 sigma 或 shift 时生效，默认 nextdit_shift 使用按分辨率计算的偏移。
     group: model_specific
-    priority: recommended
+    priority: advanced
     effectiveDefault: 6.0
   model_prediction_type:
     description: 选择如何处理 Lumina 模型输出；脚本默认并推荐 raw 直接使用预测值。
     group: model_specific
-    priority: recommended
+    priority: advanced
     effectiveDefault: raw
   gemma2_max_token_length:
     label: Gemma2 最大 Token 长度
