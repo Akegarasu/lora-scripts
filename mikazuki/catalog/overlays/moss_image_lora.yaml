@@ -1,0 +1,164 @@
+trainer:
+  defaultNetworkModule: networks.lora_generic
+  datasetDefaults:
+    resolution: [1024, 1024]
+    minBucketReso: 256
+    maxBucketReso: 2048
+    bucketResoSteps: 16
+params:
+  pretrained_model_name_or_path:
+    description: 指定 MOSS-Image Base 或 SFT 的本地 DiT 权重文件；官方分片权重请选择第一个分片，其他分片须位于同一目录。也支持 ComfyUI BF16 或 ConvRot INT8 单文件。
+  text_encoder:
+    label: Qwen3.5-9B 文本编码器
+    description: 指定本地 Qwen3.5-9B 的第一个权重分片，或 ConvRot INT8 单文件；不支持 W4A8 GPTQ。文本编码器固定使用 BF16，需要本项目 requirements.txt 中的新版训练依赖（Transformers 5.17 及以上）。
+    required: true
+  vae:
+    label: FLUX.2 VAE
+    description: 指定本地 FLUX.2 VAE 权重文件，支持 BFL、ComfyUI 和 Diffusers 权重格式；不接受模型目录，固定使用 FP32，不能使用 FLUX.1 VAE。
+    priority: required
+    required: true
+  tokenizer_cache_dir:
+    description: 指定 Hugging Face tokenizer 缓存目录，或包含 tokenizer_config.json 等文件的本地 tokenizer 目录；留空时从 OpenMOSS-Team/MOSS-Image-Base 自动下载。
+  network_module:
+    effectiveDefault: networks.lora_generic
+  network_dim:
+    effectiveDefault: 16
+  network_alpha:
+    effectiveDefault: 1
+  network_args:
+    description: 使用 key=value 设置通用 LoRA 的附加参数，如 network_reg_dims、network_reg_lrs 和模块筛选 include_patterns、exclude_patterns；可用键以 networks.lora_generic 为准。
+  network_train_unet_only:
+    description: 只训练 MOSS-Image DiT LoRA；官方建议冻结文本编码器。若训练 Qwen3.5-9B LoRA，请关闭此项及文本编码器缓存。
+    effectiveDefault: true
+  text_encoder_lr:
+    description: 设置 Qwen3.5-9B LoRA 的学习率；仅在关闭“仅训练 U-Net / DiT”及文本编码器缓存后生效。
+  learning_rate:
+    effectiveDefault: 0.0001
+  mixed_precision:
+    description: DiT 与 Qwen3.5-9B 原模型使用 BF16，推荐 BF16 训练；VAE 始终使用 FP32，FP16 训练可能不稳定。
+    effectiveDefault: bf16
+  gradient_checkpointing:
+    effectiveDefault: true
+  cache_latents:
+    description: 缓存 FLUX.2 VAE 潜变量，减少训练期间的 VAE 计算；颜色增强和随机裁剪必须关闭，水平翻转仍可缓存。
+    effectiveDefault: true
+  cache_latents_to_disk:
+    effectiveDefault: true
+  cache_text_encoder_outputs:
+    description: 缓存 Qwen3.5-9B 输出并释放训练期间的文本编码器；支持整体 Caption Dropout 和多候选 Caption，仍不支持 Shuffle、Tag Dropout、Token Warmup 或文本编码器 LoRA 训练。
+    effectiveDefault: true
+  cache_text_encoder_outputs_to_disk:
+    effectiveDefault: true
+  text_encoder_batch_size:
+    description: 缓存任务的文本批量大小；Qwen3.5 的实际编码仍逐条执行且不填充，避免 Gated DeltaNet 对 padding 敏感的问题。
+  moss_max_token_length:
+    label: MOSS 最大 Token 长度
+    description: 包括聊天模板在内的文本最大 Token 数，默认及上限均为 4096；长 Caption 会增加注意力计算、显存和缓存大小。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 1
+    max: 4096
+    step: 1
+  timestep_sampling:
+    description: 选择 Rectified Flow 时间步分布；本预设使用 truncated_logit_normal，配合均值 -1.09、标准差 0.95 和 Shift 1.0 对应官方预训练分布。
+    priority: recommended
+    effectiveDefault: truncated_logit_normal
+  logit_mean:
+    description: 截断 Logit Normal 采样的正态均值；本预设使用官方预训练分布的 -1.09，不代表所有 LoRA 数据集的最佳参数。
+    effectiveDefault: -1.09
+  logit_std:
+    description: 截断 Logit Normal 采样的正态标准差；本预设使用官方预训练分布的 0.95，必须大于 0。
+    effectiveDefault: 0.95
+  discrete_flow_shift:
+    description: 训练时间步网格的偏移，sigma、shift 和 truncated_logit_normal 会使用；本预设 1.0 对应官方训练网格，与采样预览的推理 Shift 不同。
+    effectiveDefault: 1.0
+  blocks_to_swap:
+    description: 在 CPU 与 GPU 间交换 DiT Block 以节省显存，最多 40 个；不能与 CPU 或 Unsloth 激活卸载同时启用。
+    max: 40
+  convrot_int8:
+    label: DiT 使用 ConvRot INT8
+    description: 加载时将 DiT 冻结权重量化为 ConvRot INT8 以节省显存；已量化文件会自动识别。兼容 Triton 可加速，否则使用较慢的反量化计算。
+    group: memory
+    priority: recommended
+    control: switch
+  convrot_int8_text_encoder:
+    label: 文本编码器使用 ConvRot INT8
+    description: 加载时将 Qwen3.5-9B 权重量化为 ConvRot INT8，降低文本编码阶段的显存；已量化文件会自动识别，此项不支持 W4A8 GPTQ。
+    group: memory
+    priority: recommended
+    control: switch
+  convrot_int8_bwd:
+    label: ConvRot INT8 反向计算
+    description: 默认 BF16 以临时反量化计算梯度；INT8 可提速但会量化梯度，要求 CUDA 和兼容的 Triton，仅在使用 ConvRot INT8 权重时生效。
+    group: memory
+    priority: advanced
+    control: select
+  attn_mode:
+    label: Attention 实现
+    description: 选择 MOSS-Image DiT 注意力实现；xFormers 必须同时启用拆分 Attention，SageAttention 仅供推理，SDPA 是 Torch 的兼容别名。
+    group: memory
+    priority: recommended
+    control: select
+    choices: [torch, xformers, flash, sdpa]
+    effectiveDefault: torch
+  split_attn:
+    label: 拆分 Attention
+    description: 分批计算 Attention 以降低峰值显存；使用 xFormers 时必须启用，不能与完整图编译同时使用。
+    group: memory
+    priority: advanced
+  sample_uncond_skip_layers:
+    label: 预览负向分支跳过的 Block
+    description: 采样预览时 CFG 负向分支跳过的 DiT Block 编号，用逗号分隔；默认 22 对应官方实现，清空字符串可关闭跳过，编号范围为 0 到 41。
+    group: sampling
+    priority: advanced
+    control: input
+    extra:
+      preserveEmpty: true
+  sample_sampler:
+    description: MOSS-Image 使用自身的 Euler 采样器，不读取此通用采样器选项。
+    priority: hidden
+    hidden: true
+    extra:
+      fixedValue: euler
+  show_timesteps:
+    priority: dangerous
+    hidden: false
+  show_timesteps_resolution:
+    priority: advanced
+    hidden: false
+  show_timesteps_offset:
+    priority: advanced
+    hidden: false
+  sdpa:
+    description: 使用“Attention 实现”选择 Torch 或 SDPA；此通用开关不控制 MOSS-Image DiT。
+    priority: hidden
+    hidden: true
+  xformers:
+    description: 旧配置兼容开关；使用“Attention 实现”选择 xFormers。
+    priority: hidden
+    hidden: true
+  fp8_base:
+    description: MOSS-Image 不支持通用 FP8；请使用 ConvRot INT8。
+    priority: hidden
+    hidden: true
+  fp8_base_unet:
+    description: MOSS-Image 不支持通用 DiT FP8；请使用 ConvRot INT8。
+    priority: hidden
+    hidden: true
+  v2:
+    description: Stable Diffusion 2.x 专用开关，MOSS-Image 不使用。
+    priority: hidden
+    hidden: true
+  v_parameterization:
+    description: Stable Diffusion 的 V-Pred 开关，MOSS-Image Rectified Flow 不使用。
+    priority: hidden
+    hidden: true
+  clip_skip:
+    description: Stable Diffusion CLIP 专用参数，MOSS-Image 使用 Qwen3.5-9B，不使用此项。
+    priority: hidden
+    hidden: true
+  max_token_length:
+    description: Stable Diffusion 文本长度参数，MOSS-Image 请使用 moss_max_token_length。
+    priority: hidden
+    hidden: true

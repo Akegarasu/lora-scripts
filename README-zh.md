@@ -35,6 +35,8 @@ LoRA-scripts（又名 SD-Trainer）
 
 LoRA & Dreambooth 训练图形界面 & 脚本预设 & 一键训练环境，用于 [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
 
+已同步 sd-scripts v0.12.3，工作台新增 **MOSS-Image LoRA**（Base / SFT），并接入 H2D Block Swap、多行 Caption 和截断时间步采样。所有训练器统一使用新版 `requirements.txt`，包含 Transformers 5.17.0 和 Diffusers 0.40.0；安装及模型文件配置见 [MOSS-Image 训练指南](docs/moss-image-training.md)。
+
 ## ✨新特性: 训练 WebUI
 
 Stable Diffusion 训练工作台。一切集成于一个 WebUI 中。
@@ -58,7 +60,7 @@ Caption 默认处理全部扫描图片、跳过已有文件并直接安全写入
 
 ### 必要依赖
 
-Python 3.10 和 Git
+Python 3.10 或更新版本、Git，以及 PyTorch 2.6 或更新版本。安装器默认安装 PyTorch 2.7.0、torchvision 0.22.0 和 CUDA 12.8，需要兼容的 NVIDIA 驱动。其他硬件或 CUDA 组合可先安装匹配的 PyTorch，再使用 Windows 的 `-SkipTorch` 或 Linux 的 `--skip-torch` 保留该构建。
 
 ### 克隆带子模块的仓库
 
@@ -72,7 +74,7 @@ git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 #### 安装
 
-运行 `install-cn.ps1` 将自动为您创建虚拟环境并安装必要的依赖。 
+在项目根目录运行 `.\scripts\install-cn.ps1`，或使用官方源 `.\scripts\install.ps1`，创建或更新虚拟环境并安装新版依赖。已有安装在更新代码后也应重新运行安装器，完成后重启 GUI。
 
 #### 训练
 
@@ -85,7 +87,7 @@ Release，也可切换 Jihulab 国内源或静态镜像。详见[前端版本与
 
 #### 安装
 
-运行 `install.bash` 将创建虚拟环境并安装必要的依赖。
+在项目根目录运行 `bash scripts/install.bash`，创建或更新虚拟环境并安装新版依赖；升级后重启 GUI。
 
 #### 训练
 
@@ -96,18 +98,15 @@ Release，也可切换 Jihulab 国内源或静态镜像。详见[前端版本与
 #### 编译镜像
 
 ```bash
-# 国内镜像优化版本
-# 其中 akegarasu_lora-scripts:latest 为镜像及其 tag 名，根据镜像托管服务商实际进行修改
-docker build -t akegarasu_lora-scripts:latest -f Dockfile-for-Mainland-China .
-docker push akegarasu_lora-scripts:latest
+docker build -t lora-scripts:local .
 ```
 
 #### 使用镜像
 
-> 提供一个本人已打包好并推送到 `aliyuncs` 上的镜像，此镜像压缩归档大小约 `10G` 左右，请耐心等待拉取。
+镜像基于 PyTorch 2.7.0 / CUDA 12.8，从当前工作区源码构建前后端。宿主机需要兼容 CUDA 12.8 的 NVIDIA 驱动与 NVIDIA Container Toolkit。本次更新尚未实际执行 Docker 镜像构建。
 
 ```bash
-docker run --gpus all -p 28000:28000 -p 6006:6006 registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest 
+docker run --gpus all -p 28000:28000 lora-scripts:local
 ```
 
 或者使用 `docker-compose.yaml` 。
@@ -118,8 +117,8 @@ services:
     container_name: lora-scripts
     build:
       context: .
-      dockerfile: Dockerfile-for-Mainland-China
-    image: "registry.cn-hangzhou.aliyuncs.com/go-to-mirror/akegarasu_lora-scripts:latest"
+      dockerfile: Dockerfile
+    image: "lora-scripts:local"
     ports:
       - "28000:28000"
       - "6006:6006"  

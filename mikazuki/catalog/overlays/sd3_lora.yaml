@@ -6,6 +6,22 @@ trainer:
     maxBucketReso: 2048
     bucketResoSteps: 32
 params:
+  timestep_cutoff:
+    priority: hidden
+    hidden: true
+  timestep_uniform_ratio:
+    priority: hidden
+    hidden: true
+  block_swap_h2d_only:
+    description: SD3 当前不支持单向 H2D Block Swap；请使用普通 Block Swap。
+    priority: hidden
+    hidden: true
+  block_swap_ring_size:
+    priority: hidden
+    hidden: true
+  use_pinned_memory_for_block_swap:
+    priority: hidden
+    hidden: true
   pretrained_model_name_or_path:
     description: 指定本地 SD3/SD3.5 单文件 .safetensors 底模权重；当前训练器不按 Diffusers 目录或 Hugging Face 仓库 ID 加载。
   vae:

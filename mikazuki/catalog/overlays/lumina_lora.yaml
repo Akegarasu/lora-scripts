@@ -6,6 +6,12 @@ trainer:
     maxBucketReso: 2048
     bucketResoSteps: 16
 params:
+  timestep_cutoff:
+    priority: hidden
+    hidden: true
+  timestep_uniform_ratio:
+    priority: hidden
+    hidden: true
   pretrained_model_name_or_path:
     description: 指定本地 Lumina Image 2.0 .safetensors 底模权重文件。
   gemma2:

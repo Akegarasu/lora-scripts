@@ -69,7 +69,7 @@ params:
     effectiveDefault: 0.0
   timestep_sampling:
     label: 时间步采样
-    description: 选择 Chroma 训练噪声时间步的分布；脚本文档推荐 sigmoid。
+    description: 选择 Chroma 训练噪声时间步的分布；保留 sigmoid 预设，也可选 truncated_logit_normal 并配合 Logit 均值、标准差和截断参数。
     group: model_specific
     priority: recommended
     effectiveDefault: sigmoid
@@ -104,7 +104,7 @@ params:
     priority: advanced
     control: number
   discrete_flow_shift:
-    description: 设置 Flow Matching 的离散偏移；仅在时间步采样选择 sigma 或 shift 时生效，默认 sigmoid 会忽略此项。
+    description: 设置 Flow Matching 的离散偏移；在 sigma、shift 或 truncated_logit_normal 采样时生效，默认 sigmoid 会忽略此项。
     group: model_specific
     priority: advanced
   controlnet_model_name_or_path:

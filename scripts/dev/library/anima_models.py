@@ -14,6 +14,7 @@ import torch.nn.functional as F
 from torch.utils.checkpoint import checkpoint as torch_checkpoint
 
 from library import custom_offloading_utils, attention
+from library.custom_offloading_utils import UnslothOffloadedGradientCheckpointer, detach_variable, unsloth_checkpoint
 
 
 def to_device(x, device):
@@ -36,92 +37,6 @@ def to_cpu(x):
         return {k: to_cpu(v) for k, v in x.items()}
     else:
         return x
-
-
-# Unsloth Offloaded Gradient Checkpointing
-# Based on Unsloth Zoo by Daniel Han-Chen & the Unsloth team
-try:
-    from deepspeed.runtime.activation_checkpointing.checkpointing import detach_variable
-except ImportError:
-
-    def detach_variable(inputs, device=None):
-        """Detach tensors from computation graph, optionally moving to a device.
-
-        Reimplementation of deepspeed.runtime.activation_checkpointing.checkpointing.detach_variable
-        for environments without DeepSpeed installed.
-        """
-        if isinstance(inputs, tuple):
-            out = []
-            for inp in inputs:
-                if not isinstance(inp, torch.Tensor):
-                    out.append(inp)
-                    continue
-                requires_grad = inp.requires_grad
-                if device is not None:
-                    x = inp.to(device=device)
-                else:
-                    x = inp
-                x = x.detach()
-                x.requires_grad = requires_grad
-                out.append(x)
-            return tuple(out)
-        else:
-            raise RuntimeError(
-                "Only tuple of tensors is supported. Got Unsupported input type: ",
-                type(inputs).__name__,
-            )
-
-
-class UnslothOffloadedGradientCheckpointer(torch.autograd.Function):
-    """Saves VRAM by offloading activations to CPU RAM using non-blocking transfers.
-
-    Compared to standard cpu_offload_checkpointing which uses blocking transfers,
-    this uses non_blocking=True to hide CPU<->GPU transfer latency behind compute.
-    """
-
-    @staticmethod
-    @torch.amp.custom_fwd(device_type="cuda")
-    def forward(ctx, forward_function, hidden_states, *args):
-        # Remember the original device for backward pass (multi-GPU support)
-        ctx.input_device = hidden_states.device
-        saved_hidden_states = hidden_states.to("cpu", non_blocking=True)
-        with torch.no_grad():
-            output = forward_function(hidden_states, *args)
-        ctx.save_for_backward(saved_hidden_states)
-        ctx.forward_function = forward_function
-        # NOTE: args stored directly on ctx (not via save_for_backward) because
-        # the training loop holds references to these tensors, preventing GC.
-        # Using save_for_backward for all args would add complexity for no benefit.
-        ctx.args = args
-        return output
-
-    @staticmethod
-    @torch.amp.custom_bwd(device_type="cuda")
-    def backward(ctx, *grads):
-        (hidden_states,) = ctx.saved_tensors
-        hidden_states = hidden_states.to(ctx.input_device, non_blocking=True).detach()
-        hidden_states.requires_grad_(True)
-        args = detach_variable(ctx.args)
-        inputs = (hidden_states,) + args
-        with torch.enable_grad():
-            outputs = ctx.forward_function(*inputs)
-
-        output_tensors = []
-        grad_tensors = []
-        for out, grad in zip(
-            outputs if isinstance(outputs, tuple) else (outputs,), grads if isinstance(grads, tuple) else (grads,)
-        ):
-            if isinstance(out, torch.Tensor) and out.requires_grad:
-                output_tensors.append(out)
-                grad_tensors.append(grad)
-        torch.autograd.backward(output_tensors, grad_tensors)
-        return (None,) + tuple(inp.grad if isinstance(inp, torch.Tensor) else None for inp in inputs)
-
-
-@torch._disable_dynamo
-def unsloth_checkpoint(function, *args):
-    """Wrapper for UnslothOffloadedGradientCheckpointer."""
-    return UnslothOffloadedGradientCheckpointer.apply(function, *args)
 
 
 from .utils import setup_logging
@@ -1251,15 +1166,18 @@ class Anima(nn.Module):
         )
         return x_B_C_Tt_Hp_Wp
 
-    def enable_block_swap(self, num_blocks: int, device: torch.device):
+    def enable_block_swap(self, num_blocks: int, config: custom_offloading_utils.BlockSwapConfig):
         self.blocks_to_swap = num_blocks
 
         assert (
             self.blocks_to_swap <= self.num_blocks - 2
         ), f"Cannot swap more than {self.num_blocks - 2} blocks. Requested: {self.blocks_to_swap} blocks."
 
-        self.offloader = custom_offloading_utils.ModelOffloader(self.blocks, self.blocks_to_swap, device)
-        logger.info(f"Anima: Block swap enabled. Swapping {num_blocks} blocks, total blocks: {self.num_blocks}, device: {device}.")
+        self.offloader = custom_offloading_utils.create_offloader("block", self.blocks, self.num_blocks, self.blocks_to_swap, config)
+        logger.info(
+            f"Anima: Block swap enabled. Swapping {num_blocks} blocks, total blocks: {self.num_blocks}, device: {config.device}."
+            f" H2D-only: {config.h2d_only}"
+        )
 
     def move_to_device_except_swap_blocks(self, device: torch.device):
         # Move all modules to device except blocks (which are managed by offloader)
@@ -1353,7 +1271,7 @@ class Anima(nn.Module):
             x_B_T_H_W_D = block(x_B_T_H_W_D, t_embedding_B_T_D, crossattn_emb, attn_params, use_fp32, **block_kwargs)
 
             if self.blocks_to_swap:
-                self.offloader.submit_move_blocks(self.blocks, block_idx)
+                self.offloader.submit_move_blocks_forward(self.blocks, block_idx)
 
         x_B_T_H_W_O = self.final_layer(x_B_T_H_W_D, t_embedding_B_T_D, adaln_lora_B_T_3D=adaln_lora_B_T_3D, use_fp32=use_fp32)
         x_B_C_Tt_Hp_Wp = self.unpatchify(x_B_T_H_W_O)

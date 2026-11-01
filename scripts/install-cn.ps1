@@ -1,51 +1,40 @@
+param(
+    [switch]$SkipTorch
+)
+
+$ErrorActionPreference = "Stop"
+Set-Location (Split-Path -Parent $PSScriptRoot)
 $Env:HF_HOME = "huggingface"
-$Env:PIP_DISABLE_PIP_VERSION_CHECK = 1
-$Env:PIP_NO_CACHE_DIR = 1
+$Env:PIP_DISABLE_PIP_VERSION_CHECK = "1"
+$Env:PIP_NO_CACHE_DIR = "1"
 $Env:PIP_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
-function InstallFail {
-    Write-Output "安装失败。"
-    Read-Host | Out-Null ;
-    Exit
+
+function Check-Install([string]$Step) {
+    if ($LASTEXITCODE -ne 0) { throw "$Step（退出码 $LASTEXITCODE）" }
 }
 
-function Check {
-    param (
-        $ErrorInfo
-    )
-    if (!($?)) {
-        Write-Output $ErrorInfo
-        InstallFail
-    }
-}
-if (Test-Path -Path "python\python.exe") {
-    Write-Output "使用 python 文件夹内的 python..."
-    $py_path = (Get-Item "python").FullName
-    $env:PATH = "$py_path;$env:PATH"
-}
-else {
-    if (!(Test-Path -Path "venv")) {
+if (Test-Path -LiteralPath "python/python.exe") {
+    Write-Output "使用 python 文件夹内的 Python..."
+    $pythonExe = Join-Path (Get-Location) "python/python.exe"
+} else {
+    if (!(Test-Path -LiteralPath "venv/Scripts/python.exe")) {
         Write-Output "正在创建虚拟环境..."
         python -m venv venv
-        Check "创建虚拟环境失败，请检查 python 是否安装完毕以及 python 版本是否为64位版本的python 3.10、或python的目录是否在环境变量PATH内。"
+        Check-Install "创建虚拟环境失败，请检查 Python 版本与 PATH。"
     }
-    
-    Write-Output "检测到虚拟环境，尝试激活..."
-    .\venv\Scripts\activate
-    Check "激活虚拟环境失败。"
+    $pythonExe = Join-Path (Get-Location) "venv/Scripts/python.exe"
 }
 
-Write-Output "安装程序所需依赖 (已进行国内加速，若在国外或无法使用加速源请换用 install.ps1 脚本)"
-Write-Output "受限于国内加速镜像，torch 安装无法使用镜像源，安装较为缓慢。"
-$install_torch = Read-Host "是否需要安装 Torch+xformers? [y/n] (默认为 y)"
-if ($install_torch -eq "y" -or $install_torch -eq "Y" -or $install_torch -eq "") {
-    python -m pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --index-url https://download.pytorch.org/whl/cu128
-    Check "torch 安装失败，请删除 venv 文件夹后重新运行。"
-    python -m pip install -U -I --no-deps xformers===0.0.30 --extra-index-url https://download.pytorch.org/whl/cu128
-    Check "xformers 安装失败。"
+Write-Output "安装训练依赖（使用国内 PyPI 镜像；PyTorch 使用官方 CUDA 12.8 源）。"
+if (!$SkipTorch) {
+    & $pythonExe -m pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+    Check-Install "PyTorch 安装失败。"
+    & $pythonExe -m pip install --no-deps xformers==0.0.30 --index-url https://download.pytorch.org/whl/cu128
+    Check-Install "xformers 安装失败。"
 }
 
-python -m pip install --upgrade -r requirements.txt
-Check "训练界面依赖安装失败。"
-
+& $pythonExe -c "import torch; from packaging.version import Version; assert Version(torch.__version__.split('+')[0]) >= Version('2.6'), 'sd-scripts requires PyTorch >= 2.6; install the CUDA build matching your GPU first.'"
+Check-Install "PyTorch 环境不满足要求。"
+& $pythonExe -m pip install --upgrade -r requirements.txt
+Check-Install "训练界面依赖安装失败。"
 Write-Output "安装完毕"
-Read-Host | Out-Null ;

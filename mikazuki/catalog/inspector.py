@@ -74,6 +74,14 @@ TRAINERS = {
         "status": "experimental",
         "defaultNetworkModule": "networks.lora_anima",
     },
+    "moss_image.lora": {
+        "title": "MOSS-Image Base / SFT LoRA",
+        "family": "moss_image",
+        "task": "lora",
+        "module": "moss_image_train_network",
+        "status": "experimental",
+        "defaultNetworkModule": "networks.lora_generic",
+    },
 }
 
 

@@ -86,13 +86,13 @@ params:
     hidden: true
   timestep_sampling:
     label: 时间步采样
-    description: 选择 HunyuanImage Flow Matching 的时间步分布；默认 sigma。
+    description: 选择 HunyuanImage Flow Matching 的时间步分布；默认 sigma，也可选 truncated_logit_normal 并配合 Logit 均值、标准差和截断参数。
     group: model_specific
     priority: recommended
     effectiveDefault: sigma
   discrete_flow_shift:
     label: 离散 Flow Shift
-    description: 设置 HunyuanImage Flow Matching 的离散偏移，默认 5.0；在 sigma 或 shift 时间步采样下生效，当前默认 sigma 会使用此值。
+    description: 设置 HunyuanImage Flow Matching 的离散偏移，默认 5.0；在 sigma、shift 或 truncated_logit_normal 采样时生效，当前默认 sigma 会使用此值。
     group: model_specific
     priority: advanced
     effectiveDefault: 5.0

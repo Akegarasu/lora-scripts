@@ -591,6 +591,26 @@ params:
     control: number
     min: 0
     step: 1
+  block_swap_h2d_only:
+    label: 单向 Block Swap（H2D）
+    description: 为冻结底模的 LoRA 训练保留 CPU 权重副本，只向 GPU 传输以减少回传开销；实验功能，需同时启用 Block Swap 和梯度检查点，SD3 不支持。
+    group: memory
+    priority: advanced
+    control: switch
+  block_swap_ring_size:
+    label: Block Swap GPU 缓冲区数量
+    description: 仅在单向 H2D Block Swap 中使用；默认 2 可重叠传输与计算，1 更省显存但无法重叠。
+    group: memory
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  use_pinned_memory_for_block_swap:
+    label: Block Swap 使用锁页内存
+    description: 单向 H2D Block Swap 将 CPU 权重副本放入锁页内存以加速传输；Windows 会占用更多共享 GPU 内存，关闭时通过小型锁页缓冲池传输。
+    group: memory
+    priority: advanced
+    control: switch
   min_bucket_reso:
     label: Bucket 最小分辨率
     group: dataset
@@ -778,6 +798,18 @@ params:
     description: 解析 Caption 中形如 {image|picture|rendition} 的候选项，并在训练时随机选取其中一项。
     group: caption
     priority: advanced
+  enable_multiline_caption:
+    label: 保留多行 Caption
+    description: 保留 Caption 文件中的换行；可用分隔行提供多个候选 Caption，每步随机选择一条。文本编码器缓存是否支持多候选取决于训练器，MOSS-Image 支持。
+    group: caption
+    priority: advanced
+    control: switch
+  multiline_caption_separator:
+    label: 多候选 Caption 分隔行
+    description: 启用多行 Caption 时，以此字符串开头的行分隔不同候选 Caption；分隔行中井号后的内容作为注释。
+    group: caption
+    priority: advanced
+    control: input
   face_crop_aug_range:
     label: 人脸中心裁剪范围
     description: 启用以人脸为中心的裁剪增强并指定倍率范围，例如 2.0,4.0。
@@ -915,12 +947,12 @@ params:
     priority: advanced
   logit_mean:
     label: Logit Normal 均值
-    description: weighting_scheme 使用 logit_normal 时，设置其正态分布均值。
+    description: 设置 logit_normal 分布的正态均值；用于对应损失权重策略，或支持 truncated_logit_normal 时间步采样的训练器。
     group: training
     priority: advanced
   logit_std:
     label: Logit Normal 标准差
-    description: weighting_scheme 使用 logit_normal 时，设置其正态分布标准差。
+    description: 设置 logit_normal 分布的正态标准差；用于对应损失权重策略，或支持 truncated_logit_normal 时间步采样的训练器。
     group: training
     priority: advanced
   mode_scale:
@@ -978,6 +1010,24 @@ params:
     description: 选择训练时间步的采样分布；具体可选方法及默认值由当前模型族决定。
     group: model_specific
     priority: advanced
+  timestep_cutoff:
+    label: 时间步分布截断值
+    description: 仅用于 truncated_logit_normal 采样，将 Sigma 分布在此值截断后缩放到完整范围；默认 0.95，必须大于 0 且不超过 1。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 0
+    max: 1
+    step: 0.01
+  timestep_uniform_ratio:
+    label: 均匀时间步混合比例
+    description: 仅用于 truncated_logit_normal 采样，设置从时间步网格均匀抽样的比例；默认 0.01，范围为 0 到 1。
+    group: model_specific
+    priority: advanced
+    control: number
+    min: 0
+    max: 1
+    step: 0.01
   discrete_flow_shift:
     label: 离散 Flow Shift
     description: 调整 Rectified Flow 训练的时间步分布；实际默认值和生效的采样方式由当前模型族决定。
@@ -1220,6 +1270,56 @@ params:
     description: 使用异步非阻塞传输把激活卸载到 CPU 内存；比 cpu_offload_checkpointing 更快，且不能与后者或 blocks_to_swap 同时使用。
     group: memory
     priority: advanced
+  compile:
+    label: 按 Block 编译 DiT
+    description: 对 DiT 的 Transformer Block 分别执行 torch.compile，可加速训练但增加首次启动耗时；需要兼容的 Triton，不能与通用 torch_compile 同时启用。
+    group: memory
+    priority: advanced
+    control: switch
+  compile_backend:
+    label: Block 编译后端
+    description: 选择按 Block 编译使用的后端；默认 inductor，仅在启用按 Block 编译时生效。
+    group: memory
+    priority: advanced
+    control: input
+  compile_mode:
+    label: Block 编译模式
+    description: 选择编译优化策略；训练通常使用 default，其他模式可能增加启动耗时，仅在按 Block 编译时生效。
+    group: memory
+    priority: advanced
+    control: select
+  compile_dynamic:
+    label: 编译动态形状
+    description: 控制按 Block 编译的动态形状；留空等同 auto。Windows 使用 true 时需要 Visual Studio 2022 C++ 编译环境。
+    group: memory
+    priority: advanced
+    control: select
+  compile_fullgraph:
+    label: 完整图编译
+    description: 对 DiT Block 启用完整图编译；仅在按 Block 编译时生效，不能同时启用拆分 Attention（split_attn）。
+    group: memory
+    priority: advanced
+    control: switch
+  compile_cache_size_limit:
+    label: 编译缓存条目上限
+    description: 设置 Torch Dynamo 的编译缓存条目数；留空使用 PyTorch 默认，多 Bucket 训练可按需增加以减少重复编译。
+    group: memory
+    priority: advanced
+    control: number
+    min: 1
+    step: 1
+  cuda_allow_tf32:
+    label: 允许 TF32 计算
+    description: 在 Ampere 或更新的 NVIDIA GPU 上允许 TF32 矩阵与卷积计算，以部分 FP32 精度换取速度；独立于按 Block 编译开关。
+    group: memory
+    priority: advanced
+    control: switch
+  cuda_cudnn_benchmark:
+    label: cuDNN 算法测速
+    description: 让 cuDNN 通过测速选择卷积算法；频繁切换分辨率会增加首次测速开销，此项独立于按 Block 编译开关。
+    group: memory
+    priority: advanced
+    control: switch
   async_upload:
     label: 异步上传 Hugging Face
     description: 在后台异步上传输出到 Hugging Face，减少训练等待上传完成的时间。
@@ -1561,7 +1661,7 @@ params:
     control: input
   show_timesteps_offset:
     label: 时间步预览偏移
-    description: 仅在时间步预览中模拟数据子集的采样偏移，适用于 sigmoid、shift 和 flux_shift；实际训练需在数据集 custom_attributes.timestep_sampling.offset 中设置，本项不会改变训练分布。
+    description: 仅在时间步预览中模拟数据子集偏移；支持 sigmoid、shift、flux_shift、truncated_logit_normal，以及使用 logit_normal 权重策略的 sigma。实际训练需在数据集 custom_attributes.timestep_sampling.offset 中设置，本项不会改变训练分布。
     group: advanced
     priority: hidden
     hidden: true

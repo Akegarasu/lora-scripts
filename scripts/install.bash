@@ -1,67 +1,46 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+project_dir="$(dirname -- "$script_dir")"
 create_venv=true
+skip_torch=false
 
-while [ -n "$1" ]; do
+while (( $# > 0 )); do
     case "$1" in
-        --disable-venv)
-            create_venv=false
-            shift
-            ;;
-        *)
-            shift
-            ;;
+        --disable-venv) create_venv=false; shift ;;
+        --skip-torch) skip_torch=true; shift ;;
+        *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
 
+cd "$project_dir"
 if $create_venv; then
-    echo "Creating python venv..."
-    python3 -m venv venv
-    source "$script_dir/venv/bin/activate"
-    echo "active venv"
+    if [[ ! -f venv/bin/python ]]; then
+        python3 -m venv venv
+    fi
+    source venv/bin/activate
 fi
 
-echo "Installing torch & xformers..."
+if ! $skip_torch; then
+    cuda_version=$(nvidia-smi 2>/dev/null | grep -oP 'CUDA (?:UMD )?Version: \K[\d.]+' | head -1 || true)
+    if [[ -z "$cuda_version" ]]; then
+        cuda_version=$(nvcc --version 2>/dev/null | grep -oP 'release \K[\d.]+' | head -1 || true)
+    fi
+    cuda_major_version=${cuda_version%%.*}
+    cuda_minor_version=${cuda_version#*.}
+    cuda_minor_version=${cuda_minor_version%%.*}
+    echo "CUDA Version: $cuda_version"
 
-cuda_version=$(nvidia-smi | grep -oiP 'CUDA Version: \K[\d\.]+')
-
-if [ -z "$cuda_version" ]; then
-    cuda_version=$(nvcc --version | grep -oiP 'release \K[\d\.]+')
-fi
-cuda_major_version=$(echo "$cuda_version" | awk -F'.' '{print $1}')
-cuda_minor_version=$(echo "$cuda_version" | awk -F'.' '{print $2}')
-
-echo "CUDA Version: $cuda_version"
-
-
-if (( cuda_major_version >= 12 )); then
-    echo "install torch 2.7.0+cu128"
-    pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --extra-index-url https://download.pytorch.org/whl/cu128
-    pip install --no-deps xformers==0.0.30 --extra-index-url https://download.pytorch.org/whl/cu128
-elif (( cuda_major_version == 11 && cuda_minor_version >= 8 )); then
-    echo "install torch 2.4.0+cu118"
-    pip install torch==2.4.0+cu118 torchvision==0.19.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
-    pip install --no-deps xformers==0.0.27.post2+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
-elif (( cuda_major_version == 11 && cuda_minor_version >= 6 )); then
-    echo "install torch 1.12.1+cu116"
-    pip install torch==1.12.1+cu116 torchvision==0.13.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
-    # for RTX3090+cu113/cu116 xformers, we need to install this version from source. You can also try xformers==0.0.18
-    pip install --upgrade git+https://github.com/facebookresearch/xformers.git@0bad001ddd56c080524d37c84ff58d9cd030ebfd
-    pip install triton==2.0.0.dev20221202
-elif (( cuda_major_version == 11 && cuda_minor_version >= 2 )); then
-    echo "install torch 1.12.1+cu113"
-    pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu116
-    pip install --upgrade git+https://github.com/facebookresearch/xformers.git@0bad001ddd56c080524d37c84ff58d9cd030ebfd
-    pip install triton==2.0.0.dev20221202
-else
-    echo "Unsupported cuda version:$cuda_version"
-    exit 1
+    if [[ -n "$cuda_version" ]] && (( cuda_major_version > 12 || (cuda_major_version == 12 && cuda_minor_version >= 8) )); then
+        python -m pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --index-url https://download.pytorch.org/whl/cu128
+        python -m pip install --no-deps xformers==0.0.30 --index-url https://download.pytorch.org/whl/cu128
+    else
+        echo "Install a matching CUDA build of PyTorch >= 2.6 and torchvision first, then rerun with --skip-torch (detected CUDA: $cuda_version). See docs/moss-image-training.md." >&2
+        exit 1
+    fi
 fi
 
-echo "Installing deps..."
-
-cd "$script_dir" || exit
-pip install --upgrade -r requirements.txt
-
+python -c "import torch; from packaging.version import Version; assert Version(torch.__version__.split('+')[0]) >= Version('2.6'), 'sd-scripts requires PyTorch >= 2.6'"
+python -m pip install --upgrade -r requirements.txt
 echo "Install completed"

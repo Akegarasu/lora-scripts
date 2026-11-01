@@ -128,14 +128,25 @@ def compile_draft(
                     errors,
                 )
             if draft.sample.sampler:
-                _set_structured_param(
-                    trainer,
-                    values,
-                    "sample_sampler",
-                    draft.sample.sampler,
-                    "sample.sampler",
-                    errors,
-                )
+                sampler = trainer.params.get("sample_sampler")
+                fixed_sampler = sampler.extra.get("fixedValue") if sampler else None
+                if fixed_sampler:
+                    if draft.sample.sampler != fixed_sampler:
+                        errors.append(ValidationMessage(
+                            severity="error",
+                            code="sample.sampler.unsupported",
+                            field="sample.sampler",
+                            message=f"{trainer.title} 固定使用 {fixed_sampler} 采样器。",
+                        ))
+                else:
+                    _set_structured_param(
+                        trainer,
+                        values,
+                        "sample_sampler",
+                        draft.sample.sampler,
+                        "sample.sampler",
+                        errors,
+                    )
             if (
                 draft.sample.everyNEpochs is not None
                 and draft.sample.everyNSteps is not None
@@ -582,6 +593,8 @@ def _validate_numeric_bounds(
 
 
 def _should_omit_value(param: Optional[ParamDefinition], value: Any) -> bool:
+    if value == "" and param is not None and param.extra.get("preserveEmpty"):
+        return False
     if value is None or value == "" or value == [] or value == {}:
         return True
     if param is not None and param.omitIfZero and value == 0:
@@ -825,7 +838,7 @@ def _validate_conflicts(
             "caption_tag_dropout_rate": values.get("caption_tag_dropout_rate"),
             "token_warmup_step": values.get("token_warmup_step"),
         }
-        if trainer.id == "anima.lora":
+        if trainer.id in {"anima.lora", "moss_image.lora"}:
             caption_values.pop("caption_dropout_rate")
         for name, value in caption_values.items():
             if value:
@@ -842,6 +855,22 @@ def _validate_conflicts(
             "params.adaptive_noise_scale",
             "adaptive_noise_scale 需要同时设置 noise_offset。",
         )
+
+    if values.get("timestep_sampling") == "truncated_logit_normal":
+        for name, default in (("timestep_cutoff", 0.95), ("logit_std", 1.0)):
+            if values.get(name, default) <= 0:
+                add(
+                    "param.positive.truncated_logit_normal",
+                    f"params.{name}",
+                    f"truncated_logit_normal 要求 {name} 大于 0。",
+                )
+    if values.get("timestep_sampling") in {"sigma", "shift", "truncated_logit_normal"}:
+        if values.get("discrete_flow_shift", 1.0) <= 0:
+            add(
+                "param.positive.discrete_flow_shift",
+                "params.discrete_flow_shift",
+                "当前时间步采样要求 discrete_flow_shift 大于 0。",
+            )
 
     if values.get("scale_v_pred_loss_like_noise_pred") and not values.get("v_parameterization"):
         add(
@@ -911,6 +940,67 @@ def _validate_conflicts(
             "blocks_to_swap 不能与 cpu_offload_checkpointing 同时启用。",
         )
 
+    if values.get("block_swap_h2d_only"):
+        if trainer.family == "sd3":
+            add(
+                "param.unsupported.block_swap_h2d_only",
+                "params.block_swap_h2d_only",
+                "SD3 / SD3.5 不支持 H2D 单向 Block Swap，请使用普通 Block Swap。",
+            )
+        if not values.get("blocks_to_swap", 0):
+            add(
+                "param.requires.blocks_to_swap",
+                "params.block_swap_h2d_only",
+                "H2D 单向 Block Swap 需要将 blocks_to_swap 设为大于 0。",
+            )
+        if not values.get("gradient_checkpointing"):
+            add(
+                "param.requires.h2d_gradient_checkpointing",
+                "params.gradient_checkpointing",
+                "H2D 单向 Block Swap 必须启用梯度检查点。",
+            )
+
+    if trainer.family in {"anima", "moss_image"}:
+        if values.get("compile") and values.get("torch_compile"):
+            add(
+                "param.conflict.compile",
+                "params.compile",
+                "按 Block 编译不能与通用 torch_compile 同时启用。",
+            )
+        if values.get("compile") and values.get("compile_fullgraph") and values.get("split_attn"):
+            add(
+                "param.conflict.compile_split_attention",
+                "params.compile_fullgraph",
+                "完整计算图编译不能与拆分 Attention 同时启用。",
+            )
+        attention = values.get("attn_mode") or ("xformers" if values.get("xformers") else "torch")
+        if attention == "xformers" and not values.get("split_attn"):
+            add(
+                "param.requires.split_attention",
+                "params.split_attn",
+                "此模型使用 xFormers 时必须启用拆分 Attention。",
+            )
+
+    if trainer.family == "moss_image":
+        if values.get("fp8_base") or values.get("fp8_base_unet"):
+            add(
+                "param.unsupported.moss_fp8",
+                "params.fp8_base",
+                "MOSS-Image 不支持通用 FP8；需要量化时请使用 ConvRot INT8。",
+            )
+        skip_layers = values.get("sample_uncond_skip_layers")
+        if skip_layers is not None:
+            try:
+                indices = [int(item.strip()) for item in str(skip_layers).split(",") if item.strip()]
+                if any(index < 0 or index >= 42 for index in indices):
+                    raise ValueError
+            except ValueError:
+                add(
+                    "param.invalid.sample_uncond_skip_layers",
+                    "params.sample_uncond_skip_layers",
+                    "采样跳过层应为逗号分隔的 0–41 层编号；空字符串表示不跳过。",
+                )
+
     if values.get("unsloth_offload_checkpointing") and (
         values.get("cpu_offload_checkpointing") or values.get("blocks_to_swap", 0)
     ):
@@ -930,11 +1020,11 @@ def _validate_conflicts(
             "SDXL 缓存文本编码器输出时必须仅训练 U-Net。",
         )
 
-    if trainer.id == "anima.lora" and values.get("cache_text_encoder_outputs") and not values.get("network_train_unet_only"):
+    if trainer.id in {"anima.lora", "moss_image.lora"} and values.get("cache_text_encoder_outputs") and not values.get("network_train_unet_only"):
         add(
-            "param.requires.anima_unet_only",
+            f"param.requires.{trainer.family}_unet_only",
             "params.cache_text_encoder_outputs",
-            "Anima 缓存文本编码器输出时必须仅训练 DiT。",
+            f"{trainer.title} 缓存文本编码器输出时必须仅训练 DiT。",
         )
 
     if trainer.id == "chroma.lora" and not values.get("apply_t5_attn_mask"):
@@ -961,6 +1051,7 @@ def _validate_conflicts(
         "hunyuan_image": 32,
         "lumina": 16,
         "anima": 16,
+        "moss_image": 16,
     }.get(trainer.family)
     if bucket_alignment and dataset_values.get("enableBucket", True):
         bucket_step = dataset_values.get("bucketResoSteps", 64)

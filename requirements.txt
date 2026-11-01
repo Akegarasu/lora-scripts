@@ -1,10 +1,12 @@
-accelerate==1.6.0
-transformers==4.54.1
+# sd-scripts v0.12.3 dependencies. Install a matching CUDA PyTorch >= 2.6 first.
+accelerate==1.15.0
+transformers==5.17.0
 # Bounded-time regular expressions for Tag Editor batch replacements.
 regex>=2024.11.6
 # SmolVLM2 text normalization (Caption/VLM provider).
 num2words==0.5.14
-diffusers[torch]==0.32.1
+# The torch extra enforces the minimum without upgrading a compatible CUDA build.
+diffusers[torch]==0.40.0
 ftfy==6.3.1
 # albumentations==1.3.0
 opencv-python==4.10.0.84
@@ -12,7 +14,7 @@ einops==0.7.0
 pytorch-lightning==1.9.0
 bitsandbytes==0.46.0
 lion-pytorch==0.2.3
-schedulefree==1.4
+schedulefree==1.4.1
 pytorch-optimizer==3.10.0
 prodigy-plus-schedule-free==1.9.2
 prodigyopt==1.1.2
@@ -20,10 +22,10 @@ prodigyopt==1.1.2
 tensorboardX==2.6.4
 # Shared compatibility range for tensorboardX, wandb 0.16 and open-clip-torch 2.20.
 protobuf==3.20.3
-safetensors==0.4.5
+safetensors==0.8.0
 toml==0.10.2
 voluptuous==0.15.2
-huggingface-hub==0.34.3
+huggingface-hub==1.32.0
 # for Image utils
 imagesize==1.4.1
 # for T5XXL tokenizer (SD3/FLUX)

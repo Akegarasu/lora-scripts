@@ -14,6 +14,7 @@ from mikazuki.tasks import kill_proc_tree
 
 from .models import JobRecord, JobStartResult, TERMINAL_STATES
 from .resources import get_gpu_lease
+from .runtime import validate_training_runtime
 from .store import JobStore, get_job_store
 
 
@@ -29,6 +30,10 @@ class JobRunner:
     async def start_job(self, draft: TrainDraft, *, validate_paths: bool = True) -> JobStartResult:
         compiled = compile_draft(draft, persist=True, validate_paths=validate_paths)
         if compiled.errors or compiled.runId is None:
+            return JobStartResult(compile=compiled)
+
+        compiled.errors.extend(validate_training_runtime(draft.trainerId, compiled.trainConfig))
+        if compiled.errors:
             return JobStartResult(compile=compiled)
 
         created_at = _now()

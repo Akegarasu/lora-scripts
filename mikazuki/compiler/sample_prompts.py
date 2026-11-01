@@ -10,9 +10,11 @@ def format_sample_prompts(sample: SampleDraft) -> str:
         if not prompt:
             continue
 
-        parts = [prompt]
+        # sd-scripts reads one prompt per line and expands literal \n escapes.
+        # Keep textarea line breaks inside the same prompt, including negatives.
+        parts = [_escape_line_breaks(prompt)]
         if item.negativePrompt:
-            parts.extend(["--n", item.negativePrompt])
+            parts.extend(["--n", _escape_line_breaks(item.negativePrompt)])
         if item.width:
             parts.extend(["--w", str(item.width)])
         if item.height:
@@ -27,3 +29,7 @@ def format_sample_prompts(sample: SampleDraft) -> str:
             parts.extend(["--g", str(item.guidanceScale)])
         lines.append(" ".join(parts))
     return "\n".join(lines) + ("\n" if lines else "")
+
+
+def _escape_line_breaks(value: str) -> str:
+    return value.replace("\r\n", "\n").replace("\r", "\n").replace("\n", "\\n")

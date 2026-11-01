@@ -1,5 +1,7 @@
 # sd-scripts 参数目录审查
 
+> 本文记录 2026-09-28 的历史审查。2026-11-01 已同步 v0.12.3 并接入 MOSS-Image；新增功能、依赖和验证边界见 [MOSS-Image 训练指南](moss-image-training.md) 与 [当前上游来源记录](../scripts/dev/UPSTREAM.md)。
+
 调查日期：2026-09-28。核对版本为上游 main 的 [v0.12.0，`690ea7f96c23182352ec63def76d431c6120bd2f`](https://github.com/kohya-ss/sd-scripts/commit/690ea7f96c23182352ec63def76d431c6120bd2f)，发布于 2026-09-24。范围包括通用 LoRA、SD/SDXL，以及 Flux、Chroma、SD3、Lumina、HunyuanImage、Anima 的参数目录与说明。
 
 ## 分级原则

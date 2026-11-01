@@ -35,6 +35,8 @@ LoRA-scripts (a.k.a SD-Trainer)
 
 LoRA & Dreambooth training GUI & scripts preset & one key training environment for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
 
+Updated to sd-scripts v0.12.3 with **MOSS-Image LoRA** (Base / SFT), H2D block swap, multiline captions, and truncated timestep sampling. All trainers now use the updated dependencies in `requirements.txt`, including Transformers 5.17.0 and Diffusers 0.40.0. See the [installation and model setup guide](docs/moss-image-training.md).
+
 ## ✨NEW: Train WebUI
 
 The **REAL** Stable Diffusion Training Studio. Everything in one WebUI.
@@ -58,7 +60,7 @@ Caption generation processes the full scanned dataset by default, skips existing
 
 ### Required Dependencies
 
-Python 3.10 and Git
+Python 3.10 or newer and Git. PyTorch 2.6 or newer is required; the installers provide PyTorch 2.7.0, torchvision 0.22.0 and CUDA 12.8. Use a compatible NVIDIA driver, or install the appropriate PyTorch build for your hardware before running the installer with `-SkipTorch` (Windows) or `--skip-torch` (Linux).
 
 ### Clone repo with submodules
 
@@ -72,8 +74,7 @@ git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
 
 #### Installation
 
-Run `install.ps1` will automatically create a venv for you and install necessary deps. 
-If you are in China mainland, please use `install-cn.ps1`
+From the project root, run `.\scripts\install.ps1` to create or update the virtual environment and install the current dependencies. In mainland China, use `.\scripts\install-cn.ps1`. Existing installations should rerun the installer after updating the project, then restart the GUI.
 
 #### Train
 
@@ -87,11 +88,22 @@ GitHub Release is the default source; Jihulab and static mirrors are also suppor
 
 #### Installation
 
-Run `install.bash` will create a venv and install necessary deps. 
+From the project root, run `bash scripts/install.bash` to create or update the virtual environment and install the current dependencies. Restart the GUI after upgrading.
 
 #### Train
 
 run `bash run_gui.sh`, then program will open [http://127.0.0.1:28000](http://127.0.0.1:28000) automanticlly
+
+### Docker
+
+Build the current checkout, including its frontend, using the CUDA 12.8 / PyTorch 2.7.0 image:
+
+```sh
+docker build -t lora-scripts:local .
+docker run --gpus all -p 28000:28000 lora-scripts:local
+```
+
+Mount model files, datasets and outputs under `/app/lora-scripts` as needed. The host needs an NVIDIA driver compatible with CUDA 12.8 and NVIDIA Container Toolkit. The Docker build has not been executed as part of this update.
 
 ## Legacy training through run script manually
 

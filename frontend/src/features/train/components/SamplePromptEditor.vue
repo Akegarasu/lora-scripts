@@ -5,6 +5,7 @@ import { CopyDocument, Delete, Plus } from '@element-plus/icons-vue'
 import type { SamplePromptDraft } from '@/api/types'
 import { useCatalogStore } from '@/stores/catalog'
 import { useDraftStore } from '@/stores/draft'
+import { sampleDefaults } from '@/utils/sampleDefaults'
 
 const draft = useDraftStore()
 const catalog = useCatalogStore()
@@ -17,12 +18,15 @@ const sampleSamplerDefinition = computed(() =>
   catalog.allParams.find((param) => param.name === 'sample_sampler'),
 )
 const samplerChoices = computed(() =>
-  (sampleSamplerDefinition.value?.choices || [])
+  (sampleSamplerDefinition.value?.extra?.fixedValue ? [] : sampleSamplerDefinition.value?.choices || [])
     .filter((choice): choice is string => typeof choice === 'string')
     .map((choice) => ({ label: choice, value: choice })),
 )
 const samplerPlaceholder = computed(() => {
   if (catalog.loading) return '正在加载采样器…'
+  if (sampleSamplerDefinition.value?.extra?.fixedValue) {
+    return `固定使用 ${sampleSamplerDefinition.value.extra.fixedValue}`
+  }
   if (!samplerChoices.value.length) return '当前训练器未提供采样器'
   return '使用训练器默认值'
 })
@@ -31,7 +35,7 @@ watch(
   samplerChoices,
   (choices) => {
     const selected = draft.sample.sampler
-    if (selected && choices.length && !choices.some((choice) => choice.value === selected)) {
+    if (selected && (choices.length || sampleSamplerDefinition.value?.extra?.fixedValue) && !choices.some((choice) => choice.value === selected)) {
       draft.sample.sampler = undefined
     }
   },
@@ -44,9 +48,8 @@ function newPrompt(): SamplePromptDraft {
     negativePrompt: '',
     width: draft.dataset.resolution[0] || 1024,
     height: draft.dataset.resolution[1] || 1024,
-    steps: 20,
     seed: 1337,
-    cfgScale: 1,
+    ...sampleDefaults(catalog.selectedTrainerId),
     ...(usesGuidance.value ? { guidanceScale: 1 } : {}),
   }
 }

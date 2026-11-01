@@ -65,12 +65,12 @@ params:
     priority: dangerous
   timestep_sampling:
     label: 时间步采样
-    description: 选择 Anima Rectified Flow 的时间步分布；默认 sigmoid，选择 sigma 或 shift 时使用离散 Flow Shift。
+    description: 选择 Anima Rectified Flow 的时间步分布；默认 sigmoid，sigma、shift 和 truncated_logit_normal 使用离散 Flow Shift。截断采样另受 Logit 均值、标准差和截断参数控制。
     group: model_specific
     priority: recommended
     effectiveDefault: sigmoid
   discrete_flow_shift:
-    description: 设置 Anima Rectified Flow 的时间步偏移，默认 1.0；仅在时间步采样选择 sigma 或 shift 时生效，默认 sigmoid 会忽略此项。
+    description: 设置 Anima Rectified Flow 的时间步偏移，默认 1.0；在 sigma、shift 或 truncated_logit_normal 采样时生效，默认 sigmoid 会忽略此项。
     group: model_specific
     priority: advanced
   qwen3_max_token_length:

@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from mikazuki.captioning.adapters import CaptionProvider, WDTaggerProvider
 from mikazuki.captioning.catalog import CaptionModelCatalog, builtin_model_descriptors
@@ -127,10 +128,16 @@ class CaptionModelCatalogTests(unittest.TestCase):
             cache_checker=lambda descriptor: False,
             device_resolver=lambda descriptor: ["cpu"],
         )
-        qwen3 = catalog.get("qwen3-vl-4b")
-        self.assertEqual(qwen3.status, "unavailable")
-        self.assertIn("4.57.0", qwen3.statusReason)
-        self.assertFalse(qwen3.trustRemoteCode)
+        for installed, available in (("4.54.1", False), ("4.56.9", False), ("4.57.0", True), ("5.17.0", True)):
+            with self.subTest(installed=installed), patch(
+                "mikazuki.captioning.catalog.version", return_value=installed
+            ):
+                qwen3 = catalog.get("qwen3-vl-4b")
+                self.assertEqual(qwen3.status, "downloadable" if available else "unavailable")
+                self.assertEqual(qwen3.capabilities.devices, ["cpu"] if available else [])
+                if not available:
+                    self.assertIn("4.57.0", qwen3.statusReason)
+                self.assertFalse(qwen3.trustRemoteCode)
 
 
 if __name__ == "__main__":

@@ -19,6 +19,7 @@ class CatalogIntegrationTests(unittest.TestCase):
             "lumina.lora": 210,
             "hunyuan_image.lora": 210,
             "anima.lora": 220,
+            "moss_image.lora": 230,
         }
 
         for trainer_id, minimum_count in minimum_param_counts.items():
@@ -70,6 +71,7 @@ class CatalogIntegrationTests(unittest.TestCase):
             "lumina.lora": ([1024, 1024], 16),
             "hunyuan_image.lora": ([1024, 1024], 32),
             "anima.lora": ([1024, 1024], 16),
+            "moss_image.lora": ([1024, 1024], 16),
         }
 
         summaries = {summary.id: summary for summary in self.catalog.list_trainers()}
@@ -109,7 +111,7 @@ class CatalogIntegrationTests(unittest.TestCase):
             ["private", "public"],
         )
 
-        for trainer_id in ("hunyuan_image.lora", "anima.lora"):
+        for trainer_id in ("hunyuan_image.lora", "anima.lora", "moss_image.lora"):
             attention_trainer = self.catalog.get_trainer(trainer_id)
             assert attention_trainer is not None
             self.assertNotIn("sageattn", attention_trainer.params["attn_mode"].choices or [])
@@ -184,7 +186,7 @@ class CatalogIntegrationTests(unittest.TestCase):
                 self.assertEqual(module.effectiveDefault, trainer.defaultNetworkModule)
                 self.assertFalse(module.required)
                 if "show_timesteps" in trainer.params:
-                    supports_preview = summary.id in {"flux.lora", "chroma.lora", "anima.lora"}
+                    supports_preview = summary.id in {"flux.lora", "chroma.lora", "anima.lora", "moss_image.lora"}
                     self.assertEqual(
                         trainer.params["show_timesteps"].priority,
                         "dangerous" if supports_preview else "hidden",
@@ -217,6 +219,63 @@ class CatalogIntegrationTests(unittest.TestCase):
         self.assertTrue(finetune_rates.issubset(names("all")))
         self.assertTrue(finetune_rates.isdisjoint(names("advanced")))
         self.assertIn("network_args", names("advanced"))
+
+    def test_moss_assets_and_training_recipe_match_its_upstream_entry_point(self) -> None:
+        trainer = self.catalog.get_trainer("moss_image.lora")
+        assert trainer is not None
+        self.assertEqual(trainer.script, "scripts/dev/moss_image_train_network.py")
+        self.assertEqual(trainer.defaultNetworkModule, "networks.lora_generic")
+        for name in ("pretrained_model_name_or_path", "text_encoder", "vae"):
+            with self.subTest(asset=name):
+                param = trainer.params[name]
+                self.assertTrue(param.required)
+                self.assertEqual(param.group, "model")
+                self.assertEqual(param.control, "file")
+        for name, expected in {
+            "network_module": "networks.lora_generic",
+            "network_dim": 16,
+            "network_alpha": 1,
+            "mixed_precision": "bf16",
+            "network_train_unet_only": True,
+            "cache_text_encoder_outputs": True,
+            "timestep_sampling": "truncated_logit_normal",
+            "logit_mean": -1.09,
+            "logit_std": 0.95,
+            "discrete_flow_shift": 1.0,
+        }.items():
+            with self.subTest(parameter=name):
+                self.assertEqual(trainer.params[name].effectiveDefault, expected)
+        self.assertEqual(trainer.params["moss_max_token_length"].max, 4096)
+        self.assertEqual(trainer.params["blocks_to_swap"].max, 40)
+        self.assertEqual(trainer.params["sample_sampler"].extra["fixedValue"], "euler")
+        self.assertTrue(trainer.params["sample_uncond_skip_layers"].extra["preserveEmpty"])
+        for name in ("convrot_int8", "convrot_int8_text_encoder", "convrot_int8_bwd", "compile"):
+            self.assertIsNone(trainer.params[name].effectiveDefault)
+        for name in ("fp8_base", "fp8_base_unet", "v2", "v_parameterization", "clip_skip", "max_token_length"):
+            self.assertTrue(trainer.params[name].hidden)
+
+    def test_new_shared_options_are_visible_only_where_the_trainer_uses_them(self) -> None:
+        truncated_trainers = {"flux.lora", "chroma.lora", "anima.lora", "hunyuan_image.lora", "moss_image.lora"}
+        for summary in self.catalog.list_trainers():
+            trainer = self.catalog.get_trainer(summary.id)
+            assert trainer is not None
+            with self.subTest(trainer=summary.id):
+                for name in ("enable_multiline_caption", "multiline_caption_separator"):
+                    self.assertEqual(trainer.params[name].group, "caption")
+                    self.assertIsNone(trainer.params[name].effectiveDefault)
+                if "timestep_sampling" in trainer.params:
+                    self.assertEqual(
+                        "truncated_logit_normal" in trainer.params["timestep_sampling"].choices,
+                        summary.id in truncated_trainers,
+                    )
+                for name in ("timestep_cutoff", "timestep_uniform_ratio"):
+                    if name in trainer.params:
+                        self.assertEqual(trainer.params[name].hidden, summary.id not in truncated_trainers)
+                        self.assertIsNone(trainer.params[name].effectiveDefault)
+                for name in ("block_swap_h2d_only", "block_swap_ring_size", "use_pinned_memory_for_block_swap"):
+                    if name in trainer.params:
+                        self.assertEqual(trainer.params[name].hidden, summary.id == "sd3.lora")
+                        self.assertIsNone(trainer.params[name].effectiveDefault)
 
     def test_overlays_only_reference_real_parser_parameters(self) -> None:
         params_by_trainer = {

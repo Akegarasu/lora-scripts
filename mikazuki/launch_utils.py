@@ -200,7 +200,13 @@ def prepare_environment(
 
     Path("logs").mkdir(exist_ok=True)
 
-    validate_requirements("requirements.txt")
+    if not is_installed("torch>=2.6"):
+        raise RuntimeError(
+            "The current sd-scripts dependencies require PyTorch >= 2.6. "
+            "Install the CUDA build matching your GPU first; "
+            "see docs/moss-image-training.md."
+        )
+    validate_requirements(str(base_dir_path() / "requirements.txt"))
     setup_windows_bitsandbytes()
 
     if prepare_onnxruntime:

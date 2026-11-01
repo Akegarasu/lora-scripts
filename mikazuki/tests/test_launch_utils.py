@@ -59,6 +59,25 @@ class LaunchUtilsTests(unittest.TestCase):
             self.assertEqual(run.call_args.args[0], [launch_utils.python_bin, "-m", "pip", "install", "example>=2"])
             self.assertFalse(run.call_args.kwargs["shell"])
 
+    def test_startup_requires_supported_torch_before_installing(self):
+        with patch.dict(launch_utils.os.environ, {}, clear=True), patch.object(
+            launch_utils, "is_installed", return_value=False
+        ), patch.object(launch_utils, "validate_requirements") as validate, patch.object(
+            launch_utils, "setup_windows_bitsandbytes"
+        ):
+            with self.assertRaisesRegex(RuntimeError, "PyTorch >= 2.6"):
+                launch_utils.prepare_environment(prepare_onnxruntime=False)
+            validate.assert_not_called()
+
+    def test_startup_uses_project_requirements(self):
+        with patch.dict(launch_utils.os.environ, {}, clear=True), patch.object(
+            launch_utils, "is_installed", return_value=True
+        ), patch.object(launch_utils, "validate_requirements") as validate, patch.object(
+            launch_utils, "setup_windows_bitsandbytes"
+        ):
+            launch_utils.prepare_environment(prepare_onnxruntime=False)
+            self.assertEqual(Path(validate.call_args.args[0]), launch_utils.base_dir_path() / "requirements.txt")
+
     def test_missing_bitsandbytes_directory_can_be_repaired(self):
         with tempfile.TemporaryDirectory() as directory:
             with patch.object(launch_utils.sys, "platform", "win32"), patch.object(

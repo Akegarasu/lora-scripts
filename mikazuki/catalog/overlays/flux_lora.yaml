@@ -68,7 +68,7 @@ params:
     effectiveDefault: 1.0
   timestep_sampling:
     label: 时间步采样
-    description: 选择 FLUX.1 训练噪声时间步的分布；flux_shift 会按分辨率偏移，sigma 和 shift 使用离散 Flow Shift。
+    description: 选择 FLUX.1 训练噪声时间步的分布；flux_shift 按分辨率偏移，sigma、shift 和 truncated_logit_normal 使用离散 Flow Shift。截断采样另受 Logit 均值、标准差和截断参数控制。
     group: model_specific
     priority: recommended
     control: select
@@ -82,7 +82,7 @@ params:
     effectiveDefault: raw
   discrete_flow_shift:
     label: 离散 Flow Shift
-    description: 设置 Flow Matching 的离散偏移；仅在时间步采样选择 sigma 或 shift 时生效，flux_shift、sigmoid 等模式会忽略。
+    description: 设置 Flow Matching 的离散偏移；在 sigma、shift 或 truncated_logit_normal 采样时生效，flux_shift、sigmoid 等模式会忽略。
     group: model_specific
     priority: advanced
     control: number

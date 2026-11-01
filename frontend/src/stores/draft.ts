@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 
 import { apiClient } from '@/api/client'
+import { sampleDefaults } from '@/utils/sampleDefaults'
 import type { CompileResult, ParamDefinition, SampleDraft, TrainDraft } from '@/api/types'
 
 const DRAFT_STORAGE_KEY = 'ls-v2-drafts'
@@ -54,11 +55,11 @@ function emptyDataset(defaults: Record<string, unknown> = {}): DatasetDraft {
   } as DatasetDraft
 }
 
-function emptySample(resolution: [number, number] = [1024, 1024]): SampleDraft {
+function emptySample(resolution: [number, number] = [1024, 1024], trainerId = ''): SampleDraft {
   return {
     enabled: false,
     everyNEpochs: 1,
-    prompts: [{ prompt: '', width: resolution[0], height: resolution[1], steps: 20, seed: 1337, cfgScale: 1 }],
+    prompts: [{ prompt: '', width: resolution[0], height: resolution[1], seed: 1337, ...sampleDefaults(trainerId) }],
   }
 }
 
@@ -112,8 +113,9 @@ function serializeSample(value: SampleDraft): StoredSampleDraft {
 function restoreSample(
   value: StoredSampleDraft | undefined,
   resolution: [number, number] = [1024, 1024],
+  trainerId = '',
 ): SampleDraft {
-  const baseline = emptySample(resolution)
+  const baseline = emptySample(resolution, trainerId)
   if (!value || typeof value !== 'object') return baseline
 
   const restored = {
@@ -148,7 +150,8 @@ function hasOwn(record: Record<string, unknown>, name: string) {
   return Object.prototype.hasOwnProperty.call(record, name)
 }
 
-function isUnsetValue(value: unknown) {
+function isUnsetValue(value: unknown, param?: ParamDefinition) {
+  if (value === '' && param?.extra?.preserveEmpty === true) return false
   if (value === undefined || value === null) return true
   if (typeof value === 'string') return value.trim() === ''
   if (Array.isArray(value)) return value.length === 0
@@ -192,7 +195,7 @@ function reconcileParamRecords(
         !hasEffectiveDefault(param) &&
         param.default !== undefined &&
         valuesEqual(savedValue, param.default)
-      if (!isUnsetValue(savedValue) && !isMaterializedArgparseDefault) {
+      if (!isUnsetValue(savedValue, param) && !isMaterializedArgparseDefault) {
         target[param.name] = cloneParamValue(savedValue)
         continue
       }
@@ -251,7 +254,7 @@ function migrateLegacySnapshot(
     if (!source) continue
 
     const savedValue = source[param.name]
-    if (isUnsetValue(savedValue)) continue
+    if (isUnsetValue(savedValue, param)) continue
     if (param.default !== undefined && valuesEqual(savedValue, param.default)) continue
     target[param.name] = cloneParamValue(savedValue)
   }
@@ -341,7 +344,7 @@ export const useDraftStore = defineStore('draft', {
             gpuIds: Array.isArray(saved.runtime?.gpuIds) ? [...saved.runtime.gpuIds] : [],
             numCpuThreadsPerProcess: Number(saved.runtime?.numCpuThreadsPerProcess) || 8,
           }
-          this.sample = restoreSample(saved.sample, this.dataset.resolution)
+          this.sample = restoreSample(saved.sample, this.dataset.resolution, trainerId)
           this.manifestHash = manifestHash || saved.manifestHash || ''
           this.hydratedTrainerId = trainerId
           this.lastSavedAt = saved.savedAt || ''
@@ -355,7 +358,7 @@ export const useDraftStore = defineStore('draft', {
       this.params = {}
       this.dataset = emptyDataset(datasetDefaults)
       this.runtime = { gpuIds: [], numCpuThreadsPerProcess: 8 }
-      this.sample = emptySample(this.dataset.resolution)
+      this.sample = emptySample(this.dataset.resolution, trainerId)
       this.manifestHash = manifestHash
       this.hydratedTrainerId = trainerId
       this.lastSavedAt = ''
@@ -467,7 +470,7 @@ export const useDraftStore = defineStore('draft', {
     },
 
     resetValue(param: ParamDefinition) {
-      if (!hasEffectiveDefault(param) || isUnsetValue(param.effectiveDefault)) {
+      if (!hasEffectiveDefault(param) || isUnsetValue(param.effectiveDefault, param)) {
         this.unsetValue(param)
         return
       }
@@ -478,7 +481,7 @@ export const useDraftStore = defineStore('draft', {
 
     setValue(param: ParamDefinition, value: unknown) {
       const target = param.group === 'model' ? this.modelAssets : this.params
-      if (isUnsetValue(value)) {
+      if (isUnsetValue(value, param)) {
         if (hasEffectiveDefault(param)) {
           target[param.name] = null
         } else {
