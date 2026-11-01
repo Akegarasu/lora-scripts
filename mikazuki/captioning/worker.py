@@ -1,22 +1,17 @@
 from __future__ import annotations
 
 import argparse
-import json
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, List, Optional, Sequence, Tuple
 
 from PIL import Image, ImageOps
 
 from .adapters import get_caption_model_manager
-from .datasets import _read_caption_bytes
+from .lifecycle import compact_job_details, finish_canceled_job
+from .results import CaptionResultWriter
 from .store import CaptionStore
-from .writer import (
-    CaptionWriteConflict,
-    apply_affixes,
-    atomic_write_caption,
-    merge_caption,
-)
+from .writer import CaptionWriteConflict
 
 
 def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
@@ -27,6 +22,7 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     if job is None or request is None or source_root is None:
         raise RuntimeError("Caption 任务或请求快照不存在")
 
+    results = CaptionResultWriter(store, job_id, request, source_root)
     manager = get_caption_model_manager()
     runtime = request.runtime.copy(update={"keepModelLoaded": True})
     store.update_job(
@@ -42,29 +38,16 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
         inference_rows = []
         for row in rows:
             if _cancel_requested(store, job_id):
-                _finish_canceled(store, job_id, request=request)
+                finish_canceled_job(store, job_id, compact_details=True, request=request)
                 return
 
-            fingerprint = _json_value(row.existing_fingerprint)
-            if (
-                not request.output.stageBeforeWrite
-                and request.output.conflictPolicy == "skip"
-                and fingerprint is not None
-            ):
-                store.update_item(
-                    job_id,
-                    row.id,
-                    state="skipped",
-                    finalText=row.existing_text,
-                    error="已有 Caption，按跳过策略未执行推理。",
-                )
-                continue
-            inference_rows.append(row)
+            if not results.skip_existing(row):
+                inference_rows.append(row)
 
         first_prediction = True
         for batch_rows in _chunks(inference_rows, request.runtime.batchSize):
             if _cancel_requested(store, job_id):
-                _finish_canceled(store, job_id, request=request)
+                finish_canceled_job(store, job_id, compact_details=True, request=request)
                 return
 
             prepared = []
@@ -106,7 +89,7 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
 
             for (row, _, started), (prediction, prediction_error) in zip(prepared, outcomes):
                 if _cancel_requested(store, job_id):
-                    _finish_canceled(store, job_id, request=request)
+                    finish_canceled_job(store, job_id, compact_details=True, request=request)
                     return
                 if prediction_error is not None or prediction is None:
                     error = prediction_error or RuntimeError("模型未返回 Caption 结果")
@@ -121,15 +104,7 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
                     continue
 
                 try:
-                    _save_prediction(
-                        job_id=job_id,
-                        store=store,
-                        source_root=source_root,
-                        request=request,
-                        row=row,
-                        prediction=prediction,
-                        started=started,
-                    )
+                    results.save_prediction(row, prediction, started=started)
                 except CaptionWriteConflict as exc:
                     store.update_item(job_id, row.id, state="conflict", error=str(exc))
                 except Exception as exc:
@@ -142,7 +117,7 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     if current is None:
         return
     if _cancel_requested(store, job_id):
-        _finish_canceled(store, job_id, request=request)
+        finish_canceled_job(store, job_id, compact_details=True, request=request)
         return
     if current.succeeded == 0 and current.skipped == 0:
         final_state = "failed"
@@ -156,7 +131,7 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     else:
         final_state = "succeeded"
         message = "Caption 已生成并写入。"
-    _compact_direct_details(store, job_id, request)
+    compact_job_details(store, job_id, request)
     store.update_job(job_id, state=final_state, endedAt=_now(), message=message)
 
 
@@ -217,88 +192,6 @@ def _predict_batch_isolated(
     return outcomes
 
 
-def _save_prediction(
-    *,
-    job_id: str,
-    store: CaptionStore,
-    source_root: Path,
-    request: Any,
-    row: Any,
-    prediction: Any,
-    started: float,
-) -> None:
-    fingerprint = _json_value(row.existing_fingerprint)
-    generated = prediction.text.strip()
-    if request.outputMode != "tags":
-        generated = apply_affixes(
-            generated,
-            request.postprocess.prefix,
-            request.postprocess.suffix,
-            request.postprocess.separator,
-        )
-    if not generated:
-        raise RuntimeError("模型返回了空 Caption")
-
-    _validate_merge_source(row, source_root, request.output.conflictPolicy)
-    final_text, should_write = merge_caption(
-        row.existing_text,
-        generated,
-        exists=fingerprint is not None,
-        policy=request.output.conflictPolicy,
-        separator=request.postprocess.separator,
-    )
-    elapsed_ms = round((time.perf_counter() - started) * 1000)
-    raw = prediction.raw if request.output.saveRawResult else None
-
-    if request.output.stageBeforeWrite:
-        store.update_item(
-            job_id,
-            row.id,
-            state="succeeded",
-            generatedText=generated,
-            finalText=final_text,
-            tags=prediction.tags,
-            raw=raw,
-            elapsedMs=elapsed_ms,
-        )
-        return
-
-    if not should_write:
-        store.update_item(
-            job_id,
-            row.id,
-            state="skipped",
-            generatedText=generated,
-            finalText=final_text,
-            tags=prediction.tags,
-            raw=raw,
-            elapsedMs=elapsed_ms,
-        )
-        return
-
-    written_hash = atomic_write_caption(
-        job_id=job_id,
-        caption_path=Path(row.caption_path),
-        allowed_root=source_root,
-        relative_path=row.relative_path,
-        text=final_text,
-        expected_fingerprint=fingerprint,
-        backup_existing=request.output.backupExisting,
-    )
-    store.update_item(
-        job_id,
-        row.id,
-        state="succeeded",
-        generatedText=generated,
-        finalText=final_text,
-        tags=prediction.tags,
-        raw=raw,
-        written=True,
-        writtenHash=written_hash,
-        elapsedMs=elapsed_ms,
-    )
-
-
 def commit_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     store = store or CaptionStore(reconcile=False)
     job = store.get_job(job_id)
@@ -307,6 +200,7 @@ def commit_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     if job is None or request is None or source_root is None:
         raise RuntimeError("Caption 任务或请求快照不存在")
 
+    results = CaptionResultWriter(store, job_id, request, source_root)
     commit = store.get_commit_request(job_id)
     policy = commit.conflictPolicy or request.output.conflictPolicy
     backup_existing = (
@@ -329,52 +223,10 @@ def commit_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     )
     for row in rows:
         if _cancel_requested(store, job_id):
-            _finish_canceled(store, job_id)
+            finish_canceled_job(store, job_id, compact_details=False)
             return
-        if row.written:
-            continue
-        if row.state == "failed" and not row.edited:
-            continue
         try:
-            fingerprint = _json_value(row.existing_fingerprint)
-            final_text = row.final_text
-            should_write = True
-            if not row.edited:
-                _validate_merge_source(row, source_root, policy)
-                final_text, should_write = merge_caption(
-                    row.existing_text,
-                    row.generated_text,
-                    exists=fingerprint is not None,
-                    policy=policy,
-                    separator=request.postprocess.separator,
-                )
-            if not should_write:
-                store.update_item(
-                    job_id,
-                    row.id,
-                    state="skipped",
-                    finalText=final_text,
-                    error=None,
-                )
-                continue
-            written_hash = atomic_write_caption(
-                job_id=job_id,
-                caption_path=Path(row.caption_path),
-                allowed_root=source_root,
-                relative_path=row.relative_path,
-                text=final_text,
-                expected_fingerprint=fingerprint,
-                backup_existing=backup_existing,
-            )
-            store.update_item(
-                job_id,
-                row.id,
-                state="succeeded",
-                finalText=final_text,
-                error=None,
-                written=True,
-                writtenHash=written_hash,
-            )
+            results.commit_item(row, policy=policy, backup_existing=backup_existing)
         except CaptionWriteConflict as exc:
             store.update_item(job_id, row.id, state="conflict", error=str(exc))
         except Exception as exc:
@@ -399,32 +251,6 @@ def commit_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
     store.update_job(job_id, state=final_state, endedAt=_now(), message=message)
 
 
-def _validate_merge_source(row: Any, source_root: Path, policy: str) -> None:
-    # An undecodable caption has an empty text snapshot but nonempty bytes.
-    # Policies that retain existing content must not mistake that for empty.
-    fingerprint = _json_value(row.existing_fingerprint)
-    if (
-        policy not in {"append", "prepend", "fill_empty"}
-        or row.existing_text
-        or not fingerprint
-        or not fingerprint.get("size")
-    ):
-        return
-    caption_path = Path(row.caption_path).resolve()
-    try:
-        caption_path.relative_to(source_root.resolve())
-    except ValueError as exc:
-        raise CaptionWriteConflict("Caption 输出路径已离开获准的数据集目录。") from exc
-    content = _read_caption_bytes(caption_path)
-    if content is not None:
-        try:
-            content.decode("utf-8-sig")
-        except UnicodeError as exc:
-            raise CaptionWriteConflict(
-                "现有 Caption 不是有效的 UTF-8，请先手动修复或明确选择覆盖策略。"
-            ) from exc
-
-
 def _validated_image_path(path: Path, source_root: Path) -> Path:
     resolved = path.resolve(strict=True)
     try:
@@ -439,26 +265,6 @@ def _validated_image_path(path: Path, source_root: Path) -> Path:
 def _cancel_requested(store: CaptionStore, job_id: str) -> bool:
     job = store.get_job(job_id)
     return job is None or job.state in {"canceling", "canceled"}
-
-
-def _finish_canceled(store: CaptionStore, job_id: str, *, request: Any = None) -> None:
-    store.cancel_unfinished_items(job_id)
-    if request is not None:
-        _compact_direct_details(store, job_id, request)
-    store.update_job(job_id, state="canceled", endedAt=_now(), message="任务已取消。")
-
-
-def _compact_direct_details(store: CaptionStore, job_id: str, request: Any) -> None:
-    if request.output.stageBeforeWrite or request.output.saveRawResult:
-        return
-    store.compact_direct_job_items(job_id)
-
-
-def _json_value(value: Optional[str]) -> Optional[Dict[str, Any]]:
-    if not value:
-        return None
-    payload = json.loads(value)
-    return payload if isinstance(payload, dict) else None
 
 
 def _now() -> str:

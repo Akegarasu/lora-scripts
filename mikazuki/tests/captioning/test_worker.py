@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,7 @@ from mikazuki.captioning.models import (
 )
 from mikazuki.captioning.store import CaptionStore
 from mikazuki.captioning.worker import commit_job, generate_job
+from mikazuki.captioning.writer import file_fingerprint
 
 
 class _FakeBatchManager:
@@ -63,30 +65,40 @@ class CaptionWorkerTests(unittest.TestCase):
         batch_size: int,
         stage_before_write: bool = True,
         save_raw_result: bool = False,
+        policy: str = "overwrite",
+        existing=None,
+        output_mode: str = "caption",
+        postprocess=None,
     ) -> None:
         items = []
         for index, red in enumerate(reds):
             image_path = self.dataset / f"image_{index}.png"
             Image.new("RGB", (12, 12), (red, 20, 30)).save(image_path)
+            caption_path = image_path.with_suffix(".txt")
+            caption_path.unlink(missing_ok=True)
+            text = existing[index] if existing is not None else None
+            if text is not None:
+                caption_path.write_text(text, encoding="utf-8")
             items.append(
                 {
                     "id": f"item_{index}",
                     "name": image_path.name,
                     "relative_path": image_path.name,
                     "image_path": image_path,
-                    "caption_path": image_path.with_suffix(".txt"),
-                    "existing_text": "",
-                    "existing_fingerprint": None,
+                    "caption_path": caption_path,
+                    "existing_text": text or "",
+                    "existing_fingerprint": file_fingerprint(caption_path),
                     "source_root": self.dataset,
                 }
             )
         request = CaptionJobCreateRequest(
             datasetId=f"ds_{job_id}",
             modelId="fake-caption-model",
-            outputMode="caption",
+            outputMode=output_mode,
+            postprocess=postprocess or {},
             output={
                 "stageBeforeWrite": stage_before_write,
-                "conflictPolicy": "overwrite",
+                "conflictPolicy": policy,
                 "backupExisting": True,
                 "saveRawResult": save_raw_result,
             },
@@ -280,6 +292,218 @@ class CaptionWorkerTests(unittest.TestCase):
             (self.dataset / "image_0.txt").read_text(encoding="utf-8"),
             "caption 51",
         )
+
+    def test_all_output_policies_through_direct_and_review_workflows(self) -> None:
+        expected = {
+            "skip": ["caption 11", "", "  original  "],
+            "fill_empty": ["caption 11", "caption 22", "  original  "],
+            "overwrite": ["caption 11", "caption 22", "caption 33"],
+            "prepend": ["caption 11", "caption 22", "caption 33, original"],
+            "append": ["caption 11", "caption 22", "original, caption 33"],
+        }
+        for review in (False, True):
+            for policy, texts in expected.items():
+                with self.subTest(review=review, policy=policy):
+                    job_id = f"caption_policy_{review}_{policy}"
+                    self.create_job(
+                        [11, 22, 33], job_id=job_id, batch_size=3,
+                        stage_before_write=review, save_raw_result=True,
+                        policy=policy, existing=[None, "", "  original  "],
+                    )
+                    manager = _FakeBatchManager()
+                    with (
+                        patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=manager),
+                        patch("mikazuki.captioning.writer.app_root", return_value=self.root),
+                    ):
+                        generate_job(job_id, self.store)
+                        if review:
+                            self.assertEqual(self.store.get_job(job_id).state, "awaiting_review")
+                            self.assertEqual(self.store.get_job(job_id).written, 0)
+                            self.assertFalse((self.dataset / "image_0.txt").exists())
+                            self.assertEqual((self.dataset / "image_2.txt").read_text(encoding="utf-8"), "  original  ")
+                            self.store.queue_commit(job_id, CaptionCommitRequest())
+                            commit_job(job_id, self.store)
+
+                    summary = self.store.get_job(job_id)
+                    skipped = 2 if policy == "skip" else 1 if policy == "fill_empty" else 0
+                    self.assertEqual(summary.state, "succeeded")
+                    self.assertEqual(summary.processed, 3)
+                    self.assertEqual(summary.succeeded, 3 - skipped)
+                    self.assertEqual(summary.skipped, skipped)
+                    self.assertEqual(summary.written, 3 - skipped)
+                    self.assertEqual(summary.failed, 0)
+                    self.assertEqual(summary.conflicts, 0)
+                    self.assertEqual(summary.detailsState, "available")
+                    self.assertTrue(manager.unloaded)
+                    self.assertEqual(manager.calls[0][0], [11] if policy == "skip" and not review else [11, 22, 33])
+                    for index, text in enumerate(texts):
+                        self.assertEqual((self.dataset / f"image_{index}.txt").read_text(encoding="utf-8"), text)
+                    backup = self.root / "config" / "caption-backups" / job_id / "image_2.txt"
+                    if policy in {"overwrite", "prepend", "append"}:
+                        self.assertEqual(backup.read_text(encoding="utf-8"), "  original  ")
+                    else:
+                        self.assertFalse(backup.exists())
+
+    def test_prediction_metadata_and_affixes_survive_review_commit(self) -> None:
+        for mode in ("tags", "caption", "hybrid"):
+            with self.subTest(mode=mode):
+                job_id = f"caption_metadata_{mode}"
+                self.create_job(
+                    [11], job_id=job_id, batch_size=1, save_raw_result=True,
+                    output_mode=mode,
+                    postprocess={"prefix": " prefix ", "suffix": " suffix ", "separator": " | "},
+                )
+                prediction = CaptionPrediction(text=" generated ", tags=[{"text": "tag", "score": 0.8}], raw={"test": 42})
+                manager = Mock()
+                manager.predict_batch.return_value = [prediction]
+                with patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=manager):
+                    generate_job(job_id, self.store)
+                before = self.store.get_internal_item(job_id, "item_0")
+                expected = "generated" if mode == "tags" else "prefix | generated | suffix"
+                self.assertEqual(before.generated_text, expected)
+                self.assertEqual(before.final_text, expected)
+                self.assertIsNotNone(before.elapsed_ms)
+                self.store.queue_commit(job_id, CaptionCommitRequest())
+                commit_job(job_id, self.store)
+                after = self.store.get_internal_item(job_id, "item_0")
+                for field in ("generated_text", "tags_json", "raw_json", "elapsed_ms"):
+                    self.assertEqual(getattr(after, field), getattr(before, field))
+                self.assertEqual((self.dataset / "image_0.txt").read_text(encoding="utf-8"), expected)
+
+    def test_external_changes_are_conflicts_in_both_write_paths(self) -> None:
+        for review in (False, True):
+            with self.subTest(review=review):
+                job_id = f"caption_conflict_{review}"
+                self.create_job([11], job_id=job_id, batch_size=1, stage_before_write=review)
+                caption = self.dataset / "image_0.txt"
+                if not review:
+                    caption.write_text("external", encoding="utf-8")
+                with patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=_FakeBatchManager()):
+                    generate_job(job_id, self.store)
+                if review:
+                    caption.write_text("external", encoding="utf-8")
+                    self.store.queue_commit(job_id, CaptionCommitRequest())
+                    commit_job(job_id, self.store)
+                summary = self.store.get_job(job_id)
+                item = self.store.get_item(job_id, "item_0")
+                self.assertEqual(summary.state, "partial" if review else "failed")
+                self.assertEqual(summary.conflicts, 1)
+                self.assertEqual(summary.written, 0)
+                self.assertEqual(item.state, "conflict")
+                self.assertIn("扫描后被其他程序修改", item.error)
+                self.assertEqual(caption.read_text(encoding="utf-8"), "external")
+
+    def test_write_failure_isolated_from_remaining_items_and_temporary_files_cleaned(self) -> None:
+        for review in (False, True):
+            with self.subTest(review=review):
+                job_id = f"caption_write_failure_{review}"
+                self.create_job([11, 22], job_id=job_id, batch_size=2, stage_before_write=review)
+                replace = os.replace
+
+                def fail_first(source, destination):
+                    if Path(destination).name == "image_0.txt":
+                        raise OSError("synthetic write failure")
+                    return replace(source, destination)
+
+                manager = _FakeBatchManager()
+                with (
+                    patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=manager),
+                    patch("mikazuki.captioning.writer.os.replace", side_effect=fail_first),
+                ):
+                    generate_job(job_id, self.store)
+                    if review:
+                        self.store.queue_commit(job_id, CaptionCommitRequest())
+                        commit_job(job_id, self.store)
+                summary = self.store.get_job(job_id)
+                self.assertEqual((summary.state, summary.failed, summary.written), ("partial", 1, 1))
+                self.assertFalse((self.dataset / "image_0.txt").exists())
+                self.assertEqual((self.dataset / "image_1.txt").read_text(encoding="utf-8"), "caption 22")
+                self.assertEqual(list(self.dataset.glob("*.tmp")), [])
+                self.assertTrue(manager.unloaded)
+
+    def test_cancel_during_inference_preserves_completed_work_and_releases_images(self) -> None:
+        for review, retain in ((False, False), (False, True), (True, False)):
+            with self.subTest(review=review, retain=retain):
+                job_id = f"caption_canceled_{review}_{retain}"
+                self.create_job([11, 22, 33], job_id=job_id, batch_size=1, stage_before_write=review, save_raw_result=retain)
+                manager = Mock()
+                images = []
+
+                def predict(*args):
+                    images.extend(args[1])
+                    if len(images) == 2:
+                        self.store.update_job(job_id, state="canceling")
+                    return [CaptionPrediction(text="generated")]
+
+                manager.predict_batch.side_effect = predict
+                with patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=manager):
+                    generate_job(job_id, self.store)
+                summary = self.store.get_job(job_id)
+                items = self.store.list_items(job_id).items
+                self.assertEqual(summary.state, "canceled")
+                self.assertIsNotNone(summary.endedAt)
+                self.assertEqual(summary.processed, 3)
+                self.assertEqual([item.state for item in items], ["succeeded", "canceled", "canceled"])
+                self.assertEqual(summary.written, 0 if review else 1)
+                self.assertEqual(summary.detailsState, "available" if review or retain else "compacted")
+                self.assertEqual(items[0].generatedText, "generated" if review or retain else "")
+                manager.unload.assert_called_once()
+                for image in images:
+                    with self.assertRaises(ValueError):
+                        image.getpixel((0, 0))
+
+    def test_commit_options_override_staging_policy_and_backup_default(self) -> None:
+        self.create_job([11], job_id="caption_override", batch_size=1, policy="skip", existing=["original"])
+        with patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=_FakeBatchManager()):
+            generate_job("caption_override", self.store)
+        staged = self.store.get_item("caption_override", "item_0")
+        self.assertEqual(staged.generatedText, "caption 11")
+        self.assertEqual(staged.finalText, "original")
+        self.store.queue_commit("caption_override", CaptionCommitRequest(conflictPolicy="append", backupExisting=False))
+        with patch("mikazuki.captioning.writer.app_root", return_value=self.root):
+            commit_job("caption_override", self.store)
+        self.assertEqual((self.dataset / "image_0.txt").read_text(encoding="utf-8"), "original, caption 11")
+        self.assertFalse((self.root / "config" / "caption-backups").exists())
+        self.assertEqual(self.store.get_job("caption_override").written, 1)
+
+    def test_review_edits_preserve_empty_and_untrimmed_text_even_with_skip_policy(self) -> None:
+        for index, text in enumerate(("", "  manual edit  ")):
+            with self.subTest(text=text):
+                job_id = f"caption_verbatim_{index}"
+                self.create_job([11], job_id=job_id, batch_size=1, policy="skip", existing=["original"])
+                with patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=_FakeBatchManager()):
+                    generate_job(job_id, self.store)
+                self.store.edit_review_item(job_id, "item_0", text)
+                self.store.queue_commit(job_id, CaptionCommitRequest(backupExisting=False))
+                commit_job(job_id, self.store)
+                self.assertEqual((self.dataset / "image_0.txt").read_text(encoding="utf-8"), text)
+                self.assertEqual(self.store.get_job(job_id).written, 1)
+                self.assertEqual(self.store.get_item(job_id, "item_0").finalText, text)
+
+    def test_cancel_during_commit_keeps_written_and_remaining_review_results(self) -> None:
+        job_id = "caption_commit_canceled"
+        self.create_job([11, 22, 33], job_id=job_id, batch_size=3)
+        with patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=_FakeBatchManager()):
+            generate_job(job_id, self.store)
+        self.store.queue_commit(job_id, CaptionCommitRequest())
+        update_item = self.store.update_item
+
+        def cancel_after_write(*args, **fields):
+            result = update_item(*args, **fields)
+            if fields.get("written"):
+                self.store.update_job(job_id, state="canceling")
+            return result
+
+        with patch.object(self.store, "update_item", side_effect=cancel_after_write):
+            commit_job(job_id, self.store)
+        summary = self.store.get_job(job_id)
+        items = self.store.list_items(job_id).items
+        self.assertEqual((summary.state, summary.written, summary.processed), ("canceled", 1, 3))
+        self.assertEqual(summary.detailsState, "available")
+        self.assertEqual([item.written for item in items], [True, False, False])
+        self.assertEqual([item.finalText for item in items], ["caption 11", "caption 22", "caption 33"])
+        self.assertEqual((self.dataset / "image_0.txt").read_text(encoding="utf-8"), "caption 11")
+        self.assertFalse((self.dataset / "image_1.txt").exists())
 
 
 if __name__ == "__main__":

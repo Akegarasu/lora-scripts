@@ -21,6 +21,7 @@ from .datasets import (
     CaptionDatasetRegistry,
     get_caption_dataset_registry,
 )
+from .lifecycle import finish_canceled_job
 from .models import (
     CAPTION_TERMINAL_STATES,
     CaptionCommitRequest,
@@ -168,9 +169,7 @@ class CaptionRunner:
             except Exception as exc:
                 self.store.update_job(job_id, errorMessage=str(exc))
         else:
-            self.store.cancel_unfinished_items(job_id)
-            self._compact_direct_details(job_id)
-            self.store.update_job(job_id, state="canceled", endedAt=_now(), message="任务已取消。")
+            finish_canceled_job(self.store, job_id, compact_details=True)
         return self.store.get_job(job_id)
 
     def _schedule(self, job_id: str, *, action: str, use_gpu: bool) -> None:
@@ -209,9 +208,7 @@ class CaptionRunner:
             if current is None:
                 return
             if current.state in {"canceling", "canceled"}:
-                self.store.cancel_unfinished_items(job_id)
-                self._compact_direct_details(job_id)
-                self.store.update_job(job_id, state="canceled", endedAt=_now(), message="任务已取消。")
+                finish_canceled_job(self.store, job_id, compact_details=True)
                 return
 
             log_path = Path(current.logPath) if current.logPath else app_root() / "logs" / "caption-jobs" / f"{job_id}.log"
@@ -249,9 +246,7 @@ class CaptionRunner:
             if latest is None:
                 return
             if latest.state == "canceling":
-                self.store.cancel_unfinished_items(job_id)
-                self._compact_direct_details(job_id)
-                self.store.update_job(job_id, state="canceled", endedAt=_now(), message="任务已取消。")
+                finish_canceled_job(self.store, job_id, compact_details=True)
             elif exit_code != 0 and latest.state not in CAPTION_TERMINAL_STATES:
                 self.store.update_job(
                     job_id,
@@ -270,14 +265,6 @@ class CaptionRunner:
                     self._processes.pop(job_id, None)
                 if acquired:
                     self._gpu_lease.release()
-
-    def _compact_direct_details(self, job_id: str) -> None:
-        request = self.store.get_request(job_id)
-        if request is None:
-            return
-        if request.output.stageBeforeWrite or request.output.saveRawResult:
-            return
-        self.store.compact_direct_job_items(job_id)
 
 
 def _now() -> str:

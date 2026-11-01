@@ -77,6 +77,36 @@ class _NoProcessRunner(CaptionRunner):
 
 
 class CaptionRunnerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cancel_retains_review_and_raw_details_and_compacts_before_terminal_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            store = CaptionStore(root / "caption.sqlite3", reconcile=False)
+            runner = _NoProcessRunner(store=store, datasets=_Datasets(root), catalog=_Catalog())
+            for review, retain in ((False, False), (False, True), (True, False)):
+                with self.subTest(review=review, retain=retain):
+                    created = await runner.start_job(CaptionJobCreateRequest(
+                        datasetId="ds_cancel", modelId="fake-caption-model", outputMode="caption",
+                        runtime={"device": "cpu"},
+                        output={"stageBeforeWrite": review, "saveRawResult": retain},
+                    ))
+                    store.update_item(created.id, "item_runner", state="succeeded", generatedText="generated")
+                    lifecycle = Mock()
+                    with (
+                        patch.object(store, "cancel_unfinished_items", wraps=store.cancel_unfinished_items) as cancel,
+                        patch.object(store, "compact_direct_job_items", wraps=store.compact_direct_job_items) as compact,
+                        patch.object(store, "update_job", wraps=store.update_job) as update,
+                    ):
+                        lifecycle.attach_mock(cancel, "cancel")
+                        lifecycle.attach_mock(compact, "compact")
+                        lifecycle.attach_mock(update, "update")
+                        canceled = runner.cancel_job(created.id)
+                    expected_calls = ["update", "cancel", "update"] if review or retain else ["update", "cancel", "compact", "update"]
+                    self.assertEqual([call[0] for call in lifecycle.mock_calls], expected_calls)
+                    self.assertEqual(canceled.state, "canceled")
+                    self.assertEqual(canceled.detailsState, "available" if review or retain else "compacted")
+                    self.assertIsNotNone(canceled.endedAt)
+                    self.assertEqual(store.get_item(created.id, "item_runner").generatedText, "generated" if review or retain else "")
+
     async def test_invalid_utf8_requires_overwrite_or_manual_repair(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

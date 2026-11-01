@@ -1,7 +1,8 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import Mock, patch
 
 from fastapi import HTTPException
 from PIL import Image
@@ -9,11 +10,16 @@ from PIL import Image
 from mikazuki.app import caption_api
 from mikazuki.captioning.datasets import CaptionDatasetRegistry
 from mikazuki.captioning.models import (
+    CaptionCommitRequest,
     CaptionDatasetInspectRequest,
     CaptionJobCreateRequest,
+    CaptionJobItemUpdateRequest,
     CaptionJobSummary,
+    CaptionPrediction,
 )
+from mikazuki.captioning.runner import CaptionRunner
 from mikazuki.captioning.store import CaptionStore
+from mikazuki.captioning.worker import commit_job, generate_job
 
 
 class CaptionApiTests(unittest.IsolatedAsyncioTestCase):
@@ -209,6 +215,54 @@ class CaptionApiTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(chunks[1].startswith("event: state\ndata: "))
         self.assertIn('"state": "awaiting_review"', chunks[0])
         self.assertEqual(response.headers["X-Accel-Buffering"], "no")
+
+    async def test_scan_generate_review_commit_and_observe_through_api(self) -> None:
+        catalog = Mock()
+        catalog.get.return_value = SimpleNamespace(
+            id="fake-model", title="Fake model", status="ready",
+            outputModes=["caption"],
+            capabilities=SimpleNamespace(devices=["cpu"], batch=True, prompt=False),
+        )
+        catalog.validate_params.return_value = {}
+        runner = CaptionRunner(store=self.store, datasets=self.registry, catalog=catalog)
+        manager = Mock()
+        manager.predict_batch.return_value = [CaptionPrediction(text="generated")]
+        with (
+            patch("mikazuki.app.caption_api.get_caption_dataset_registry", return_value=self.registry),
+            patch("mikazuki.app.caption_api.get_caption_store", return_value=self.store),
+            patch("mikazuki.app.caption_api.get_caption_runner", return_value=runner),
+            patch("mikazuki.captioning.worker.get_caption_model_manager", return_value=manager),
+            patch.object(runner, "_schedule") as schedule,
+        ):
+            inspected = await caption_api.inspect_caption_dataset(CaptionDatasetInspectRequest(root="train"))
+            created = await caption_api.create_caption_job(CaptionJobCreateRequest(
+                datasetId=inspected.dataset.id, modelId="fake-model", outputMode="caption",
+                runtime={"device": "cpu"}, output={"stageBeforeWrite": True},
+            ))
+            self.assertEqual(created.state, "queued")
+            schedule.assert_called_once_with(created.id, action="generate", use_gpu=False)
+            generate_job(created.id, self.store)
+            listed = await caption_api.list_caption_job_items(created.id, offset=0, limit=10, state=None, query="")
+            self.assertEqual(listed.items[0].finalText, "generated")
+            self.assertFalse(self.image.with_suffix(".txt").exists())
+            edited = await caption_api.edit_caption_job_item(
+                created.id, listed.items[0].id, CaptionJobItemUpdateRequest(finalText="reviewed"),
+            )
+            self.assertTrue(edited.edited)
+            queued = await caption_api.commit_caption_job(created.id, CaptionCommitRequest())
+            self.assertEqual(queued.state, "queued")
+            schedule.assert_called_with(created.id, action="commit", use_gpu=False)
+            commit_job(created.id, self.store)
+            completed = await caption_api.get_caption_job(created.id)
+            events = await caption_api.get_caption_job_events(created.id, after=0, last_event_id=None)
+            chunks = [chunk async for chunk in events.body_iterator]
+
+        self.assertEqual((completed.state, completed.processed, completed.written), ("succeeded", 1, 1))
+        self.assertEqual(self.image.with_suffix(".txt").read_text(encoding="utf-8"), "reviewed")
+        self.assertEqual(len(chunks), 2)
+        self.assertTrue(chunks[0].startswith(f"id: {completed.revision}\nevent: progress\n"))
+        self.assertIn('"state": "succeeded"', chunks[1])
+        manager.unload.assert_called_once()
 
 
 if __name__ == "__main__":
