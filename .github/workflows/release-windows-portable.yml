@@ -1,0 +1,83 @@
+name: Package Windows portable (NVIDIA)
+
+on:
+  # All public triggers live in release-frontend.yml. Consume that run's build
+  # instead of rebuilding the frontend or depending on a GITHUB_TOKEN event.
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      source-sha:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2022
+    timeout-minutes: 120
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      SOURCE_SHA: ${{ inputs.source-sha }}
+      PYTHON_VERSION: '3.11.9'
+      PYTHONUTF8: '1'
+      PIP_DISABLE_PIP_VERSION_CHECK: '1'
+    steps:
+      - name: Checkout the same source as the frontend build
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source-sha }}
+          persist-credentials: false
+
+      - name: Setup Python for building wheels
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+
+      - name: Download built frontend
+        uses: actions/download-artifact@v6
+        with:
+          name: frontend-release
+          path: release
+
+      - name: Verify and unpack frontend
+        run: |
+          $version = Get-Content version.json -Raw | ConvertFrom-Json
+          if ($version.tag -cne $env:RELEASE_TAG) { throw 'Release tag does not match version.json.' }
+          $expected = ((Get-Content release/frontend-dist.zip.sha256 -Raw).Trim() -split '\s+')[0]
+          $actual = (Get-FileHash release/frontend-dist.zip -Algorithm SHA256).Hash
+          if ($expected -notmatch '^[0-9a-fA-F]{64}$' -or $actual -ine $expected) {
+            throw 'Frontend archive checksum does not match.'
+          }
+          Expand-Archive -LiteralPath release/frontend-dist.zip -DestinationPath frontend/dist
+          if (!(Test-Path -LiteralPath frontend/dist/index.html)) { throw 'Frontend index.html is missing.' }
+          $build = Get-Content frontend/dist/build-info.json -Raw | ConvertFrom-Json
+          if ($build.appVersion -cne $version.version -or
+              $build.frontendVersion -cne $version.frontend.version -or
+              $build.commit -cne $env:SOURCE_SHA) {
+            throw 'Frontend version or source commit does not match the backend.'
+          }
+
+      - name: Build and test portable archive
+        run: >-
+          ./.github/scripts/build-windows-portable.ps1
+          -OutputDirectory "$env:RUNNER_TEMP/windows-portable"
+          -PythonVersion "$env:PYTHON_VERSION"
+
+      - name: Upload portable release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$env:RELEASE_TAG" --repo "$env:GITHUB_REPOSITORY" --clobber `
+            "$env:RUNNER_TEMP/windows-portable/lora-scripts_windows_portable_nvidia.7z" `
+            "$env:RUNNER_TEMP/windows-portable/lora-scripts_windows_portable_nvidia.7z.sha256"
+          if ($LASTEXITCODE -ne 0) { throw 'Release asset upload failed.' }

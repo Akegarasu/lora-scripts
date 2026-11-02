@@ -1,0 +1,10 @@
+# Keep this CUDA stack aligned with scripts/install.ps1.
+torch==2.7.0+cu128
+torchvision==0.22.0+cu128
+xformers==0.0.30
+# Ship the tagger runtime instead of downloading it on first launch.
+onnxruntime-gpu==1.20.1
+# Include pip for the launcher's dependency checks and future updates.
+pip==25.1.1
+setuptools==75.8.0
+wheel==0.45.1

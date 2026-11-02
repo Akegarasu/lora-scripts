@@ -1,24 +1,85 @@
-name: Release frontend
+name: Release frontend and Windows portable
 
 on:
   push:
     tags:
       - "v*"
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to rebuild (must match version.json)
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-  release-frontend:
+  build-frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      commit: ${{ steps.release.outputs.commit }}
+      channel: ${{ steps.release.outputs.channel }}
+      frontend-version: ${{ steps.release.outputs.frontend-version }}
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
     steps:
-      - name: Checkout
+      - name: Checkout release tag
         uses: actions/checkout@v6
+        with:
+          ref: refs/tags/${{ env.RELEASE_TAG }}
+          persist-credentials: false
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Validate release metadata before building
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # Manual runs update an existing release; tag pushes may create one.
+          if [[ "$EVENT_NAME" != "push" ]]; then
+            gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName
+          fi
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+          from mikazuki.frontend_release import load_release_info
+
+          release = load_release_info()
+          package = json.loads(Path("frontend/package.json").read_text(encoding="utf-8"))
+          if release.tag != os.environ["RELEASE_TAG"]:
+              raise SystemExit("Release tag does not match version.json")
+          if package["version"] != release.version:
+              raise SystemExit("frontend/package.json version does not match version.json")
+          if release.channel == "stable" and not release.frontend.auto_download:
+              raise SystemExit("Stable releases must enable frontend.autoDownload")
+          commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"tag={release.tag}\ncommit={commit}\nchannel={release.channel}\n")
+              output.write(f"frontend-version={release.frontend.version}\n")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
+              output.write(f"MIKAZUKI_BUILD_COMMIT={commit}\n")
+          PY
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10.26.2
+          package_json_file: frontend/package.json
 
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -31,50 +92,101 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      - name: Build frontend
+      - name: Test frontend
+        working-directory: frontend
+        run: pnpm test
+
+      - name: Typecheck and build frontend
         working-directory: frontend
         run: pnpm run build
 
       - name: Package frontend
         run: >-
           python -m mikazuki.scripts.package_frontend_release
-          --output release
-          --expected-tag "${{ github.ref_name }}"
+          --output release --expected-tag "$RELEASE_TAG"
 
-      - name: Publish GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
+      - name: Share frontend release assets
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-release
+          path: |
+            release/frontend-dist.zip
+            release/frontend-dist.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+          overwrite: true
+
+  publish-frontend:
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ needs.build-frontend.outputs.tag }}
+      RELEASE_CHANNEL: ${{ needs.build-frontend.outputs.channel }}
+    steps:
+      - name: Download built frontend
+        uses: actions/download-artifact@v6
+        with:
+          name: frontend-release
+          path: release
+
+      - name: Publish GitHub Release assets
+        working-directory: release
         run: |
-          release_args=(--verify-tag --generate-notes)
-          channel="$(python -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["channel"])')"
-          if [[ "$channel" != "stable" ]]; then
-            release_args+=(--prerelease)
+          sha256sum --check frontend-dist.zip.sha256
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" frontend-dist.zip frontend-dist.zip.sha256 --clobber
+          else
+            release_args=(--verify-tag --generate-notes)
+            if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
+              release_args+=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" frontend-dist.zip frontend-dist.zip.sha256 "${release_args[@]}"
           fi
-          gh release create "${{ github.ref_name }}" \
-            release/frontend-dist.zip \
-            release/frontend-dist.zip.sha256 \
-            "${release_args[@]}"
+
+  publish-jihulab:
+    needs: [build-frontend, publish-frontend]
+    if: vars.JIHULAB_PROJECT_ID != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download built frontend
+        uses: actions/download-artifact@v6
+        with:
+          name: frontend-release
+          path: release
 
       - name: Publish Jihulab generic package
         env:
           JIHULAB_PROJECT_ID: ${{ vars.JIHULAB_PROJECT_ID }}
           JIHULAB_PACKAGE: ${{ vars.JIHULAB_FRONTEND_PACKAGE }}
           JIHULAB_TOKEN: ${{ secrets.JIHULAB_TOKEN }}
-        shell: bash
+          FRONTEND_VERSION: ${{ needs.build-frontend.outputs.frontend-version }}
+        working-directory: release
         run: |
-          if [[ -z "$JIHULAB_PROJECT_ID" || -z "$JIHULAB_TOKEN" ]]; then
-            echo "Jihulab variables are not configured; skipping CN package upload."
+          if [[ -z "$JIHULAB_TOKEN" ]]; then
+            echo "JIHULAB_TOKEN is not configured; skipping CN package upload."
             exit 0
           fi
-
+          sha256sum --check frontend-dist.zip.sha256
           package="${JIHULAB_PACKAGE:-lora-scripts-frontend}"
-          version="$(python -c 'import json; print(json.load(open("version.json", encoding="utf-8"))["frontend"]["version"])')"
-          endpoint="https://jihulab.com/api/v4/projects/${JIHULAB_PROJECT_ID}/packages/generic/${package}/${version}"
-
-          for file in release/frontend-dist.zip release/frontend-dist.zip.sha256; do
+          endpoint="https://jihulab.com/api/v4/projects/${JIHULAB_PROJECT_ID}/packages/generic/${package}/${FRONTEND_VERSION}"
+          for file in frontend-dist.zip frontend-dist.zip.sha256; do
             curl --fail-with-body --location --retry 3 \
               --header "PRIVATE-TOKEN: ${JIHULAB_TOKEN}" \
-              --upload-file "$file" \
-              "${endpoint}/$(basename "$file")"
+              --upload-file "$file" "${endpoint}/${file}"
           done
+
+  release-windows-portable:
+    needs: [build-frontend, publish-frontend]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release-windows-portable.yml
+    with:
+      tag: ${{ needs.build-frontend.outputs.tag }}
+      source-sha: ${{ needs.build-frontend.outputs.commit }}

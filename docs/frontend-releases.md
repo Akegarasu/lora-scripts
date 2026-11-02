@@ -16,9 +16,15 @@
 2. 将 `channel` 改为 `stable`，并将 `frontend.autoDownload` 改为 `true`。
 3. 同步更新 `frontend/package.json` 的版本。
 4. 提交后创建并推送同名 tag，例如 `v2.1.0`。
-5. `release-frontend.yml` 会构建并发布以下两个文件：
+5. `release-frontend.yml` 会运行前端测试、类型检查与构建，并发布以下两个文件：
    - `frontend-dist.zip`
    - `frontend-dist.zip.sha256`
+
+前端仅构建一次，结果通过 Actions artifact 同时用于 GitHub Release、Jihulab 镜像和 Windows 包。
+GitHub 前端附件发布成功后，会自动调用 Windows NVIDIA 便携版构建，将前端、后端和 Python/CUDA 依赖一起打包为
+`lora-scripts_windows_portable_nvidia.7z` 并上传到同一 Release。
+Release 事件及手动补包方式见 [Windows 便携版发布说明](windows-portable.md)。
+镜像上传与 Windows 打包独立执行，失败时可单独重试，前端 artifact 保留 7 天。
 
 本地也可以执行：
 

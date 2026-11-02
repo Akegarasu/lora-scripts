@@ -2,6 +2,7 @@
   "name": "lora-scripts-webui-v2",
   "version": "2.0.0-dev",
   "private": true,
+  "packageManager": "pnpm@10.26.2",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 8004",
