@@ -15,7 +15,7 @@ _✨ 享受 Stable Diffusion 训练！ ✨_
   <a href="https://github.com/Akegarasu/lora-scripts" style="margin: 2px;">
     <img alt="GitHub 仓库分支" src="https://img.shields.io/github/forks/Akegarasu/lora-scripts">
   </a>
-  <a href="https://raw.githubusercontent.com/Akegarasu/lora-scripts/master/LICENSE" style="margin: 2px;">
+  <a href="LICENSE" style="margin: 2px;">
     <img src="https://img.shields.io/github/license/Akegarasu/lora-scripts" alt="许可证">
   </a>
   <a href="https://github.com/Akegarasu/lora-scripts/releases" style="margin: 2px;">
@@ -31,168 +31,118 @@ _✨ 享受 Stable Diffusion 训练！ ✨_
   <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README-zh.md">中文README</a>
 </p>
 
-LoRA-scripts（又名 SD-Trainer）
+LoRA-scripts（SD-Trainer）是基于 [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts) 的本地训练与数据集工作台。v2 界面集成训练配置、Caption 生成、人工标签编辑、任务日志和训练指标。
 
-LoRA & Dreambooth 训练图形界面 & 脚本预设 & 一键训练环境，用于 [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
+## 训练工作台
 
-已同步 sd-scripts v0.12.3，工作台新增 **MOSS-Image LoRA**（Base / SFT），并接入 H2D Block Swap、多行 Caption 和截断时间步采样。所有训练器统一使用新版 `requirements.txt`，包含 Transformers 5.17.0 和 Diffusers 0.40.0；安装及模型文件配置见 [MOSS-Image 训练指南](docs/moss-image-training.md)。
+选择训练器，配置模型资产和数据集，在启动任务前查看参数帮助与配置检查结果。表单随训练器展示对应参数，支持常用/全部参数切换、搜索和配置完成度检查。
 
-## ✨新特性: 训练 WebUI
+当前目录提供 SD、SDXL、SD3、FLUX.1、Chroma、Lumina、HunyuanImage 2.1、Anima 和 MOSS-Image Base / SFT LoRA；实验性训练器会在界面中标注。训练代码直接收录于 `scripts/dev`，已同步 sd-scripts v0.12.3。MOSS-Image 的模型与依赖要求见[安装配置指南](docs/moss-image-training.md)。
 
-Stable Diffusion 训练工作台。一切集成于一个 WebUI 中。
+![v2 训练工作台](assets/screenshots/training-workspace.jpg)
 
-按照下面的安装指南安装 GUI，然后运行 `run_gui.ps1`(Windows) 或 `run_gui.sh`(Linux) 来启动 GUI。
+任务保留配置、状态和日志，详情页直接展示损失与学习率曲线。指标读取兼容 TensorBoard 的事件文件，无需另外启动 TensorBoard 服务。
 
-![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/d3fcf5ad-fb8f-4e1d-81f9-c903376c19c6)
+## Caption 与人工编辑
 
-| Tensorboard | WD 1.4 标签器 | 标签编辑器 |
-| ------------ | ------------ | ------------ |
-| ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/b2ac5c36-3edf-43a6-9719-cb00b757fc76) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/9504fad1-7d77-46a7-a68f-91fbbdbc7407) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/4597917b-caa8-4e90-b950-8b01738996f2) |
+Caption 工作台可扫描数据集，使用 WD/CL 标签器、BLIP/GIT 系列模型及支持的 chat VLM 批量生成标签或自然语言描述。默认跳过已有 Caption，可选手动选图及写入前复核，并与训练任务共享 GPU 队列。界面会在执行前显示模型可用性与依赖要求。
 
-### Caption 与标签识别工作台
+![v2 Caption 工作台](assets/screenshots/caption-workspace.jpg)
 
-启动 GUI 后打开 [http://127.0.0.1:28000/caption](http://127.0.0.1:28000/caption)，即可扫描数据集，并批量生成标签或自然语言 Caption。服务端目录当前登记 25 个模型：既有 WD/CL Tagger、BLIP/GIT/BLIP-2 兼容模型，以及 6 个 chat VLM 条目；缺少依赖或版本不兼容的模型会在任务开始前明确禁用。
+独立的 Tag 编辑器支持逐图编辑、筛选、标签建议、批量增删、文本或正则替换以及格式整理。批量修改先预览再应用；备份与冲突检测支持在文件未被外部修改时安全回滚。
 
-Caption 默认处理全部扫描图片、跳过已有文件并直接安全写入；手动选图和生成后复核均为可选模式。图库采用服务端分页与虚拟网格，可浏览千张以上的数据集；长期人工打标、查找替换和批量修订将由独立 Tag 编辑器承担。写入会检测 GUI 外部文件修改、按需保留备份，并与训练任务共享 GPU 队列。该功能完全位于 `scripts/` 之外，不影响 sd-scripts 子模块跟随上游更新。API、模型兼容性、许可和安全边界详见[前后端重构设计文档](docs/frontend-backend-refactor-design.md)。
+## Windows NVIDIA 便携版
 
+从 [Releases](https://github.com/Akegarasu/lora-scripts/releases) 下载 `lora-scripts_windows_portable_nvidia.7z`，完整解压后双击包内的 `run_gui.bat`。
 
-# 使用方法
+包内包含 Python、CUDA 12.8 / PyTorch 2.7.0 依赖和构建好的前端。需要 Windows x64 与兼容的 NVIDIA 驱动，无需另装 Python、Node.js 或 CUDA Toolkit；模型权重与训练数据需自行准备。详见[便携版使用与发布说明](docs/windows-portable.md)。
 
-### 必要依赖
+## 从源码安装
 
-Python 3.10 或更新版本、Git，以及 PyTorch 2.6 或更新版本。安装器默认安装 PyTorch 2.7.0、torchvision 0.22.0 和 CUDA 12.8，需要兼容的 NVIDIA 驱动。其他硬件或 CUDA 组合可先安装匹配的 PyTorch，再使用 Windows 的 `-SkipTorch` 或 Linux 的 `--skip-torch` 保留该构建。
-
-### 克隆带子模块的仓库
+推荐 Python 3.11 x64，也支持 Python 3.10；获取源码需要 Git。构建前端还需要带 Corepack 的 Node.js 22，运行已构建的前端不需要 Node.js。安装器默认提供 PyTorch 2.7.0、torchvision 0.22.0 和 CUDA 12.8。如需其他兼容组合，先在项目环境中安装对应的 PyTorch，再传入 Windows 的 `-SkipTorch` 或 Linux 的 `--skip-torch`；PyTorch 至少需要 2.6。
 
 ```sh
-git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
+git clone https://github.com/Akegarasu/lora-scripts
+cd lora-scripts
 ```
 
-## ✨ SD-Trainer GUI
+### 构建前端
+
+当前开发版本在 `version.json` 中关闭了 `frontend.autoDownload`。源码首次启动前需要构建前端；前端代码更新后也需要重新构建：
+
+```sh
+cd frontend
+corepack pnpm install --frozen-lockfile
+corepack pnpm run build
+cd ..
+```
+
+Corepack 使用 `frontend/package.json` 中固定的 pnpm 版本。构建结果与版本信息会写入 `frontend/dist`。
 
 ### Windows
 
-#### 安装
+在仓库根目录打开 PowerShell，执行：
 
-在项目根目录运行 `.\scripts\install-cn.ps1`，或使用官方源 `.\scripts\install.ps1`，创建或更新虚拟环境并安装新版依赖。已有安装在更新代码后也应重新运行安装器，完成后重启 GUI。
+```powershell
+.\scripts\install-cn.ps1
+.\scripts\run_gui.ps1
+```
 
-#### 训练
-
-运行 `run_gui.ps1`，程序将自动打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)
-
-执行 `git pull` 后，启动器会在需要时自动获取与当前代码版本匹配的前端。默认使用 GitHub
-Release，也可切换 Jihulab 国内源或静态镜像。详见[前端版本与分发说明](docs/frontend-releases.md)。
+使用官方安装源时，将安装命令换成 `.\scripts\install.ps1`。
 
 ### Linux
 
-#### 安装
+在仓库根目录执行：
 
-在项目根目录运行 `bash scripts/install.bash`，创建或更新虚拟环境并安装新版依赖；升级后重启 GUI。
+```sh
+bash scripts/install.bash
+source venv/bin/activate
+bash scripts/run_gui.sh
+```
 
-#### 训练
+GUI 启动脚本使用当前激活的 Python，因此每次新开终端都需要先激活 `venv`。启动后打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)。
 
-运行 `bash run_gui.sh`，程序将自动打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)
+更新 Python 依赖后，应重新运行安装器并重启 GUI。已启用前端自动下载的发布版本可以从 GitHub Release、Jihulab 或静态镜像获取匹配前端；开发版本仍需按上面的步骤构建。详见[前端版本与分发说明](docs/frontend-releases.md)。
 
 ### Docker
 
-#### 编译镜像
+Dockerfile 会构建前端，并将当前源码与 PyTorch 2.7.0 / CUDA 12.8 一起打包：
 
-```bash
+```sh
 docker build -t lora-scripts:local .
-```
-
-#### 使用镜像
-
-镜像基于 PyTorch 2.7.0 / CUDA 12.8，从当前工作区源码构建前后端。宿主机需要兼容 CUDA 12.8 的 NVIDIA 驱动与 NVIDIA Container Toolkit。本次更新尚未实际执行 Docker 镜像构建。
-
-```bash
 docker run --gpus all -p 28000:28000 lora-scripts:local
 ```
 
-或者使用 `docker-compose.yaml` 。
+宿主机需要兼容的 NVIDIA 驱动与 NVIDIA Container Toolkit。请把数据集、模型和输出目录挂载到容器内 `/app/lora-scripts` 下的对应位置，以便在容器外保留文件。
 
-```yaml
-services:
-  lora-scripts:
-    container_name: lora-scripts
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: "lora-scripts:local"
-    ports:
-      - "28000:28000"
-      - "6006:6006"  
-    # 共享本地文件夹（请根据实际修改）
-    #volumes:
-      # - "/data/srv/lora-scripts:/app/lora-scripts"
-      # 共享 comfyui 大模型
-      # - "/data/srv/comfyui/models/checkpoints:/app/lora-scripts/models/comfyui"
-      # 共享 sd-webui 大模型
-      # - "/data/srv/stable-diffusion-webui/models/Stable-diffusion:/app/lora-scripts/models/sd-webui"
-    environment:
-      - HF_HOME=huggingface
-      - PYTHONUTF8=1
-    security_opt:
-      - "label=type:nvidia_container_t"
-    runtime: nvidia
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              device_ids: ['0']
-              capabilities: [gpu]
-```
- 
-关于容器使用 GPU 相关依赖安装问题，请自行搜索查阅资料解决。
+### 通过脚本训练
 
-## 通过手动运行脚本的传统训练方式
+安装依赖后，也可在仓库根目录编辑并运行 Windows 的 `scripts/train.ps1` 或 Linux 的 `scripts/train.sh`。Linux 需要先激活 `venv`。这些入口与 GUI 使用同一份随仓库分发的训练代码。
 
-### Windows
+## 发布
 
-#### 安装
+发布版本 tag 前，先同步 `version.json` 和 `frontend/package.json`。推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和 Windows 便携包。手动运行需填写已有 Release 的 tag。
 
-运行 `install.ps1` 将自动为您创建虚拟环境并安装必要的依赖。
+完整流程见[前端版本准备](docs/frontend-releases.md)和 [Windows 打包与重试说明](docs/windows-portable.md)。
 
-#### 训练
+## GUI 参数
 
-编辑 `train.ps1`，然后运行它。
+在已激活的环境中传给 `python gui.py`，或传给便携版的 `run_gui.bat`。
 
-### Linux
+| 参数 | 默认值 | 说明 |
+| --- | --- | --- |
+| `--host` | `127.0.0.1` | 服务器绑定地址 |
+| `--port` | `28000` | 服务器端口 |
+| `--listen` | 关闭 | 监听所有网络接口 |
+| `--skip-prepare-environment` | 关闭 | 跳过依赖检查与准备 |
+| `--skip-prepare-onnxruntime` | 关闭 | 跳过 ONNX Runtime 准备 |
+| `--disable-auto-mirror` | 关闭 | 禁用自动软件源镜像选择 |
+| `--dev` | 关闭 | 启用后端自动重载，跳过前端自动下载 |
+| `--frontend-source` | 读取配置，默认 `github` | `github`、`jihulab`/`cn`、`static`、`auto` 或 `off` |
+| `--frontend-static-base-url` | 未设置 | 静态前端镜像根地址 |
+| `--skip-frontend-download` | 关闭 | 跳过前端自动下载 |
+| `--force-frontend-download` | 关闭 | 重新安装匹配版本的前端制品 |
 
-#### 安装
+## 许可
 
-运行 `install.bash` 将创建虚拟环境并安装必要的依赖。
-
-#### 训练
-
-训练
-
-脚本 `train.sh` **不会** 为您激活虚拟环境。您应该先激活虚拟环境。
-
-```sh
-source venv/bin/activate
-```
-
-编辑 `train.sh`，然后运行它。
-
-#### TensorBoard
-
-训练指标直接显示在每个任务详情中。默认环境只使用 `tensorboardX` 写入兼容事件文件，
-不安装也不启动 TensorBoard Web UI。
-
-## 程序参数
-
-| 参数名称                     | 类型  | 默认值       | 描述                                            |
-|------------------------------|-------|--------------|-------------------------------------------------|
-| `--host`                     | str   | "127.0.0.1"  | 服务器的主机名                                  |
-| `--port`                     | int   | 28000        | 运行服务器的端口                                |
-| `--listen`                   | bool  | false        | 启用服务器的监听模式                            |
-| `--skip-prepare-environment` | bool  | false        | 跳过环境准备步骤                                |
-| `--skip-prepare-onnxruntime` | bool  | false        | 跳过 ONNX Runtime 准备                          |
-| `--disable-auto-mirror`      | bool  | false        | 禁用自动软件源镜像选择                          |
-| `--dev`                      | bool  | false        | 启用开发模式和自动重载                          |
-| `--frontend-source`          | str   | github       | 前端源：github、jihulab/cn、static、auto 或 off |
-| `--frontend-static-base-url` | str   | —            | 静态前端制品镜像的根地址                        |
-| `--skip-frontend-download`   | bool  | false        | 跳过前端自动下载                                |
-| `--force-frontend-download`  | bool  | false        | 强制下载并重新安装匹配前端                      |
+[GNU AGPL v3](LICENSE)。随仓库收录的组件与下载的模型分别遵循各自许可。

@@ -15,7 +15,7 @@ _✨ Enjoy Stable Diffusion Train！ ✨_
   <a href="https://github.com/Akegarasu/lora-scripts" style="margin: 2px;">
     <img alt="GitHub forks" src="https://img.shields.io/github/forks/Akegarasu/lora-scripts">
   </a>
-  <a href="https://raw.githubusercontent.com/Akegarasu/lora-scripts/master/LICENSE" style="margin: 2px;">
+  <a href="LICENSE" style="margin: 2px;">
     <img src="https://img.shields.io/github/license/Akegarasu/lora-scripts" alt="license">
   </a>
   <a href="https://github.com/Akegarasu/lora-scripts/releases" style="margin: 2px;">
@@ -31,126 +31,118 @@ _✨ Enjoy Stable Diffusion Train！ ✨_
   <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README-zh.md">中文README</a>
 </p>
 
-LoRA-scripts (a.k.a SD-Trainer)
+LoRA-scripts (SD-Trainer) is a local training and dataset workspace built on [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts). The v2 interface brings training configuration, caption generation, manual tag editing, job logs and metrics into one application.
 
-LoRA & Dreambooth training GUI & scripts preset & one key training environment for [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts.git)
+## Training workspace
 
-Updated to sd-scripts v0.12.3 with **MOSS-Image LoRA** (Base / SFT), H2D block swap, multiline captions, and truncated timestep sampling. All trainers now use the updated dependencies in `requirements.txt`, including Transformers 5.17.0 and Diffusers 0.40.0. See the [installation and model setup guide](docs/moss-image-training.md).
+Choose a trainer, configure model assets and datasets, and inspect parameter help and validation before starting a job. The form follows each trainer's supported parameters, with common and full parameter views, search, and a configuration checklist.
 
-## ✨NEW: Train WebUI
+The current catalog includes SD, SDXL, SD3, FLUX.1, Chroma, Lumina, HunyuanImage 2.1, Anima and MOSS-Image Base / SFT LoRA. Experimental trainers are marked in the interface. Training code is vendored under `scripts/dev` and tracks sd-scripts v0.12.3; see the [MOSS-Image setup guide](docs/moss-image-training.md) for its model and dependency requirements.
 
-The **REAL** Stable Diffusion Training Studio. Everything in one WebUI.
+![v2 training workspace](assets/screenshots/training-workspace.jpg)
 
-Follow the installation guide below to install the GUI, then run `run_gui.ps1`(windows) or `run_gui.sh`(linux) to start the GUI.
+Jobs retain their configuration, status and logs. Loss and learning-rate charts are displayed in job details using TensorBoard-compatible event files; the application does not need a separate TensorBoard server.
 
-![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/d3fcf5ad-fb8f-4e1d-81f9-c903376c19c6)
+## Caption and Tag Editor
 
-| Tensorboard | WD 1.4 Tagger | Tag Editor |
-| ------------ | ------------ | ------------ |
-| ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/b2ac5c36-3edf-43a6-9719-cb00b757fc76) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/9504fad1-7d77-46a7-a68f-91fbbdbc7407) | ![image](https://github.com/Akegarasu/lora-scripts/assets/36563862/4597917b-caa8-4e90-b950-8b01738996f2) |
+The Caption workspace scans datasets and generates tags or natural-language descriptions using WD/CL taggers, BLIP/GIT-family models and supported chat VLMs. It skips existing captions by default, supports optional image selection and review before writing, and shares the GPU queue with training. Model availability and dependency requirements are shown before execution.
 
-### Caption & tagging workspace
+![v2 Caption workspace](assets/screenshots/caption-workspace.jpg)
 
-Open [http://127.0.0.1:28000/caption](http://127.0.0.1:28000/caption) after starting the GUI to scan a dataset and batch-generate tags or natural-language captions. The server-side catalog currently registers 25 models: the existing WD/CL taggers, BLIP/GIT/BLIP-2 compatibility models, and six chat VLM entries. Missing dependencies and incompatible model versions are disabled before a job starts.
+The separate Tag Editor supports individual edits, filtering, tag suggestions, batch add/remove, text or regular-expression replacement, and normalization. Preview changes before applying them; backups and conflict checks support safe rollback when files have not been edited externally.
 
-Caption generation processes the full scanned dataset by default, skips existing sidecars, and writes safely. Manual image selection and review-before-write are optional. The gallery combines server-side pagination with a virtual grid for datasets containing thousands of images; long-term manual tagging, search/replace, and batch revision belong to the separate Tag Editor. Writes detect external file changes, can preserve backups, and share the GPU queue with training jobs. The feature stays outside `scripts/`, so the sd-scripts submodule can continue tracking upstream. See [the frontend/backend design notes](docs/frontend-backend-refactor-design.md) for the API, model compatibility, licensing and safety boundaries.
+## Windows NVIDIA portable
 
+Download `lora-scripts_windows_portable_nvidia.7z` from [Releases](https://github.com/Akegarasu/lora-scripts/releases), extract the complete archive, and double-click `run_gui.bat` inside it.
 
-# Usage
+The package includes Python, CUDA 12.8 / PyTorch 2.7.0 dependencies and the built frontend. It needs Windows x64 and a compatible NVIDIA driver; no separate Python, Node.js or CUDA Toolkit installation is required. Model weights and datasets are supplied separately. See [portable usage and release automation](docs/windows-portable.md).
 
-### Required Dependencies
+## Install from source
 
-Python 3.10 or newer and Git. PyTorch 2.6 or newer is required; the installers provide PyTorch 2.7.0, torchvision 0.22.0 and CUDA 12.8. Use a compatible NVIDIA driver, or install the appropriate PyTorch build for your hardware before running the installer with `-SkipTorch` (Windows) or `--skip-torch` (Linux).
-
-### Clone repo with submodules
+Python 3.11 x64 is recommended; Python 3.10 is also supported. Git is required for the source checkout. Building the frontend also requires Node.js 22 with Corepack; Node.js is not needed to run a built frontend. The installers provide PyTorch 2.7.0, torchvision 0.22.0 and CUDA 12.8. To use another compatible PyTorch build, install it into the project environment first and pass `-SkipTorch` on Windows or `--skip-torch` on Linux; PyTorch must be at least 2.6.
 
 ```sh
-git clone --recurse-submodules https://github.com/Akegarasu/lora-scripts
+git clone https://github.com/Akegarasu/lora-scripts
+cd lora-scripts
 ```
 
-## ✨ SD-Trainer GUI
+### Build the frontend
+
+The current development version has `frontend.autoDownload` disabled in `version.json`. Build the frontend before starting a source checkout, and rebuild it after frontend changes:
+
+```sh
+cd frontend
+corepack pnpm install --frozen-lockfile
+corepack pnpm run build
+cd ..
+```
+
+Corepack uses the pnpm version pinned in `frontend/package.json`. The build writes `frontend/dist` and its version metadata.
 
 ### Windows
 
-#### Installation
+Run from the repository root in PowerShell:
 
-From the project root, run `.\scripts\install.ps1` to create or update the virtual environment and install the current dependencies. In mainland China, use `.\scripts\install-cn.ps1`. Existing installations should rerun the installer after updating the project, then restart the GUI.
+```powershell
+.\scripts\install.ps1
+.\scripts\run_gui.ps1
+```
 
-#### Train
-
-run `run_gui.ps1`, then program will open [http://127.0.0.1:28000](http://127.0.0.1:28000) automanticlly
-
-After a `git pull`, the launcher automatically obtains the matching frontend release when needed.
-GitHub Release is the default source; Jihulab and static mirrors are also supported. See
-[frontend versioning and distribution](docs/frontend-releases.md).
+Use `.\scripts\install-cn.ps1` instead for the installation mirrors in mainland China.
 
 ### Linux
 
-#### Installation
+Run from the repository root:
 
-From the project root, run `bash scripts/install.bash` to create or update the virtual environment and install the current dependencies. Restart the GUI after upgrading.
+```sh
+bash scripts/install.bash
+source venv/bin/activate
+bash scripts/run_gui.sh
+```
 
-#### Train
+The GUI shell script uses the active Python environment, so activate `venv` in each new terminal. Open [http://127.0.0.1:28000](http://127.0.0.1:28000) after startup.
 
-run `bash run_gui.sh`, then program will open [http://127.0.0.1:28000](http://127.0.0.1:28000) automanticlly
+After updating Python dependencies, rerun the installer and restart the GUI. Released versions with frontend auto-download enabled can obtain their matching frontend from GitHub Release, Jihulab or a static mirror. Development checkouts still use the build steps above; see [frontend versioning and distribution](docs/frontend-releases.md).
 
 ### Docker
 
-Build the current checkout, including its frontend, using the CUDA 12.8 / PyTorch 2.7.0 image:
+The Dockerfile builds the frontend and packages this checkout with PyTorch 2.7.0 / CUDA 12.8:
 
 ```sh
 docker build -t lora-scripts:local .
 docker run --gpus all -p 28000:28000 lora-scripts:local
 ```
 
-Mount model files, datasets and outputs under `/app/lora-scripts` as needed. The host needs an NVIDIA driver compatible with CUDA 12.8 and NVIDIA Container Toolkit. The Docker build has not been executed as part of this update.
+The host needs a compatible NVIDIA driver and NVIDIA Container Toolkit. Mount datasets, model files and outputs into the corresponding directories under `/app/lora-scripts` to preserve them outside the container.
 
-## Legacy training through run script manually
+### Training scripts
 
-### Windows
+For script-based training, edit and run `scripts/train.ps1` on Windows or `scripts/train.sh` on Linux from the repository root. Install dependencies first; on Linux, activate `venv` before running the script. These entrypoints use the same vendored training code as the GUI.
 
-#### Installation
+## Releases
 
-Run `install.ps1` will automatically create a venv for you and install necessary deps.
+Keep `version.json` and `frontend/package.json` aligned before publishing a version tag. Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and Windows portable package. Manual runs require an existing Release tag.
 
-#### Train
+See [frontend release preparation](docs/frontend-releases.md) and [Windows packaging and retry instructions](docs/windows-portable.md) for the complete process.
 
-Edit `train.ps1`, and run it.
+## GUI arguments
 
-### Linux
+Pass these to `python gui.py` in the active environment, or to the portable `run_gui.bat`.
 
-#### Installation
+| Argument | Default | Description |
+| --- | --- | --- |
+| `--host` | `127.0.0.1` | Server bind address |
+| `--port` | `28000` | Server port |
+| `--listen` | off | Listen on all network interfaces |
+| `--skip-prepare-environment` | off | Skip dependency checks and preparation |
+| `--skip-prepare-onnxruntime` | off | Skip ONNX Runtime preparation |
+| `--disable-auto-mirror` | off | Disable automatic package mirror selection |
+| `--dev` | off | Enable backend auto-reload and skip frontend auto-download |
+| `--frontend-source` | configuration, then `github` | `github`, `jihulab`/`cn`, `static`, `auto`, or `off` |
+| `--frontend-static-base-url` | unset | Base URL of a static frontend mirror |
+| `--skip-frontend-download` | off | Skip frontend auto-download |
+| `--force-frontend-download` | off | Reinstall the matching frontend artifact |
 
-Run `install.bash` will create a venv and install necessary deps.
+## License
 
-#### Train
-
-Training script `train.sh` **will not** activate venv for you. You should activate venv first.
-
-```sh
-source venv/bin/activate
-```
-
-Edit `train.sh`, and run it.
-
-#### TensorBoard
-
-Training metrics are displayed directly in each job detail. The default environment uses
-`tensorboardX` only to write compatible event files and does not install or start the
-TensorBoard Web UI.
-
-## Program arguments
-
-| Parameter Name                | Type  | Default Value | Description                                      |
-|-------------------------------|-------|---------------|--------------------------------------------------|
-| `--host`                      | str   | "127.0.0.1"   | Hostname for the server                          |
-| `--port`                      | int   | 28000         | Port to run the server                           |
-| `--listen`                    | bool  | false         | Enable listening mode for the server             |
-| `--skip-prepare-environment`  | bool  | false         | Skip the environment preparation step            |
-| `--skip-prepare-onnxruntime`  | bool  | false         | Skip ONNX Runtime preparation                    |
-| `--disable-auto-mirror`       | bool  | false         | Disable automatic package mirror selection       |
-| `--dev`                       | bool  | false         | Enable development mode and auto reload          |
-| `--frontend-source`           | str   | github        | Frontend source: github, jihulab/cn, static, auto, or off |
-| `--frontend-static-base-url`  | str   | —             | Base URL for a static frontend artifact mirror   |
-| `--skip-frontend-download`    | bool  | false         | Skip automatic frontend download                 |
-| `--force-frontend-download`   | bool  | false         | Download and reinstall the matching frontend     |
+[GNU AGPL v3](LICENSE). Vendored components and downloaded models retain their respective licenses.
