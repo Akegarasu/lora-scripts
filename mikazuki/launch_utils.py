@@ -120,15 +120,26 @@ def setup_onnxruntime(
 
     onnx_version = os.environ.get("ONNXRUNTIME_VERSION", onnx_version)
 
-    if onnx_version and not is_installed(f"onnxruntime-gpu=={onnx_version}"):
-        log.info("uninstalling wrong onnxruntime version")
-        run_pip("uninstall onnxruntime -y", "onnxruntime", live=True)
-        run_pip("uninstall onnxruntime-gpu -y", "onnxruntime", live=True)
+    # CPU and GPU distributions own the same files; the GPU package already
+    # includes the CPU provider. Repair older installs that shipped both.
+    try:
+        version("onnxruntime")
+    except PackageNotFoundError:
+        cpu_installed = False
+    else:
+        cpu_installed = True
 
-    if not is_installed("onnxruntime-gpu"):
-        log.info("installing onnxruntime")
-        pip_install("onnxruntime", onnx_version, index_url=index_url, live=True)
-        pip_install("onnxruntime-gpu", onnx_version, index_url=index_url, live=True)
+    requirement = f"onnxruntime-gpu=={onnx_version}" if onnx_version else "onnxruntime-gpu"
+    gpu_ready = is_installed(requirement)
+    if cpu_installed:
+        if gpu_ready and not onnx_version:
+            onnx_version = version("onnxruntime-gpu")
+        run_pip(["uninstall", "-y", "onnxruntime", "onnxruntime-gpu"], "ONNX Runtime", live=True)
+    elif gpu_ready:
+        return
+
+    log.info("installing onnxruntime-gpu")
+    pip_install("onnxruntime-gpu", onnx_version, index_url=index_url, live=True)
 
 
 def run_pip(command, desc=None, live=False):

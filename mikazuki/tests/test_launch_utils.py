@@ -98,6 +98,58 @@ class LaunchUtilsTests(unittest.TestCase):
             launch_utils.setup_onnxruntime()
             self.assertEqual(install.call_args.args, ("onnxruntime-gpu", "1.16.3"))
 
+    def test_fresh_onnx_install_uses_only_gpu_distribution(self):
+        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+            launch_utils.os.environ, {}, clear=True
+        ), patch.object(launch_utils, "version", side_effect=PackageNotFoundError), patch.object(
+            launch_utils, "run_pip"
+        ) as uninstall, patch.object(launch_utils, "pip_install") as install:
+            launch_utils.setup_onnxruntime()
+            uninstall.assert_not_called()
+            install.assert_called_once_with("onnxruntime-gpu", None, index_url=None, live=True)
+
+    def test_matching_onnx_gpu_needs_no_pip_calls(self):
+        def installed_version(name):
+            if name == "onnxruntime-gpu":
+                return "1.20.1"
+            raise PackageNotFoundError(name)
+
+        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+            launch_utils.os.environ, {}, clear=True
+        ), patch.object(launch_utils, "version", side_effect=installed_version), patch.object(
+            launch_utils, "run_pip"
+        ) as uninstall, patch.object(launch_utils, "pip_install") as install:
+            launch_utils.setup_onnxruntime("1.20.1")
+            uninstall.assert_not_called()
+            install.assert_not_called()
+
+    def test_overlapping_onnx_packages_are_replaced_without_version_upgrade(self):
+        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+            launch_utils.os.environ, {}, clear=True
+        ), patch.object(launch_utils, "version", return_value="1.20.1"), patch.object(
+            launch_utils, "run_pip"
+        ) as uninstall, patch.object(launch_utils, "pip_install") as install:
+            launch_utils.setup_onnxruntime()
+            uninstall.assert_called_once_with(
+                ["uninstall", "-y", "onnxruntime", "onnxruntime-gpu"], "ONNX Runtime", live=True
+            )
+            install.assert_called_once_with("onnxruntime-gpu", "1.20.1", index_url=None, live=True)
+
+    def test_onnx_environment_pin_replaces_gpu_without_explicit_uninstall(self):
+        def installed_version(name):
+            if name == "onnxruntime-gpu":
+                return "1.19.0"
+            raise PackageNotFoundError(name)
+
+        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+            launch_utils.os.environ, {"ONNXRUNTIME_VERSION": "1.20.1"}, clear=True
+        ), patch.object(launch_utils, "version", side_effect=installed_version), patch.object(
+            launch_utils, "run_pip"
+        ) as uninstall, patch.object(launch_utils, "pip_install") as install:
+            launch_utils.setup_onnxruntime("1.18.0")
+            uninstall.assert_not_called()
+            install.assert_called_once_with("onnxruntime-gpu", "1.20.1", index_url=None, live=True)
+
     def test_run_preserves_live_and_captured_output(self):
         for live in (True, False):
             with self.subTest(live=live):

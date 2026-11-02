@@ -68,25 +68,41 @@ class FileManagerLaunchError(RuntimeError):
 def list_files(kind: str = "file", root: str = "workspace", path: Optional[str] = None) -> List[FileItem]:
     base = ROOTS.get(root, ROOTS["workspace"]).resolve()
     target = _resolve_path(base, path)
-    if not target.exists() or not target.is_dir():
+    if not target.is_dir():
         return []
 
+    extensions = None
+    if kind in {"model", "lora", "vae"}:
+        extensions = MODEL_EXTENSIONS
+    elif kind == "dataset":
+        extensions = IMAGE_EXTENSIONS
+
     items: List[FileItem] = []
-    for child in sorted(target.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower())):
-        if child.name.startswith("."):
-            continue
-        if not _include_item(child, kind):
-            continue
-        stat = child.stat()
-        items.append(
-            FileItem(
-                name=child.name,
-                path=_display_path(child),
-                type="dir" if child.is_dir() else "file",
-                size=0 if child.is_dir() else stat.st_size,
-                modifiedAt=_format_timestamp(stat.st_mtime),
+    with os.scandir(target) as entries:
+        for entry in entries:
+            if entry.name.startswith("."):
+                continue
+            try:
+                is_directory = entry.is_dir()
+                if not is_directory and (
+                    kind == "folder"
+                    or extensions is not None and Path(entry.name).suffix.lower() not in extensions
+                ):
+                    continue
+                stat = entry.stat()
+            except FileNotFoundError:
+                # A removed file or dangling link should not break the directory listing.
+                continue
+            items.append(
+                FileItem(
+                    name=entry.name,
+                    path=_display_path(Path(entry.path)),
+                    type="dir" if is_directory else "file",
+                    size=0 if is_directory else stat.st_size,
+                    modifiedAt=_format_timestamp(stat.st_mtime),
+                )
             )
-        )
+    items.sort(key=lambda item: (item.type != "dir", item.name.lower()))
     return items
 
 
@@ -219,19 +235,6 @@ def _resolve_path(base: Path, path: Optional[str]) -> Path:
     except ValueError as error:
         raise BrowsePathError("requested path is outside the selected root") from error
     return resolved
-
-
-def _include_item(path: Path, kind: str) -> bool:
-    if path.is_dir():
-        return True
-    suffix = path.suffix.lower()
-    if kind in {"model", "lora", "vae"}:
-        return suffix in MODEL_EXTENSIONS
-    if kind == "dataset":
-        return suffix in IMAGE_EXTENSIONS
-    if kind == "folder":
-        return False
-    return True
 
 
 def _unavailable_file_manager(system: str, reason: str) -> Dict[str, object]:

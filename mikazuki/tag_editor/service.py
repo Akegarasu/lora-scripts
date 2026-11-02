@@ -1214,16 +1214,23 @@ def _append_manifest(handle, payload: Dict[str, object]) -> None:
     os.fsync(handle.fileno())
 
 
+def _iter_manifest(path: Path) -> Iterable[Dict[str, object]]:
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            try:
+                entry = json.loads(line)
+            except ValueError:
+                continue
+            if isinstance(entry, dict):
+                yield entry
+
+
 def _load_applied_manifest(path: Path) -> List[Dict[str, object]]:
     if not path.is_file():
         raise TagEditorConflictError("变更清单不存在，无法自动回滚")
     applied: Dict[str, Dict[str, object]] = {}
     rolled_back = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        try:
-            entry = json.loads(line)
-        except (TypeError, ValueError):
-            continue
+    for entry in _iter_manifest(path):
         item_id = entry.get("itemId")
         if entry.get("event") == "applied" and item_id:
             applied[str(item_id)] = entry
@@ -1243,11 +1250,7 @@ def _load_result_manifest(path: Path) -> List[Dict[str, object]]:
         "rolled_back": "rolled_back",
         "rollback_conflict": "rollback_conflict",
     }
-    for line in path.read_text(encoding="utf-8").splitlines():
-        try:
-            entry = json.loads(line)
-        except (TypeError, ValueError):
-            continue
+    for entry in _iter_manifest(path):
         event = state_events.get(str(entry.get("event")))
         item_id = entry.get("itemId")
         if not event or not item_id:

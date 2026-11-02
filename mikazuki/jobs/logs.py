@@ -1,24 +1,23 @@
+from collections import deque
 from pathlib import Path
 from typing import List, Tuple
 
 
 def tail_log(path: str, tail: int = 500) -> Tuple[int, List[str]]:
     log_path = Path(path)
-    if not log_path.exists():
+    if not log_path.is_file():
         return 0, []
 
     with log_path.open("r", encoding="utf-8", errors="replace") as f:
-        lines = f.readlines()
+        lines = deque(f, maxlen=tail if tail > 0 else None)
         cursor = f.tell()
 
-    if tail > 0:
-        lines = lines[-tail:]
     return cursor, [line.rstrip("\r\n") for line in lines]
 
 
 def read_log_from(path: str, cursor: int = 0) -> Tuple[int, List[str]]:
     log_path = Path(path)
-    if not log_path.exists():
+    if not log_path.is_file():
         return cursor, []
 
     with log_path.open("r", encoding="utf-8", errors="replace") as f:

@@ -34,7 +34,10 @@ parser.add_argument("--skip-frontend-download", action="store_true")
 parser.add_argument("--force-frontend-download", action="store_true")
 
 
-def launch() -> None:
+def launch(args: argparse.Namespace | None = None) -> None:
+    if args is None:
+        args = parser.parse_args()
+
     log.info("Starting SD-Trainer Mikazuki GUI...")
     log.info(f"Base directory: {base_dir_path()}, Working directory: {os.getcwd()}")
     log.info(f"{platform.system()} Python {platform.python_version()} {sys.executable}")
@@ -64,30 +67,27 @@ def launch() -> None:
             prepare_onnxruntime=not args.skip_prepare_onnxruntime,
         )
 
-    if not check_port_available(args.port):
-        available_port = find_available_port(30000, 30020)
-        if available_port is None:
+    port = args.port
+    if not check_port_available(port):
+        port = find_available_port(30000, 30020)
+        if port is None:
             raise RuntimeError("No available port found")
-        args.port = available_port
 
     os.environ["MIKAZUKI_HOST"] = args.host
-    os.environ["MIKAZUKI_PORT"] = str(args.port)
-
-    if args.listen:
-        args.host = "0.0.0.0"
+    os.environ["MIKAZUKI_PORT"] = str(port)
+    host = "0.0.0.0" if args.listen else args.host
 
     import uvicorn
 
-    log.info(f"Server started at http://{args.host}:{args.port}")
+    log.info(f"Server started at http://{host}:{port}")
     uvicorn.run(
         "mikazuki.app:app",
-        host=args.host,
-        port=args.port,
+        host=host,
+        port=port,
         log_level="error",
         reload=args.dev,
     )
 
 
 if __name__ == "__main__":
-    args = parser.parse_args()
     launch()

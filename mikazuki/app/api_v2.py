@@ -125,7 +125,7 @@ async def get_job_logs(job_id: str, tail: int = Query(default=500, ge=0, le=5000
     job = get_job_store().get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
-    cursor, lines = tail_log(job.logPath or "", tail=tail)
+    cursor, lines = await asyncio.to_thread(tail_log, job.logPath or "", tail=tail)
     return {"jobId": job_id, "cursor": cursor, "lines": lines}
 
 
@@ -233,7 +233,7 @@ async def get_job_events(job_id: str):
                 yield _format_sse("state", job.dict(exclude_none=True))
                 last_state = job.state
 
-            cursor, lines = read_log_from(job.logPath or "", cursor=cursor)
+            cursor, lines = await asyncio.to_thread(read_log_from, job.logPath or "", cursor=cursor)
             for line in lines:
                 yield _format_sse("log", {"line": line, "cursor": cursor})
 

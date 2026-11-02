@@ -54,6 +54,39 @@ class StorageFilesPathBoundaryTests(unittest.TestCase):
         with self.assertRaises(BrowsePathError):
             list_files(root="test", path="../outside")
 
+    def test_listing_preserves_directory_order_and_filters_file_types(self) -> None:
+        (self.inside / "z-directory").mkdir()
+        (self.inside / "B.SAFETENSORS").write_bytes(b"model")
+        (self.inside / "a.PNG").write_bytes(b"image")
+        (self.inside / ".hidden.png").write_bytes(b"hidden")
+        (self.inside / ".hidden-directory").mkdir()
+
+        for kind, expected in (
+            ("file", ["z-directory", "a.PNG", "B.SAFETENSORS", "visible.txt"]),
+            ("model", ["z-directory", "B.SAFETENSORS"]),
+            ("dataset", ["z-directory", "a.PNG"]),
+            ("folder", ["z-directory"]),
+        ):
+            with self.subTest(kind=kind):
+                items = list_files(kind=kind, root="test", path="inside")
+                self.assertEqual(expected, [item.name for item in items])
+                self.assertEqual("dir", items[0].type)
+                self.assertEqual(0, items[0].size)
+                for item in items[1:]:
+                    self.assertEqual("file", item.type)
+                    self.assertEqual((self.inside / item.name).stat().st_size, item.size)
+
+    def test_dangling_link_does_not_break_listing(self) -> None:
+        link = self.inside / "missing-link.txt"
+        try:
+            link.symlink_to(self.inside / "missing.txt")
+        except (NotImplementedError, OSError) as error:
+            self.skipTest(f"symlinks are unavailable: {error}")
+
+        items = list_files(root="test", path="inside")
+
+        self.assertEqual(["visible.txt"], [item.name for item in items])
+
     def test_absolute_path_outside_root_is_rejected(self) -> None:
         with self.assertRaises(BrowsePathError):
             list_files(root="test", path=str(self.outside.resolve()))

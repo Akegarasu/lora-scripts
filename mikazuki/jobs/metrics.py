@@ -4,6 +4,7 @@ import math
 import os
 import struct
 import threading
+from bisect import bisect_right
 from collections import OrderedDict
 from dataclasses import dataclass
 from functools import lru_cache
@@ -131,7 +132,7 @@ class JobMetricsReader:
                 points = self._series.get(tag)
                 if points is None:
                     continue
-                delta = [point for point in points if point.seq > cursor]
+                delta = points[bisect_right(points, cursor, key=lambda point: point.seq):]
                 point_count += len(delta)
                 sampled = downsample_metric_points(delta, max_points)
                 series_payload.append(

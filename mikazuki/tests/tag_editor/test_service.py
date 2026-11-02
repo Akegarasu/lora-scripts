@@ -375,6 +375,29 @@ class TagEditorServiceTests(unittest.TestCase):
         with self.assertRaises(TagEditorConflictError):
             self.service.rollback_change_set(preview.id)
 
+    def test_history_and_rollback_ignore_invalid_manifest_records(self) -> None:
+        caption = self.make_caption("a.png", "cat")
+        inspected = self.inspect()
+        preview = self.preview(
+            inspected,
+            [inspected.items[0].id],
+            [TagEditorAddOperation(type="add", values=["blue eyes"])],
+        )
+        applied = self.apply(inspected, preview)
+        self.assertEqual(applied.state, "completed")
+        manifest = self.history / preview.id / "manifest.jsonl"
+        with manifest.open("a", encoding="utf-8") as handle:
+            handle.write('[]\nnull\n42\n"note"\n{"event":\n\n')
+
+        results = self.service.list_change_results(preview.id)
+        self.assertEqual(results.total, 1)
+        self.assertEqual(results.items[0].state, "applied")
+
+        rolled_back = self.rollback(preview.id)
+        self.assertEqual(rolled_back.state, "rolled_back")
+        self.assertEqual(caption.read_text(encoding="utf-8"), "cat")
+        self.assertEqual(self.service.list_change_results(preview.id).items[0].state, "rolled_back")
+
     def test_new_caption_rolls_back_by_removing_the_created_sidecar(self) -> None:
         caption = self.make_image("created.png").with_suffix(".txt")
         inspected = self.inspect()
