@@ -74,14 +74,14 @@ export TF_CPP_MIN_LOG_LEVEL=3
 extArgs=()
 launchArgs=()
 
-trainer_file="./scripts/stable/train_network.py"
+trainer_file="./scripts/dev/train_network.py"
 
 if [ $model_type == "sd1.5" ]; then
   ext_args+=("--clip_skip=$clip_skip")
 elif [ $model_type == "sd2.0" ]; then
   ext_args+=("--v2")
 elif [ $model_type == "sdxl" ]; then
-  trainer_file="./scripts/stable/sdxl_train_network.py"
+  trainer_file="./scripts/dev/sdxl_train_network.py"
 elif [ $model_type == "flux" ]; then
   trainer_file="./scripts/dev/flux_train_network.py"
 fi

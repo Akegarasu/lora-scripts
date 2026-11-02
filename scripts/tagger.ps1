@@ -19,6 +19,7 @@ $frequency_tags = 0 # order by frequency tags | 从大到小按识别率排序�
 .\venv\Scripts\activate
 
 $Env:HF_HOME = "huggingface"
+$Env:PYTHONPATH = "$(Join-Path $PSScriptRoot 'dev');$Env:PYTHONPATH"
 $Env:XFORMERS_FORCE_DISABLE_TRITON = "1"
 $ext_args = [System.Collections.ArrayList]::new()
 
@@ -63,7 +64,7 @@ if ($frequency_tags) {
 }
 
 # run tagger
-accelerate launch --num_cpu_threads_per_process=8 "./scripts/stable/finetune/tag_images_by_wd14_tagger.py" `
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/dev/finetune/tag_images_by_wd14_tagger.py" `
   $train_data_dir `
   --thresh=$thresh `
   --caption_extension .txt `

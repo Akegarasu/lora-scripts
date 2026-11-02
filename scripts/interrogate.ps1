@@ -11,6 +11,7 @@ $clip_skip = 1 # use output of nth layer from back of text encoder (n>=1) | ä½¿ç
 .\venv\Scripts\activate
 
 $Env:HF_HOME = "huggingface"
+$Env:PYTHONPATH = "$(Join-Path $PSScriptRoot 'dev');$Env:PYTHONPATH"
 $ext_args = [System.Collections.ArrayList]::new()
 
 if ($v2) {
@@ -18,7 +19,7 @@ if ($v2) {
 }
 
 # run interrogate
-accelerate launch --num_cpu_threads_per_process=8 "./scripts/stable/networks/lora_interrogator.py" `
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/dev/networks/lora_interrogator.py" `
 	--sd_model=$sd_model `
 	--model=$model `
 	--batch_size=$batch_size `

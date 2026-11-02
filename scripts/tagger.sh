@@ -18,6 +18,7 @@ frequency_tags=0 # order by frequency tags | 从大到小按识别率排序标�
 # ============= DO NOT MODIFY CONTENTS BELOW | 请勿修改下方内容 =====================
 
 export HF_HOME="huggingface"
+export PYTHONPATH="$(cd "$(dirname "${BASH_SOURCE[0]}")/dev" && pwd)${PYTHONPATH:+:$PYTHONPATH}"
 export TF_CPP_MIN_LOG_LEVEL=3
 extArgs=()
 
@@ -63,7 +64,7 @@ fi
 
 
 # run tagger
-accelerate launch --num_cpu_threads_per_process=8 "./scripts/stable/finetune/tag_images_by_wd14_tagger.py" \
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/dev/finetune/tag_images_by_wd14_tagger.py" \
   $train_data_dir \
   --thresh=$thresh \
   --caption_extension .txt \

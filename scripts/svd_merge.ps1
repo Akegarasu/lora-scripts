@@ -13,6 +13,7 @@ $new_conv_rank = 0 # Specify rank of output LoRA for Conv2d 3x3, None for same a
 .\venv\Scripts\activate
 
 $Env:HF_HOME = "huggingface"
+$Env:PYTHONPATH = "$(Join-Path $PSScriptRoot 'dev');$Env:PYTHONPATH"
 $Env:XFORMERS_FORCE_DISABLE_TRITON = "1"
 $ext_args = [System.Collections.ArrayList]::new()
 
@@ -31,7 +32,7 @@ if ($new_conv_rank) {
 }
 
 # run svd_merge
-accelerate launch --num_cpu_threads_per_process=8 "./scripts/stable/networks/svd_merge_lora.py" `
+accelerate launch --num_cpu_threads_per_process=8 "./scripts/dev/networks/svd_merge_lora.py" `
 	--save_precision=$save_precision `
 	--precision=$precision `
 	--new_rank=$new_rank `
