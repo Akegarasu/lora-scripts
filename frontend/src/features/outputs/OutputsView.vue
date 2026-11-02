@@ -17,6 +17,7 @@ import { ElMessage } from 'element-plus'
 
 import { apiClient, outputFileUrl } from '@/api/client'
 import type { FileItem, FileManagerCapability, SafetensorsMetadataResponse } from '@/api/types'
+import InfoHint from '@/components/InfoHint.vue'
 
 interface DirectoryLocation {
   requestPath: string
@@ -461,32 +462,21 @@ onMounted(() => {
           aria-label="搜索当前输出目录"
           clearable
         />
-        <el-button
-          text
-          :icon="CopyDocument"
-          :disabled="!currentLocation.displayPath"
-          @click="copyPath(currentLocation.displayPath, '当前目录')"
-        >
-          复制路径
-        </el-button>
         <el-button text :icon="Refresh" :loading="loading" @click="refresh">刷新</el-button>
       </div>
     </header>
 
     <div class="view-toolbar">
       <div class="filter-tabs" role="group" aria-label="产物类型">
-        <button type="button" :class="{ active: activeFilter === 'all' }" @click="activeFilter = 'all'">全部</button>
-        <button type="button" :class="{ active: activeFilter === 'dir' }" @click="activeFilter = 'dir'">文件夹</button>
-        <button type="button" :class="{ active: activeFilter === 'file' }" @click="activeFilter = 'file'">文件</button>
+        <button type="button" :class="{ active: activeFilter === 'all' }" :aria-pressed="activeFilter === 'all'" @click="activeFilter = 'all'">全部</button>
+        <button type="button" :class="{ active: activeFilter === 'dir' }" :aria-pressed="activeFilter === 'dir'" @click="activeFilter = 'dir'">文件夹</button>
+        <button type="button" :class="{ active: activeFilter === 'file' }" :aria-pressed="activeFilter === 'file'" @click="activeFilter = 'file'">文件</button>
       </div>
-      <span
+      <InfoHint
         v-if="fileManagerCapability && !canRevealInFileManager"
-        class="file-manager-unavailable"
-        :title="fileManagerUnavailableReason"
-      >
-        <el-icon><InfoFilled /></el-icon>
-        当前环境无法调用文件资源管理器
-      </span>
+        :content="fileManagerUnavailableReason || '当前环境无法调用文件资源管理器，可复制文件路径。'"
+        label="文件资源管理器状态"
+      />
     </div>
 
     <section class="browser-panel" aria-label="输出文件浏览器">
@@ -522,7 +512,7 @@ onMounted(() => {
           <span><strong>{{ fileCount }}</strong> 个文件</span>
           <span v-if="fileCount"><strong>{{ formatSize(totalFileBytes) }}</strong> 文件总量</span>
           <span v-if="artifactGroupCount">
-            <strong>{{ groupedVersionCount }}</strong> 个中途版本已折叠为 {{ artifactGroupCount }} 组
+            <strong>{{ artifactGroupCount }}</strong> 组 · {{ groupedVersionCount }} 个自动保存版本
           </span>
         </div>
 

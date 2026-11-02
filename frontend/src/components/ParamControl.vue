@@ -4,7 +4,7 @@ import { Document, FolderOpened } from '@element-plus/icons-vue'
 
 import type { ParamDefinition } from '@/api/types'
 import FilePicker from './FilePicker.vue'
-import InfoHint from './InfoHint.vue'
+import ParameterHelp from './ParameterHelp.vue'
 import ScientificNumberInput from './ScientificNumberInput.vue'
 
 const props = defineProps<{
@@ -79,7 +79,12 @@ const pathHint = computed(() => {
   if (isPathControl.value) return '接受文件路径'
   return ''
 })
-const controlInfo = computed(() => [defaultHint.value, pathHint.value].filter(Boolean).join('；'))
+const controlInfo = computed(() => [
+  props.param.priority === 'dangerous' ? '' : props.param.description || props.param.help,
+  props.param.label && props.param.label !== props.param.name ? `参数：${props.param.name}` : '',
+  defaultHint.value,
+  pathHint.value,
+].filter(Boolean).join('\n'))
 
 // el-input-number needs `undefined` (not 0) to render an empty field, otherwise
 // every optional number silently compiles to 0.
@@ -226,7 +231,8 @@ function updatePath(next: string) {
 </script>
 
 <template>
-  <div class="param-control">
+  <ParameterHelp class="param-control" :content="controlInfo" :label="`${fieldLabel}说明`">
+    <slot name="label" />
     <div class="control-row">
       <div class="control-input">
         <el-switch
@@ -328,9 +334,9 @@ function updatePath(next: string) {
 
         <el-input v-else v-model="value" clearable :aria-label="fieldLabel" :placeholder="controlPlaceholder" />
       </div>
-      <InfoHint :content="controlInfo" :label="`${fieldLabel}的默认与输入信息`" />
     </div>
-  </div>
+    <slot name="suffix" />
+  </ParameterHelp>
 
   <FilePicker
     v-if="isPathControl"
@@ -345,12 +351,14 @@ function updatePath(next: string) {
 <style scoped>
 .param-control {
   min-width: 0;
+  display: grid;
+  gap: 5px;
 }
 
 .control-row {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   align-items: center;
   gap: 8px;
 }

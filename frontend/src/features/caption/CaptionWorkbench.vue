@@ -23,6 +23,7 @@ import type {
 } from '@/api/types'
 import FilePicker from '@/components/FilePicker.vue'
 import InfoHint from '@/components/InfoHint.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
 import { useCaptionStore } from '@/stores/caption'
 
@@ -171,6 +172,30 @@ const canStart = computed(
     (draft.scope === 'all' || selectedIds.value.length > 0),
 )
 const history = computed(() => caption.jobs.slice(0, 16))
+const startStatus = computed(() => {
+  if (!caption.dataset) return '请先扫描数据集'
+  if (scanOutdated.value) return '数据源已变化，请重新扫描'
+  if (!selectedModel.value || !modelReady.value) return '请选择可用模型'
+  if (draft.scope === 'selected' && !selectedIds.value.length) return '请选择要标注的图片'
+  return `${draft.scope === 'selected' ? selectedIds.value.length : caption.dataset.total} 张图片`
+})
+const writeWarning = computed(() => {
+  if (draft.stageBeforeWrite || !['overwrite', 'prepend', 'append'].includes(draft.conflictPolicy)) return ''
+  const action = draft.conflictPolicy === 'overwrite' ? '覆盖已有 Caption 内容' : '修改已有 Caption 内容'
+  return `生成后将${action}。${draft.backupExisting ? '原文件会先备份。' : '未开启备份，原内容无法通过本任务恢复。'}`
+})
+const modelDetails = computed(() => {
+  const model = selectedModel.value
+  if (!model) return ''
+  return [
+    model.description,
+    familyLabel(model.family),
+    engineLabel(model.engine),
+    model.capabilities.batch ? '支持批处理' : '逐张处理',
+    model.license ? `许可：${model.license}` : '',
+    model.minTransformers ? `Transformers ≥ ${model.minTransformers}` : '',
+  ].filter(Boolean).join('；')
+})
 
 watch(
   draft,
@@ -506,7 +531,7 @@ function openHistoryJob(jobId: string) {
   <section v-else class="caption-page" aria-labelledby="caption-title">
     <header class="page-header">
       <div class="page-heading">
-        <h1 id="caption-title">Caption 工作台</h1>
+        <h1 id="caption-title">数据标注</h1>
       </div>
       <div class="header-actions">
         <el-button text :icon="EditPen" @click="router.push('/tag-editor')">
@@ -528,12 +553,13 @@ function openHistoryJob(jobId: string) {
     />
 
     <div class="workbench-layout">
-      <main class="configuration-flow">
+      <div class="configuration-flow">
         <section class="config-section" aria-labelledby="source-title">
           <div class="section-heading">
+            <span class="step-number" aria-hidden="true">1</span>
             <div>
               <div class="heading-with-info">
-                <h2 id="source-title">选择并检查数据集</h2>
+                <h2 id="source-title">数据集</h2>
                 <InfoHint
                   content="扫描只读取图片和同名 Caption，不会修改任何文件。"
                   label="数据集扫描说明"
@@ -543,59 +569,50 @@ function openHistoryJob(jobId: string) {
           </div>
 
           <div class="source-form">
-            <label class="field field-wide">
+            <ParameterHelp class="field field-wide" content="可直接输入任意本地目录；浏览窗口仍只显示项目 train 目录中的内容。" label="图片目录说明">
               <span class="field-label label-with-info">
                 <span>图片目录 <em>必填</em></span>
-                <InfoHint
-                  content="可直接输入任意本地目录；浏览窗口仍只显示项目 train 目录中的内容。"
-                  label="图片目录说明"
-                />
               </span>
-              <el-input v-model="draft.path" clearable placeholder="输入任意本地图片目录，或从 train 目录浏览">
+              <el-input v-model="draft.path" clearable placeholder="输入图片目录" aria-label="图片目录" aria-required="true">
                 <template #append>
                   <el-button :icon="FolderOpened" @click="pickerVisible = true">浏览</el-button>
                 </template>
               </el-input>
-            </label>
+            </ParameterHelp>
 
-            <label class="field">
+            <ParameterHelp class="field" content="读取和写入与图片同名的描述文件。" label="Caption 后缀说明">
               <span class="field-label label-with-info">
                 <span>Caption 后缀</span>
-                <InfoHint content="读取和写入与图片同名的描述文件。" label="Caption 后缀说明" />
               </span>
-              <el-select v-model="draft.captionExtension">
-                <el-option label=".txt（训练常用）" value=".txt" />
+              <el-select v-model="draft.captionExtension" aria-label="Caption 后缀">
+                <el-option label=".txt" value=".txt" />
                 <el-option label=".caption" value=".caption" />
                 <el-option label=".tags" value=".tags" />
               </el-select>
-            </label>
+            </ParameterHelp>
 
-            <label class="option-card">
+            <ParameterHelp class="option-card" content="递归处理分组数据集；隐藏目录和符号链接会跳过。" label="扫描子文件夹说明">
               <span>
                 <span class="option-title">
                   <strong>扫描子文件夹</strong>
-                  <InfoHint
-                    content="递归处理分组数据集；隐藏目录和符号链接会跳过。"
-                    label="扫描子文件夹说明"
-                  />
                 </span>
               </span>
-              <el-switch v-model="draft.recursive" />
-            </label>
+              <el-switch v-model="draft.recursive" aria-label="扫描子文件夹" />
+            </ParameterHelp>
 
-            <label class="field">
+            <ParameterHelp class="field" content="超大型数据集建议拆分任务，便于复核和恢复。" label="扫描上限建议">
               <span class="field-label label-with-info">
                 <span>扫描图片上限</span>
-                <InfoHint content="超大型数据集建议拆分任务，便于复核和恢复。" label="扫描上限建议" />
               </span>
               <el-input-number
                 v-model="draft.maxImages"
+                aria-label="扫描图片上限"
                 :min="1"
                 :max="50000"
                 :step="1000"
                 controls-position="right"
               />
-            </label>
+            </ParameterHelp>
 
             <div class="scan-action">
               <el-button
@@ -622,16 +639,18 @@ function openHistoryJob(jobId: string) {
 
         <section class="config-section" aria-labelledby="model-title">
           <div class="section-heading">
+            <span class="step-number" aria-hidden="true">2</span>
             <div>
-              <h2 id="model-title">选择识别模型</h2>
+              <h2 id="model-title">识别模型</h2>
             </div>
           </div>
 
           <div class="model-picker-grid">
-            <label class="field field-wide">
+            <ParameterHelp class="field field-wide" :content="modelDetails" label="模型信息" as="label">
               <span class="field-label">模型</span>
               <el-select
                 v-model="draft.modelId"
+                aria-label="识别模型"
                 filterable
                 :loading="caption.modelsLoading"
                 placeholder="选择 Caption 模型"
@@ -640,30 +659,35 @@ function openHistoryJob(jobId: string) {
                   <el-option
                     v-for="model in group.models"
                     :key="model.id"
-                    :label="`${model.title} · ${statusLabel(model)}`"
+                    :label="model.title"
                     :value="model.id"
                     :disabled="model.status === 'unavailable' || model.status === 'misconfigured'"
-                  />
+                  >
+                    <span class="model-option">
+                      <span>{{ model.title }}</span>
+                      <small>{{ statusLabel(model) }}</small>
+                    </span>
+                  </el-option>
                 </el-option-group>
               </el-select>
-            </label>
+            </ParameterHelp>
 
             <article v-if="selectedModel" class="model-summary">
               <div class="model-summary-heading">
-                <div>
-                  <span>{{ familyLabel(selectedModel.family) }}</span>
-                  <h3>{{ selectedModel.title }}</h3>
+                <div class="heading-with-info">
+                  <el-tag :type="statusType(selectedModel)">{{ statusLabel(selectedModel) }}</el-tag>
                 </div>
-                <el-tag :type="statusType(selectedModel)">{{ statusLabel(selectedModel) }}</el-tag>
+                <a
+                  v-if="selectedModel.homepage"
+                  class="model-homepage"
+                  :href="selectedModel.homepage"
+                  target="_blank"
+                  rel="noreferrer"
+                >模型主页</a>
               </div>
-              <p>{{ selectedModel.description }}</p>
               <div class="model-facts">
                 <span>{{ providerLabel(selectedModel.provider) }}</span>
-                <span>{{ engineLabel(selectedModel.engine) }}</span>
                 <span v-if="selectedModel.recommendedVramGb">建议显存 {{ selectedModel.recommendedVramGb }} GB</span>
-                <span>{{ selectedModel.capabilities.batch ? '支持批处理' : '逐张处理' }}</span>
-                <span v-if="selectedModel.license">许可：{{ selectedModel.license }}</span>
-                <span v-if="selectedModel.minTransformers">Transformers ≥ {{ selectedModel.minTransformers }}</span>
                 <span v-if="selectedModel.gated">需接受模型许可</span>
                 <span v-if="selectedModel.requiresHfToken">需配置 Hugging Face Token</span>
                 <span v-if="selectedModel.trustRemoteCode">会加载模型仓库代码</span>
@@ -679,36 +703,27 @@ function openHistoryJob(jobId: string) {
                   <span>{{ warning }}</span>
                 </p>
               </div>
-              <a
-                v-if="selectedModel.homepage"
-                class="model-homepage"
-                :href="selectedModel.homepage"
-                target="_blank"
-                rel="noreferrer"
-              >
-                查看模型主页与许可说明
-              </a>
             </article>
 
-            <label v-if="selectedModel && selectedModel.outputModes.length > 1" class="field field-wide">
-              <span class="field-label">输出形式</span>
+            <ParameterHelp v-if="selectedModel && selectedModel.outputModes.length > 1" class="field field-wide" content="标签适合动漫 LoRA；自然描述适合写实素材和语义更丰富的训练。" label="输出形式说明">
+              <span class="field-label label-with-info">
+                <span>输出形式</span>
+              </span>
               <SegmentedControl
                 :model-value="draft.outputMode"
                 :options="outputModeOptions"
                 accessible-label="输出形式"
                 @update:model-value="(value) => (draft.outputMode = value as CaptionOutputMode)"
               />
-              <small>标签适合动漫 LoRA；自然描述适合写实素材和语义更丰富的训练。</small>
-            </label>
+            </ParameterHelp>
           </div>
 
           <div v-for="group in regularParamGroups" :key="group.id" class="param-group">
-            <div class="param-group-heading">
+            <ParameterHelp class="param-group-heading" :content="group.description || ''" :label="`${group.title}说明`">
               <div class="heading-with-info">
                 <h3>{{ group.title }}</h3>
-                <InfoHint v-if="group.description" :content="group.description" :label="`${group.title}说明`" />
               </div>
-            </div>
+            </ParameterHelp>
             <div class="param-grid">
               <CaptionParamControl
                 v-for="param in group.params"
@@ -724,17 +739,16 @@ function openHistoryJob(jobId: string) {
             <div class="param-group-heading">
               <div class="heading-with-info">
                 <h3>多模态指令</h3>
-                <InfoHint
-                  content="告诉模型关注哪些信息；指令本身不会写入 Caption。"
-                  label="多模态指令说明"
-                />
               </div>
             </div>
             <div class="param-grid">
-              <label class="field field-wide">
-                <span class="field-label">识别指令</span>
+              <ParameterHelp class="field field-wide" :content="customInstructionEnabled ? '告诉模型关注哪些信息；指令本身不会写入 Caption。需要中文输出时，可在指令中明确要求。' : '将提示预设切换为自定义指令后可编辑。指令本身不会写入 Caption。'" label="识别指令说明">
+                <span class="field-label label-with-info">
+                  <span>识别指令</span>
+                </span>
                 <el-input
                   v-model="draft.instruction"
+                  aria-label="识别指令"
                   type="textarea"
                   :rows="4"
                   maxlength="8000"
@@ -742,15 +756,12 @@ function openHistoryJob(jobId: string) {
                   :disabled="!customInstructionEnabled"
                   placeholder="例如：准确描述主体、服装、动作、构图与光线。"
                 />
-                <small v-if="customInstructionEnabled">模型通常更擅长英语指令；需要中文输出时可在指令中明确要求。</small>
-                <small v-else>当前使用内置提示预设；将“提示预设”切换为“自定义指令”后可编辑。</small>
-              </label>
-              <label class="field">
+              </ParameterHelp>
+              <ParameterHelp class="field" content="仅列出当前模型目录声明支持的语言。" label="输出语言说明">
                 <span class="field-label label-with-info">
                   <span>输出语言</span>
-                  <InfoHint content="仅列出当前模型目录声明支持的语言。" label="输出语言说明" />
                 </span>
-                <el-select v-model="draft.language">
+                <el-select v-model="draft.language" aria-label="输出语言">
                   <el-option
                     v-for="language in selectedModel.capabilities.languages"
                     :key="language"
@@ -758,7 +769,7 @@ function openHistoryJob(jobId: string) {
                     :value="language"
                   />
                 </el-select>
-              </label>
+              </ParameterHelp>
             </div>
           </div>
 
@@ -766,20 +777,21 @@ function openHistoryJob(jobId: string) {
             v-if="advancedParamGroups.length"
             class="advanced-toggle"
             type="button"
+            :aria-expanded="advancedVisible"
+            aria-controls="caption-advanced-params"
             @click="advancedVisible = !advancedVisible"
           >
             <el-icon><Setting /></el-icon>
-            {{ advancedVisible ? '收起模型高级参数' : '展开模型高级参数' }}
+            {{ advancedVisible ? '收起高级参数' : '高级参数' }}
           </button>
 
-          <div v-if="advancedVisible" class="advanced-area">
+          <div v-if="advancedVisible" id="caption-advanced-params" class="advanced-area">
             <div v-for="group in advancedParamGroups" :key="group.id" class="param-group">
-              <div class="param-group-heading">
+              <ParameterHelp class="param-group-heading" :content="group.description || ''" :label="`${group.title}说明`">
                 <div class="heading-with-info">
-                  <h3>{{ group.title }} · 高级</h3>
-                  <InfoHint v-if="group.description" :content="group.description" :label="`${group.title}说明`" />
+                  <h3>{{ group.title }}</h3>
                 </div>
-              </div>
+              </ParameterHelp>
               <div class="param-grid">
                 <CaptionParamControl
                   v-for="param in group.params"
@@ -795,62 +807,56 @@ function openHistoryJob(jobId: string) {
 
         <section class="config-section" aria-labelledby="output-title">
           <div class="section-heading">
+            <span class="step-number" aria-hidden="true">3</span>
             <div>
-              <h2 id="output-title">整理结果并创建任务</h2>
+              <h2 id="output-title">输出与执行</h2>
             </div>
           </div>
 
           <div class="param-group">
-            <div class="param-group-heading">
+            <ParameterHelp class="param-group-heading" :content="draft.outputMode === 'caption'
+                ? '自然语言描述只应用统一前缀和后缀，不执行标签清理。'
+                : '这些规则在标签模型输出之后执行，再组成最终 Caption。'" label="结果整理说明">
               <div class="heading-with-info">
                 <h3>结果整理</h3>
-                <InfoHint
-                  :content="draft.outputMode === 'caption'
-                    ? '自然语言描述只应用统一前缀和后缀，不执行标签清理。'
-                    : '这些规则在标签模型输出之后执行，再组成最终 Caption。'"
-                  label="结果整理说明"
-                />
               </div>
-            </div>
+            </ParameterHelp>
             <div class="param-grid">
-              <label v-if="draft.outputMode !== 'caption'" class="field">
-                <span class="field-label">固定附加标签</span>
-                <el-input v-model="draft.additionalTags" clearable placeholder="例如 trigger_name, 1girl" />
-                <small>逗号或换行分隔；这些标签总会加入结果。</small>
-              </label>
+              <ParameterHelp v-if="draft.outputMode !== 'caption'" class="field" content="用逗号或换行分隔；每张图片都会加入这些标签。" label="附加标签说明">
+                <span class="field-label label-with-info">
+                  <span>固定附加标签</span>
+                </span>
+                <el-input v-model="draft.additionalTags" clearable placeholder="trigger_name, 1girl" aria-label="固定附加标签" />
+              </ParameterHelp>
               <label v-if="draft.outputMode !== 'caption'" class="field">
                 <span class="field-label">排除标签</span>
-                <el-input v-model="draft.excludeTags" clearable placeholder="例如 watermark, text" />
-                <small>从模型结果中移除不希望进入训练的标签。</small>
+                <el-input v-model="draft.excludeTags" clearable placeholder="watermark, text" aria-label="排除标签" />
               </label>
               <label class="field">
                 <span class="field-label">统一前缀</span>
-                <el-input v-model="draft.prefix" clearable placeholder="可选" />
+                <el-input v-model="draft.prefix" clearable aria-label="统一前缀" />
               </label>
               <label class="field">
                 <span class="field-label">统一后缀</span>
-                <el-input v-model="draft.suffix" clearable placeholder="可选" />
+                <el-input v-model="draft.suffix" clearable aria-label="统一后缀" />
               </label>
-              <label v-if="draft.outputMode !== 'caption'" class="field">
+              <ParameterHelp v-if="draft.outputMode !== 'caption'" class="field" content="通常使用英文逗号加空格。" label="标签分隔符建议">
                 <span class="field-label label-with-info">
                   <span>标签分隔符</span>
-                  <InfoHint content="通常使用英文逗号加空格。" label="标签分隔符建议" />
                 </span>
-                <el-input v-model="draft.separator" maxlength="32" />
-              </label>
+                <el-input v-model="draft.separator" maxlength="32" aria-label="标签分隔符" />
+              </ParameterHelp>
               <label v-if="draft.outputMode !== 'caption'" class="option-card">
                 <span>
                   <strong>去除重复标签</strong>
-                  <small>保留第一次出现的位置，避免重复 Token。</small>
                 </span>
-                <el-switch v-model="draft.deduplicate" />
+                <el-switch v-model="draft.deduplicate" aria-label="去除重复标签" />
               </label>
               <label v-if="draft.outputMode !== 'caption'" class="option-card">
                 <span>
                   <strong>下划线替换为空格</strong>
-                  <small>让 Danbooru 标签更接近自然文本格式。</small>
                 </span>
-                <el-switch v-model="draft.replaceUnderscore" />
+                <el-switch v-model="draft.replaceUnderscore" aria-label="下划线替换为空格" />
               </label>
               <label
                 v-if="draft.outputMode !== 'caption' && draft.replaceUnderscore"
@@ -859,28 +865,30 @@ function openHistoryJob(jobId: string) {
                 <span class="field-label">保留下划线的标签</span>
                 <el-input
                   v-model="draft.replaceUnderscoreExcludes"
+                  aria-label="保留下划线的标签"
                   clearable
-                  placeholder="例如 character_name, series_name"
+                  placeholder="character_name, series_name"
                 />
-                <small>逗号或换行分隔；命中的完整标签不会把下划线替换为空格。</small>
               </label>
-              <label v-if="draft.outputMode !== 'caption'" class="option-card">
+              <ParameterHelp v-if="draft.outputMode !== 'caption'" class="option-card" content="为反斜杠和圆括号添加转义；仅在训练语法需要时开启。" label="标签转义说明">
                 <span>
-                  <strong>转义标签特殊字符</strong>
-                  <small>为反斜杠和圆括号添加转义；仅在训练语法需要时开启。</small>
+                  <span class="option-title">
+                    <strong>转义标签特殊字符</strong>
+                  </span>
                 </span>
-                <el-switch v-model="draft.escapeTags" />
-              </label>
-              <label
+                <el-switch v-model="draft.escapeTags" aria-label="转义标签特殊字符" />
+              </ParameterHelp>
+              <ParameterHelp
                 v-if="draft.outputMode !== 'caption' && selectedModel?.capabilities.scores"
                 class="option-card"
-              >
+               content="将模型置信度作为标签的训练权重。" label="置信度权重说明">
                 <span>
-                  <strong>写入置信度权重</strong>
-                  <small>把分数写成训练权重；普通数据集通常保持关闭。</small>
+                  <span class="option-title">
+                    <strong>写入置信度权重</strong>
+                  </span>
                 </span>
-                <el-switch v-model="draft.includeConfidence" />
-              </label>
+                <el-switch v-model="draft.includeConfidence" aria-label="写入置信度权重" />
+              </ParameterHelp>
             </div>
           </div>
 
@@ -891,21 +899,22 @@ function openHistoryJob(jobId: string) {
             <div class="param-grid">
               <label class="field">
                 <span class="field-label">任务名称</span>
-                <el-input v-model="draft.name" clearable maxlength="120" placeholder="可选，例如 角色数据集首轮标注" />
+                <el-input v-model="draft.name" clearable maxlength="120" placeholder="如：角色数据集" aria-label="任务名称" />
               </label>
-              <label class="field">
+              <ParameterHelp class="field" content="此策略用于处理与图片同名的已有 Caption。复核后写入模式下，可在提交时重新选择策略。" label="已有 Caption 的处理说明">
                 <span class="field-label">已有 Caption</span>
-                <el-select v-model="draft.conflictPolicy">
-                  <el-option label="跳过已有文件（推荐）" value="skip" />
+                <el-select v-model="draft.conflictPolicy" aria-label="已有 Caption 的处理方式">
+                  <el-option label="跳过已有文件" value="skip" />
                   <el-option label="只填充空文件" value="fill_empty" />
                   <el-option label="覆盖已有内容" value="overwrite" />
                   <el-option label="生成结果放在原内容前" value="prepend" />
                   <el-option label="生成结果追加到原内容后" value="append" />
                 </el-select>
-                <small>{{ draft.stageBeforeWrite ? '复核提交时仍可重新选择策略。' : '默认跳过已有文件，避免覆盖人工内容。' }}</small>
-              </label>
-              <label class="field">
-                <span class="field-label">推理设备</span>
+              </ParameterHelp>
+              <ParameterHelp class="field" content="低精度可降低显存占用，需模型和设备支持。" label="推理精度说明">
+                <span class="field-label label-with-info">
+                  <span>设备与精度</span>
+                </span>
                 <div class="runtime-row">
                   <el-select v-model="draft.device" aria-label="推理设备">
                     <el-option label="自动选择" value="auto" />
@@ -927,54 +936,53 @@ function openHistoryJob(jobId: string) {
                     <el-option label="BFloat16" value="bfloat16" />
                   </el-select>
                 </div>
-                <small>低精度可降低显存占用，但需模型和设备支持。</small>
-              </label>
-              <label class="field">
-                <span class="field-label">推理 Batch Size</span>
+              </ParameterHelp>
+              <ParameterHelp class="field" content="显存不足时保持为 1；支持批处理的模型可适当增大。" label="批次大小说明">
+                <span class="field-label label-with-info">
+                  <span>批次大小</span>
+                </span>
                 <el-input-number
                   v-model="draft.batchSize"
+                  aria-label="推理批次大小"
                   :min="1"
                   :max="64"
                   :disabled="selectedModel?.capabilities.batch === false"
                   controls-position="right"
                 />
-                <small>显存不足时保持为 1；传统 ONNX Tagger 可适当增大。</small>
-              </label>
-              <label class="option-card">
+              </ParameterHelp>
+              <ParameterHelp class="option-card" content="开启后先暂存生成结果，复核提交后才写入 Caption 文件。" label="复核后写入说明">
                 <span>
-                  <strong>生成后进入可选复核 <el-tag type="info" effect="plain">可选</el-tag></strong>
-                  <small>暂存逐图结果，确认后再写入。</small>
+                  <span class="option-title">
+                    <strong>复核后写入</strong>
+                  </span>
                 </span>
-                <el-switch v-model="draft.stageBeforeWrite" />
-              </label>
+                <el-switch v-model="draft.stageBeforeWrite" aria-label="复核后写入" />
+              </ParameterHelp>
               <label class="option-card">
                 <span>
                   <strong>覆盖前创建备份</strong>
-                  <small>保存已有 Caption 的原始字节和变更记录。</small>
                 </span>
-                <el-switch v-model="draft.backupExisting" />
+                <el-switch v-model="draft.backupExisting" aria-label="覆盖前创建备份" />
               </label>
-              <label class="option-card">
+              <ParameterHelp class="option-card" content="用于诊断模型输出，会增加存储占用，不影响最终 Caption。" label="原始结果说明">
                 <span>
-                  <strong>保留模型原始结果</strong>
-                  <small>用于诊断模型输出，会增加任务数据库占用；不影响最终 Caption。</small>
+                  <span class="option-title">
+                    <strong>保留模型原始结果</strong>
+                  </span>
                 </span>
-                <el-switch v-model="draft.saveRawResult" />
-              </label>
+                <el-switch v-model="draft.saveRawResult" aria-label="保留模型原始结果" />
+              </ParameterHelp>
             </div>
           </div>
+
+          <el-alert v-if="writeWarning" type="warning" :title="writeWarning" :closable="false" show-icon />
 
           <div class="start-panel" :class="{ ready: canStart }">
             <div>
               <el-icon><MagicStick /></el-icon>
               <span>
-                <strong v-if="canStart">已可以创建 Caption 任务</strong>
-                <strong v-else>完成数据集扫描和模型选择后即可开始</strong>
-                <small v-if="caption.dataset">
-                  {{ draft.scope === 'selected' ? `${selectedIds.length} 张已选图片` : `${caption.dataset.total} 张扫描图片` }}
-                  · {{ selectedModel?.title || '未选择模型' }}
-                  · {{ draft.stageBeforeWrite ? '先复核后写入' : '生成后直接写入' }}
-                </small>
+                <strong>{{ startStatus }}</strong>
+                <small v-if="canStart">{{ draft.stageBeforeWrite ? '复核后写入' : '生成后直接写入 Caption 文件' }}</small>
               </span>
             </div>
             <el-button
@@ -985,7 +993,7 @@ function openHistoryJob(jobId: string) {
               :loading="caption.starting"
               @click="startJob"
             >
-              创建 Caption 任务
+              {{ draft.stageBeforeWrite ? '生成并复核' : '开始标注' }}
             </el-button>
           </div>
 
@@ -997,12 +1005,12 @@ function openHistoryJob(jobId: string) {
             show-icon
           />
         </section>
-      </main>
+      </div>
 
       <aside class="history-panel" aria-labelledby="history-title">
         <div class="history-heading">
           <div>
-            <h2 id="history-title">Caption 历史</h2>
+            <h2 id="history-title">最近任务</h2>
           </div>
           <el-button circle text :icon="Refresh" :loading="caption.jobsLoading" aria-label="刷新历史" @click="caption.loadJobs()" />
         </div>
@@ -1026,7 +1034,7 @@ function openHistoryJob(jobId: string) {
             <span class="history-icon"><el-icon><EditPen /></el-icon></span>
             <span class="history-copy">
               <strong>{{ job.name || job.modelTitle }}</strong>
-              <span>{{ job.reviewMode ? '可选复核' : '直接写入' }} · {{ job.processed }}/{{ job.total }}</span>
+              <span>{{ job.reviewMode ? '复核后写入' : '直接写入' }} · {{ job.processed }}/{{ job.total }}</span>
               <small><el-icon><Clock /></el-icon>{{ formatTime(job.createdAt) }}</small>
             </span>
             <el-tag :type="jobStateType(job.state)">{{ jobStateLabel(job.state) }}</el-tag>
@@ -1035,14 +1043,9 @@ function openHistoryJob(jobId: string) {
 
         <div v-else-if="!caption.jobsLoading" class="history-empty">
           <el-icon><MagicStick /></el-icon>
-          <strong>还没有 Caption 任务</strong>
-          <span>创建任务后可在这里跟踪进度、日志和异常。</span>
+          <strong>暂无标注任务</strong>
         </div>
 
-        <div class="history-help">
-          <strong>安全写入说明</strong>
-          <p>每个任务固定数据集快照和模型参数；写入时会检查文件指纹并使用原子替换，避免覆盖扫描后发生的人工修改。</p>
-        </div>
       </aside>
     </div>
 
@@ -1080,27 +1083,19 @@ function openHistoryJob(jobId: string) {
   letter-spacing: 0;
 }
 
-.page-heading p {
-  max-width: 760px;
-  margin: 7px 0 0;
-  color: var(--text-secondary);
-  font-size: 15px;
-}
-
 .workbench-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   align-items: start;
-  gap: 18px;
+  gap: 32px;
 }
 
 .configuration-flow {
   min-width: 0;
   display: grid;
-  gap: 0;
+  gap: 12px;
 }
 
-.config-section,
 .history-panel {
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
@@ -1110,13 +1105,31 @@ function openHistoryJob(jobId: string) {
 .config-section {
   display: grid;
   gap: 20px;
-  padding: 26px 4px 34px;
+  padding: 22px 0 32px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.config-section:last-child {
+  border-bottom: 0;
 }
 
 .section-heading {
   display: flex;
-  align-items: flex-start;
-  gap: 13px;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-number {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 650;
 }
 
 .heading-with-info,
@@ -1136,12 +1149,6 @@ function openHistoryJob(jobId: string) {
   color: var(--text-strong);
   font-size: 19px;
   font-weight: 600;
-}
-
-.section-heading p {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 14px;
 }
 
 .source-form,
@@ -1176,25 +1183,19 @@ function openHistoryJob(jobId: string) {
   font-style: normal;
 }
 
-.field small,
-.option-card small {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .field :deep(.el-input-number) {
   width: 100%;
 }
 
 .option-card {
   min-width: 0;
-  min-height: 78px;
-  display: flex;
+  min-height: 56px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 13px 14px;
+  gap: 8px 16px;
+  padding: 11px 14px;
   border: 0;
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
@@ -1236,24 +1237,22 @@ function openHistoryJob(jobId: string) {
   background: var(--surface-sunken);
 }
 
+.model-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.model-option small {
+  color: var(--text-muted);
+}
+
 .model-summary-heading {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.model-summary-heading span {
-  color: var(--text-muted);
-  font-size: 13px;
-  font-weight: 630;
-}
-
-.model-summary-heading h3 {
-  margin: 2px 0 0;
-  color: var(--text-strong);
-  font-size: 18px;
-  font-weight: 690;
 }
 
 .model-summary > p {
@@ -1329,12 +1328,6 @@ function openHistoryJob(jobId: string) {
   font-weight: 680;
 }
 
-.param-group-heading p {
-  margin: 3px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
 .advanced-toggle {
   justify-self: start;
   display: inline-flex;
@@ -1375,7 +1368,7 @@ function openHistoryJob(jobId: string) {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 16px;
+  padding: 18px;
   border: 0;
   border-radius: var(--radius-md);
   background: var(--surface-sunken);
@@ -1418,7 +1411,8 @@ function openHistoryJob(jobId: string) {
   top: 18px;
   display: grid;
   gap: 14px;
-  padding: 4px 0 18px;
+  margin-top: 22px;
+  padding: 16px;
 }
 
 .history-heading {
@@ -1521,28 +1515,6 @@ function openHistoryJob(jobId: string) {
   font-size: 14px;
 }
 
-.history-empty span {
-  font-size: 13px;
-}
-
-.history-help {
-  padding: 12px;
-  border-radius: var(--radius-md);
-  background: var(--surface-sunken);
-}
-
-.history-help strong {
-  color: var(--text-strong);
-  font-size: 13px;
-}
-
-.history-help p {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
 @media (max-width: 1180px) {
   .workbench-layout {
     grid-template-columns: 1fr;
@@ -1569,7 +1541,7 @@ function openHistoryJob(jobId: string) {
   }
 
   .config-section {
-    padding: 16px 14px;
+    padding: 16px 0 24px;
   }
 
   .source-form,

@@ -7,7 +7,6 @@ import {
   RefreshLeft,
   RefreshRight,
   View,
-  WarningFilled,
 } from '@element-plus/icons-vue'
 import { ElAutocomplete, ElImageViewer } from 'element-plus'
 import { computed, nextTick, ref, watch } from 'vue'
@@ -185,11 +184,10 @@ defineExpose({ undo, redo, focusEditor })
       <header class="inspector-header">
         <div>
           <h2 :title="item.relativePath">{{ item.name }}</h2>
-          <p :title="item.relativePath">{{ item.relativePath }}</p>
+          <p v-if="item.relativePath !== item.name" :title="item.relativePath">{{ item.relativePath }}</p>
         </div>
         <el-tag v-if="pending || dirty" type="warning">待应用</el-tag>
         <el-tag v-else-if="item.error" type="danger">不可编辑</el-tag>
-        <el-tag v-else type="info">扫描版本</el-tag>
       </header>
 
       <button
@@ -229,12 +227,12 @@ defineExpose({ undo, redo, focusEditor })
       <el-alert
         v-else-if="readonly"
         type="info"
-        title="移动端当前为只读浏览"
+        title="只读预览"
         :closable="false"
         show-icon
       >
         <template #default>
-          <el-button size="small" @click="emit('enable-edit')">启用此项编辑</el-button>
+          <el-button size="small" @click="emit('enable-edit')">编辑 Caption</el-button>
         </template>
       </el-alert>
 
@@ -341,8 +339,6 @@ defineExpose({ undo, redo, focusEditor })
       </section>
 
       <div class="editor-status" aria-live="polite">
-        <span v-if="dirty"><el-icon><WarningFilled /></el-icon> 修改尚未应用</span>
-        <span v-else>与扫描版本一致</span>
         <span>{{ draftText.length }} 字符<template v-if="mode === 'tags'"> · {{ tags.length }} 个标签</template></span>
       </div>
 
@@ -360,7 +356,6 @@ defineExpose({ undo, redo, focusEditor })
     <div v-else class="inspector-empty">
       <el-icon><View /></el-icon>
       <strong>选择一张图片</strong>
-      <span>Caption 和标签会显示在这里。</span>
     </div>
 
     <ElImageViewer

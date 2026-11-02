@@ -3,7 +3,6 @@ import { computed, defineAsyncComponent, nextTick, onMounted, ref, watch } from 
 import { useRoute } from 'vue-router'
 import {
   ArrowRight,
-  Close,
   Cpu,
   EditPen,
   FolderOpened,
@@ -39,6 +38,11 @@ function openHelp() {
 function openSettingsDialog() {
   accountMenuOpen.value = false
   settingsDialogOpen.value = true
+}
+
+function toggleTheme() {
+  settings.toggleTheme()
+  accountMenuOpen.value = false
 }
 
 const navItems = [
@@ -96,6 +100,8 @@ watch(
           class="nav-item"
           :class="{ 'is-active': item.activePrefixes.some((prefix) => route.path.startsWith(prefix)) }"
           :to="item.to"
+          :aria-label="item.label"
+          :title="item.label"
         >
           <span class="nav-icon" aria-hidden="true">
             <el-icon><component :is="item.icon" /></el-icon>
@@ -113,12 +119,13 @@ watch(
             class="account-trigger"
             type="button"
             aria-haspopup="menu"
+            aria-label="工作区菜单"
             :aria-expanded="accountMenuOpen"
             @keydown.esc="accountMenuOpen = false"
             @click="accountMenuOpen = !accountMenuOpen"
           >
-            <span class="account-avatar" aria-hidden="true">LS</span>
-            <span class="account-copy"><strong>LoRA Studio</strong><small>本地工作区</small></span>
+            <span class="workspace-icon" aria-hidden="true"><el-icon><Setting /></el-icon></span>
+            <span class="account-copy"><strong>工作区</strong></span>
             <el-icon class="account-chevron"><ArrowRight /></el-icon>
           </button>
           <div v-if="accountMenuOpen" class="account-menu" role="menu">
@@ -130,7 +137,7 @@ watch(
             <button class="account-menu-item" type="button" role="menuitem" @click="openSettingsDialog">
               <el-icon><Setting /></el-icon><span>设置</span>
             </button>
-            <button class="account-menu-item" type="button" role="menuitem" @click="settings.toggleTheme">
+            <button class="account-menu-item" type="button" role="menuitem" @click="toggleTheme">
               <el-icon><Sunny v-if="settings.theme === 'dark'" /><Moon v-else /></el-icon>
               <span>{{ settings.theme === 'dark' ? '浅色外观' : '深色外观' }}</span>
             </button>
@@ -221,7 +228,7 @@ watch(
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 36px;
+  min-height: 42px;
   padding: 4px 10px;
   border: 1px solid transparent;
   border-radius: 12px;
@@ -370,6 +377,16 @@ watch(
   height: 32px;
 }
 
+.workspace-icon {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  color: var(--text-secondary);
+  font-size: 19px;
+}
+
 .account-copy,
 .account-menu-head > span:last-child {
   min-width: 0;
@@ -401,7 +418,7 @@ watch(
 
 .account-menu {
   position: absolute;
-  right: -2px;
+  left: 0;
   bottom: calc(100% + 8px);
   z-index: 80;
   width: 236px;
@@ -502,6 +519,13 @@ watch(
     padding-inline: 0;
   }
 
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+  }
+
   .brand-copy,
   .nav-copy,
   .service-pill span:last-child,
@@ -545,16 +569,54 @@ watch(
     width: auto;
     max-width: 100vw;
     height: calc(64px + env(safe-area-inset-bottom));
-    display: block;
-    overflow: hidden;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 6px;
+    overflow: visible;
     padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
     border-top: 1px solid var(--border-subtle);
     border-right: 0;
   }
 
-  .app-brand,
-  .sidebar-footer {
+  .app-brand {
     display: none;
+  }
+
+  .sidebar-footer {
+    display: block;
+    margin: 0;
+  }
+
+  .account-wrap {
+    margin: 0;
+  }
+
+  .account-trigger {
+    width: 44px;
+    min-height: 52px;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0;
+  }
+
+  .workspace-icon {
+    height: 25px;
+    flex-basis: 25px;
+  }
+
+  .account-copy {
+    display: block;
+  }
+
+  .account-copy strong {
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .account-menu {
+    left: auto;
+    right: 0;
+    bottom: calc(100% + 14px);
   }
 
   .primary-nav {

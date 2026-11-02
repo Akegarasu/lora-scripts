@@ -26,6 +26,7 @@ import ModelAssetForm from '@/components/ModelAssetForm.vue'
 import ParamControl from '@/components/ParamControl.vue'
 import ParamSearch from '@/components/ParamSearch.vue'
 import InfoHint from '@/components/InfoHint.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
 import type { ParamDefinition, ParamGroup } from '@/api/types'
 import { useCatalogStore } from '@/stores/catalog'
@@ -50,8 +51,8 @@ const initialized = ref(false)
 const hydrating = ref(false)
 const savePending = ref(false)
 const densityOptions = [
-  { label: '引导', value: 'recommended' },
-  { label: '专家', value: 'advanced' },
+  { label: '常用参数', value: 'recommended' },
+  { label: '全部参数', value: 'advanced' },
 ] as const
 let saveTimer: number | undefined
 let sectionFrame: number | undefined
@@ -656,14 +657,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <SegmentedControl
-        class="density-switch"
-        :model-value="catalog.view"
-        :options="densityOptions"
-        accessible-label="参数密度"
-        @update:model-value="(value) => (catalog.view = value as 'recommended' | 'advanced')"
-      />
-
       <div class="page-actions">
         <el-button text :icon="Search" @click="searchVisible = true">搜索参数</el-button>
         <el-button text :icon="Refresh" :loading="catalog.loading || devices.loading" @click="refreshCatalog">
@@ -684,7 +677,6 @@ onBeforeUnmount(() => {
 
     <section v-if="!catalog.loading && !catalog.trainers.length" class="catalog-empty">
       <el-empty description="未能加载训练器目录">
-        <p>请确认后端服务可用，然后重新获取训练器与参数信息。</p>
         <el-button type="primary" :loading="catalog.loading" @click="refreshCatalog">重新加载</el-button>
       </el-empty>
     </section>
@@ -727,21 +719,17 @@ onBeforeUnmount(() => {
         </el-select>
       </div>
 
-      <div class="trainer-context">
-        <span class="context-item">
-          <small>模型族</small>
-          <strong>{{ catalog.selectedTrainer?.family?.toUpperCase() || '—' }}</strong>
-        </span>
-        <span class="context-item">
-          <small>任务</small>
-          <strong>{{ catalog.selectedTrainer?.task || '—' }}</strong>
-        </span>
-        <span class="context-item manifest">
-          <small>参数目录</small>
-          <strong>{{ trainerManifest }}</strong>
-        </span>
-      </div>
-
+      <InfoHint
+        :content="`模型族：${catalog.selectedTrainer?.family?.toUpperCase() || '—'}；任务：${catalog.selectedTrainer?.task || '—'}；参数目录：${trainerManifest}`"
+        label="训练器信息"
+      />
+      <SegmentedControl
+        class="density-switch"
+        :model-value="catalog.view"
+        :options="densityOptions"
+        accessible-label="参数范围"
+        @update:model-value="(value) => (catalog.view = value as 'recommended' | 'advanced')"
+      />
     </section>
 
     <div v-if="catalog.trainers.length && (hydrating || (catalog.loading && !catalog.groups.length))" class="loading-shell">
@@ -755,15 +743,13 @@ onBeforeUnmount(() => {
       element-loading-text="正在更新参数目录"
     >
       <nav class="section-rail" aria-label="训练配置章节">
-        <div class="rail-heading">
-          <span>配置流程</span>
-        </div>
         <button
           v-for="item in sectionNavItems"
           :key="item.id"
           type="button"
           class="rail-item"
           :class="{ active: activeSection === item.id, done: item.done }"
+          :aria-current="activeSection === item.id ? 'location' : undefined"
           @click="scrollToSection(item.id)"
         >
           <span class="rail-icon"><el-icon><component :is="item.icon" /></el-icon></span>
@@ -773,7 +759,7 @@ onBeforeUnmount(() => {
         </button>
       </nav>
 
-      <main ref="editorColumn" class="editor-column">
+      <div ref="editorColumn" class="editor-column">
         <section
           id="section-runtime"
           class="config-section"
@@ -784,9 +770,6 @@ onBeforeUnmount(() => {
             <div>
               <h2>运行与输出</h2>
             </div>
-            <span class="section-state" :class="{ complete: draft.name.trim() }">
-              {{ draft.name.trim() ? '已命名' : '需要名称' }}
-            </span>
           </header>
 
           <div class="section-body runtime-grid">
@@ -800,33 +783,36 @@ onBeforeUnmount(() => {
                 v-model="draft.name"
                 clearable
                 maxlength="128"
-                show-word-limit
+                aria-required="true"
                 placeholder="例如 aki_flux_style_v1"
               />
             </label>
 
-            <label class="form-field" for="cpu-threads">
-              <span><strong>CPU 线程</strong></span>
+            <ParameterHelp class="form-field" content="每个训练进程用于数据加载的线程数。" label="CPU 线程说明">
+              <span class="label-with-info">
+                <label for="cpu-threads"><strong>CPU 线程</strong></label>
+              </span>
               <el-input-number
                 id="cpu-threads"
+                aria-label="CPU 线程"
                 v-model="draft.runtime.numCpuThreadsPerProcess"
                 :min="1"
                 :max="128"
                 controls-position="right"
               />
-              <small>每个训练进程用于数据加载的线程数。</small>
-            </label>
+            </ParameterHelp>
 
-            <label class="form-field gpu-field" for="gpu-select">
+            <ParameterHelp
+              class="form-field gpu-field"
+              content="留空时沿用当前环境；多选时会配置 Accelerate 多卡启动参数。"
+              label="运行 GPU 说明"
+            >
               <span class="label-with-info">
-                <strong>运行 GPU</strong>
-                <InfoHint
-                  content="留空时沿用当前环境；多选时会配置 Accelerate 多卡启动参数。"
-                  label="运行 GPU 补充信息"
-                />
+                <label for="gpu-select"><strong>运行 GPU</strong></label>
               </span>
               <el-select
                 id="gpu-select"
+                aria-label="运行 GPU"
                 v-model="draft.runtime.gpuIds"
                 multiple
                 clearable
@@ -856,7 +842,7 @@ onBeforeUnmount(() => {
               </el-select>
               <small v-if="devices.error" class="field-warning">{{ devices.error }}</small>
               <small v-else-if="!devices.loading && !devices.gpus.length">未检测到 CUDA GPU，启动前请检查运行环境。</small>
-            </label>
+            </ParameterHelp>
           </div>
         </section>
 
@@ -871,8 +857,8 @@ onBeforeUnmount(() => {
             <div>
               <h2>模型资产</h2>
             </div>
-            <span class="section-state" :class="{ complete: !missingModelParams.length }">
-              {{ missingModelParams.length ? `缺少 ${missingModelParams.length} 项` : '必要项完整' }}
+            <span v-if="missingModelParams.length" class="section-state">
+              缺少 {{ missingModelParams.length }} 项
             </span>
           </header>
           <div class="section-body">
@@ -890,9 +876,6 @@ onBeforeUnmount(() => {
             <div>
               <h2>训练数据</h2>
             </div>
-            <span class="section-state" :class="{ complete: draft.dataset.root.trim() }">
-              {{ draft.dataset.root.trim() ? '目录已选择' : '需要目录' }}
-            </span>
           </header>
           <div class="section-body">
             <DatasetEditor />
@@ -900,7 +883,7 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-for="(group, groupIndex) in selectedGroups"
+          v-for="group in selectedGroups"
           :id="`section-${group.id}`"
           :key="group.id"
           class="config-section"
@@ -911,7 +894,6 @@ onBeforeUnmount(() => {
             <div>
               <h2>{{ group.title }}</h2>
             </div>
-            <span class="section-state neutral">{{ group.params.length }} 项</span>
           </header>
 
           <div class="section-body parameter-list">
@@ -922,36 +904,34 @@ onBeforeUnmount(() => {
               class="parameter-row"
               :class="{ dangerous: param.priority === 'dangerous' }"
             >
-              <div class="parameter-copy">
-                <div class="parameter-title">
-                  <strong>{{ param.label || param.name }}</strong>
-                  <el-tag v-if="isRequired(param)" size="small" type="danger" effect="plain">必填</el-tag>
-                  <el-tag v-else-if="param.priority === 'dangerous'" size="small" type="danger" effect="light">
-                    高风险
-                  </el-tag>
-                  <el-tag v-else-if="param.priority === 'advanced'" size="small" type="info" effect="plain">
-                    高级
-                  </el-tag>
-                  <el-tag v-if="param.deprecated" size="small" type="warning" effect="plain">
-                    已弃用
-                  </el-tag>
-                  <el-tag v-if="isParamModified(param)" size="small" type="primary" effect="light">
-                    已修改
-                  </el-tag>
-                </div>
-                <code>{{ param.name }}</code>
-                <p v-if="param.description || param.help">{{ param.description || param.help }}</p>
-              </div>
-              <div class="parameter-control">
-                <ParamControl
-                  :param="param"
-                  :model-value="draft.getValue(param)"
-                  @update:model-value="draft.setValue(param, $event)"
-                />
-                <button v-if="isParamModified(param)" type="button" class="reset-param" @click="resetParam(param)">
-                  恢复默认
-                </button>
-              </div>
+              <ParamControl
+                :param="param"
+                :model-value="draft.getValue(param)"
+                @update:model-value="draft.setValue(param, $event)"
+              >
+                <template #label>
+                  <div class="parameter-copy">
+                    <div class="parameter-title">
+                      <strong>{{ param.label || param.name }}</strong>
+                      <el-tag v-if="isRequired(param)" size="small" type="danger" effect="plain">必填</el-tag>
+                      <el-tag v-else-if="param.priority === 'dangerous'" size="small" type="danger" effect="light">
+                        高风险
+                      </el-tag>
+                      <el-tag v-if="param.deprecated" size="small" type="warning" effect="plain">
+                        已弃用
+                      </el-tag>
+                    </div>
+                    <p v-if="param.priority === 'dangerous' && (param.description || param.help)">
+                      {{ param.description || param.help }}
+                    </p>
+                  </div>
+                </template>
+                <template #suffix>
+                  <button v-if="isParamModified(param)" type="button" class="reset-param" :aria-label="`恢复${param.label || param.name}的默认值`" @click="resetParam(param)">
+                    恢复默认
+                  </button>
+                </template>
+              </ParamControl>
             </div>
           </div>
         </section>
@@ -966,15 +946,12 @@ onBeforeUnmount(() => {
             <div>
               <h2>采样预览</h2>
             </div>
-            <span class="section-state" :class="{ complete: draft.sample.enabled, neutral: !draft.sample.enabled }">
-              {{ draft.sample.enabled ? `${draft.sample.prompts.length} 组提示词` : '未启用' }}
-            </span>
           </header>
           <div class="section-body">
             <SamplePromptEditor />
           </div>
         </section>
-      </main>
+      </div>
 
       <div class="desktop-inspector">
         <CompileInspector
@@ -987,16 +964,17 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <button class="mobile-launch" type="button" @click="inspectorVisible = true">
+    <button v-if="catalog.trainers.length" class="mobile-launch" type="button" @click="inspectorVisible = true">
       <span>
-        <small>检查与启动</small>
-        <strong>
-          <template v-if="missingParams.length || !draft.dataset.root.trim()">
+        <strong>检查与启动</strong>
+        <small>
+          <template v-if="missingParams.length || !draft.dataset.root.trim() || !draft.name.trim()">
             仍有未完成项目
           </template>
-          <template v-else-if="previewFresh">当前配置已预检</template>
+          <template v-else-if="previewFresh && draft.compileResult?.errors.length">预检发现问题</template>
+          <template v-else-if="previewFresh">配置已通过预检</template>
           <template v-else>准备检查配置</template>
-        </strong>
+        </small>
       </span>
       <span class="mobile-launch-icon"><el-icon><Timer /></el-icon></span>
     </button>
@@ -1005,7 +983,7 @@ onBeforeUnmount(() => {
       v-model="inspectorVisible"
       class="inspector-drawer"
       title="检查与启动"
-      size="390px"
+      size="min(390px, 100vw)"
       append-to-body
     >
       <CompileInspector
@@ -1034,7 +1012,7 @@ onBeforeUnmount(() => {
 .page-header {
   position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
 }
@@ -1042,6 +1020,7 @@ onBeforeUnmount(() => {
 .title-line {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 5px;
 }
@@ -1068,11 +1047,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   min-height: 26px;
-  padding: 3px 8px;
-  border: 1px solid color-mix(in srgb, var(--success) 26%, var(--border));
-  border-radius: 6px;
-  background: var(--success-soft);
-  color: var(--success);
+  padding: 3px 0;
+  border: 0;
+  color: var(--text-muted);
   font-size: 10px;
   font-weight: 620;
 }
@@ -1099,6 +1076,8 @@ onBeforeUnmount(() => {
 .page-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 2px;
 }
 
@@ -1114,10 +1093,7 @@ onBeforeUnmount(() => {
 }
 
 .density-switch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  justify-self: end;
 }
 
 .catalog-alert {
@@ -1146,9 +1122,9 @@ onBeforeUnmount(() => {
 
 .trainer-panel {
   display: grid;
-  grid-template-columns: minmax(360px, 1.25fr) minmax(300px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 22px;
+  gap: 12px;
   margin-top: 26px;
   padding: 8px 0 20px;
   border: 1px solid var(--border-subtle);
@@ -1292,7 +1268,7 @@ onBeforeUnmount(() => {
 
 .workbench-layout {
   display: grid;
-  grid-template-columns: 160px minmax(720px, 1fr) 280px;
+  grid-template-columns: 156px minmax(0, 1fr) 280px;
   align-items: start;
   gap: 20px;
   margin-top: 22px;
@@ -1398,9 +1374,9 @@ onBeforeUnmount(() => {
 
 .section-header {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 13px;
+  gap: 12px;
   min-height: 64px;
   padding: 18px 4px 10px;
   border-bottom: 0;
@@ -1465,6 +1441,7 @@ onBeforeUnmount(() => {
 .runtime-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(150px, 0.65fr);
+  align-items: start;
   gap: 18px 20px;
 }
 
@@ -1542,14 +1519,18 @@ onBeforeUnmount(() => {
 }
 
 .parameter-row {
-  display: grid;
-  grid-template-columns: minmax(230px, 0.9fr) minmax(220px, 1.1fr);
-  align-items: center;
-  gap: 24px;
-  min-height: 88px;
-  padding: 15px;
+  min-width: 0;
+  min-height: 66px;
+  padding: 12px 4px;
   border-bottom: 1px solid var(--border-subtle);
   scroll-margin-top: 20px;
+}
+
+.parameter-row :deep(.param-control) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 1fr);
+  align-items: center;
+  gap: 8px 20px;
 }
 
 .parameter-row:last-child {
@@ -1596,15 +1577,9 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
 }
 
-.parameter-control {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-}
-
 .reset-param {
+  grid-column: 2;
+  justify-self: end;
   padding: 4px 0;
   border: 0;
   background: transparent;
@@ -1684,24 +1659,13 @@ onBeforeUnmount(() => {
   }
 
   .workbench-layout {
-    grid-template-columns: 152px minmax(660px, 1fr) 260px;
+    grid-template-columns: 144px minmax(0, 1fr) 260px;
     gap: 16px;
   }
 
-  .trainer-panel {
-    grid-template-columns: minmax(360px, 1.25fr) minmax(300px, 0.8fr);
-  }
 }
 
 @media (max-width: 1280px) {
-  .trainer-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .trainer-context {
-    display: none;
-  }
-
   .workbench-layout {
     grid-template-columns: 156px minmax(0, 1fr);
   }
@@ -1722,7 +1686,7 @@ onBeforeUnmount(() => {
 
   .page-header {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: center;
   }
 
@@ -1731,13 +1695,15 @@ onBeforeUnmount(() => {
   }
 
   .density-switch {
-    position: static;
     justify-self: start;
-    transform: none;
   }
 
   .trainer-panel {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .trainer-panel .density-switch {
+    grid-column: 1 / -1;
   }
 
   .trainer-control {
@@ -1812,10 +1778,11 @@ onBeforeUnmount(() => {
 
   .page-actions {
     width: 100%;
+    justify-content: flex-start;
   }
 
   .page-actions :deep(.el-button) {
-    flex: 1;
+    margin-left: 0;
   }
 
   .trainer-panel {
@@ -1876,16 +1843,16 @@ onBeforeUnmount(() => {
   }
 
   .parameter-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
     padding: 15px 2px;
   }
 
-  .parameter-control {
+  .parameter-row :deep(.param-control) {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 
   .reset-param {
+    grid-column: 1;
     justify-self: start;
   }
 

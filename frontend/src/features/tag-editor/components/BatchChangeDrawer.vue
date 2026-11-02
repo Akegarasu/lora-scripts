@@ -4,6 +4,7 @@ import { ElMessage } from 'element-plus'
 import { computed, reactive, ref, watch } from 'vue'
 
 import SegmentedControl from '@/components/SegmentedControl.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import type { TagEditorOperation } from '@/api/types'
 
 const props = defineProps<{
@@ -175,12 +176,17 @@ function operationLabel(operation: TagEditorOperation) {
         <div class="section-heading">
           <div>
             <h3 id="batch-scope-title">处理范围</h3>
-            <span>“全部图片”不受图库分页和当前筛选影响。</span>
           </div>
           <el-tag v-if="pendingItemCount" type="warning">另有 {{ pendingItemCount }} 项手动修改</el-tag>
         </div>
 
-        <div class="scope-options" role="radiogroup" aria-label="批量处理范围">
+        <ParameterHelp
+          class="scope-options"
+          role="radiogroup"
+          aria-label="批量处理范围"
+          content="整个数据集包含所有扫描到的图片，不受当前分页或筛选影响；已选图片只处理你选择的范围。"
+          label="批量处理范围说明"
+        >
           <button
             type="button"
             role="radio"
@@ -191,7 +197,7 @@ function operationLabel(operation: TagEditorOperation) {
             @click="emit('update:scopeMode', 'all')"
           >
             <span class="scope-option-icon"><el-icon><Collection /></el-icon></span>
-            <span><strong>全部图片</strong><small>{{ totalCount }} 张 · 跨分页处理</small></span>
+            <span><strong>整个数据集</strong><small>{{ totalCount }} 张</small></span>
           </button>
           <button
             type="button"
@@ -208,7 +214,7 @@ function operationLabel(operation: TagEditorOperation) {
               <small>{{ selectedCount ? `${selectedCount} 张` : '尚未选择' }}</small>
             </span>
           </button>
-        </div>
+        </ParameterHelp>
       </section>
 
       <el-alert
@@ -222,9 +228,8 @@ function operationLabel(operation: TagEditorOperation) {
       <section class="operation-builder" aria-labelledby="operation-builder-title">
         <div class="section-heading">
           <div>
-            <h3 id="operation-builder-title">添加结构化操作</h3>
+            <h3 id="operation-builder-title">添加操作</h3>
           </div>
-          <el-tag type="info">按顺序执行</el-tag>
         </div>
 
         <SegmentedControl
@@ -251,35 +256,40 @@ function operationLabel(operation: TagEditorOperation) {
         <div v-else-if="operationType === 'replace'" class="operation-form replace-form">
           <label>
             <span>查找</span>
-            <el-input v-model="replaceForm.find" :prefix-icon="Search" clearable />
+            <el-input v-model="replaceForm.find" :prefix-icon="Search" clearable aria-label="查找内容" />
           </label>
           <label>
             <span>替换为</span>
-            <el-input v-model="replaceForm.replacement" clearable />
+            <el-input v-model="replaceForm.replacement" clearable aria-label="替换为" />
           </label>
           <div class="switch-grid">
-            <label><span>正则表达式</span><el-switch v-model="replaceForm.regex" /></label>
-            <label><span>区分大小写</span><el-switch v-model="replaceForm.caseSensitive" /></label>
-            <label><span>整词匹配</span><el-switch v-model="replaceForm.wholeWord" /></label>
+            <label><span>正则表达式</span><el-switch v-model="replaceForm.regex" aria-label="正则表达式" /></label>
+            <label><span>区分大小写</span><el-switch v-model="replaceForm.caseSensitive" aria-label="区分大小写" /></label>
+            <label><span>整词匹配</span><el-switch v-model="replaceForm.wholeWord" aria-label="整词匹配" /></label>
           </div>
         </div>
 
         <div v-else class="operation-form normalize-form">
-          <label><span>清理首尾空白</span><el-switch v-model="normalizeForm.trimWhitespace" /></label>
-          <label><span>标签去重</span><el-switch v-model="normalizeForm.deduplicate" /></label>
-          <label><span>按字母排序</span><el-switch v-model="normalizeForm.sort" /></label>
+          <label><span>清理首尾空白</span><el-switch v-model="normalizeForm.trimWhitespace" aria-label="清理首尾空白" /></label>
+          <label><span>标签去重</span><el-switch v-model="normalizeForm.deduplicate" aria-label="标签去重" /></label>
+          <label><span>按字母排序</span><el-switch v-model="normalizeForm.sort" aria-label="按字母排序" /></label>
         </div>
 
-        <el-button :icon="Plus" @click="addOperation">加入操作序列</el-button>
+        <el-button class="add-operation" :icon="Plus" @click="addOperation">添加到列表</el-button>
       </section>
 
       <section class="operation-list" aria-labelledby="operation-list-title">
-        <div class="section-heading">
+        <ParameterHelp
+          class="section-heading"
+          tabindex="0"
+          content="列表中的操作会从上到下依次执行，每一步都基于上一步的结果。预览修改后再确认写入文件。"
+          label="操作执行顺序说明"
+        >
           <div>
             <h3 id="operation-list-title">操作序列</h3>
           </div>
-          <el-tag>{{ operations.length }} 项</el-tag>
-        </div>
+          <span v-if="operations.length">{{ operations.length }} 项</span>
+        </ParameterHelp>
 
         <ol v-if="operations.length">
           <li v-for="(operation, index) in operations" :key="`${operation.type}-${index}`">
@@ -302,7 +312,7 @@ function operationLabel(operation: TagEditorOperation) {
 
     <template #footer>
       <div class="drawer-footer">
-        <span>将预览 {{ effectiveCount }} 张图片，不会立即写入文件</span>
+        <span>{{ effectiveCount }} 张图片</span>
         <div>
           <el-button @click="visible = false">关闭</el-button>
           <el-button
@@ -311,7 +321,7 @@ function operationLabel(operation: TagEditorOperation) {
             :disabled="!hasEffectiveScope || operations.length === 0"
             @click="emit('preview')"
           >
-            预览批量变更
+            预览修改
           </el-button>
         </div>
       </div>
@@ -338,6 +348,10 @@ function operationLabel(operation: TagEditorOperation) {
 .drawer-footer > span {
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.add-operation {
+  justify-self: start;
 }
 
 .scope-section {

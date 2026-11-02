@@ -35,13 +35,6 @@ const serviceLabel = computed(() => {
   return serviceOnline.value ? '服务在线' : '服务离线'
 })
 
-const serviceDescription = computed(() => {
-  if (settings.loadingHealth) return '正在与本地 Mikazuki 服务通信…'
-  if (settings.healthError) return '无法连接后端，请确认服务已启动并检查 API 地址。'
-  if (serviceOnline.value) return '训练、编译与任务接口均可访问。'
-  return '服务返回了非正常状态，请刷新后重试。'
-})
-
 const isRefreshing = computed(
   () => refreshingAll.value || settings.loadingHealth || devices.loading,
 )
@@ -102,7 +95,6 @@ onMounted(() => {
           />
           <span>
             <strong>{{ serviceLabel }}</strong>
-            <small>{{ settings.health?.version || 'Mikazuki API' }}</small>
           </span>
         </div>
         <el-button
@@ -129,13 +121,13 @@ onMounted(() => {
 
     <div class="settings-workspace">
       <nav class="settings-nav" aria-label="设置分类">
-        <button :class="{ active: activeSection === 'general' }" type="button" @click="activeSection = 'general'">
+        <button :class="{ active: activeSection === 'general' }" :aria-current="activeSection === 'general' ? 'true' : undefined" type="button" @click="activeSection = 'general'">
           <Sunny /><span>常规</span>
         </button>
-        <button :class="{ active: activeSection === 'service' }" type="button" @click="activeSection = 'service'">
+        <button :class="{ active: activeSection === 'service' }" :aria-current="activeSection === 'service' ? 'true' : undefined" type="button" @click="activeSection = 'service'">
           <Monitor /><span>后端服务</span>
         </button>
-        <button :class="{ active: activeSection === 'devices' }" type="button" @click="activeSection = 'devices'">
+        <button :class="{ active: activeSection === 'devices' }" :aria-current="activeSection === 'devices' ? 'true' : undefined" type="button" @click="activeSection = 'devices'">
           <Cpu /><span>计算设备</span>
         </button>
       </nav>
@@ -146,8 +138,8 @@ onMounted(() => {
         <div class="setting-row">
           <span><strong>外观</strong></span>
           <div class="theme-segment" role="group" aria-label="选择界面主题">
-            <button :class="{ active: settings.theme === 'light' }" type="button" @click="settings.setTheme('light')"><Sunny />浅色</button>
-            <button :class="{ active: settings.theme === 'dark' }" type="button" @click="settings.setTheme('dark')"><Moon />深色</button>
+            <button :class="{ active: settings.theme === 'light' }" :aria-pressed="settings.theme === 'light'" type="button" @click="settings.setTheme('light')"><Sunny />浅色</button>
+            <button :class="{ active: settings.theme === 'dark' }" :aria-pressed="settings.theme === 'dark'" type="button" @click="settings.setTheme('dark')"><Moon />深色</button>
           </div>
         </div>
       </aside>
@@ -160,7 +152,6 @@ onMounted(() => {
             </span>
             <span>
               <h2 id="service-title">后端服务</h2>
-              <p>{{ serviceDescription }}</p>
             </span>
           </div>
           <span

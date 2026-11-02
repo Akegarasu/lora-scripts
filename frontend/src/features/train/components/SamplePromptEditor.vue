@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { CopyDocument, Delete, Plus } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
 
 import type { SamplePromptDraft } from '@/api/types'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import { useCatalogStore } from '@/stores/catalog'
 import { useDraftStore } from '@/stores/draft'
 import { sampleDefaults } from '@/utils/sampleDefaults'
@@ -62,8 +64,22 @@ function duplicatePrompt(prompt: SamplePromptDraft) {
   draft.sample.prompts.push(JSON.parse(JSON.stringify(prompt)) as SamplePromptDraft)
 }
 
-function removePrompt(index: number) {
-  draft.sample.prompts.splice(index, 1)
+async function removePrompt(index: number) {
+  const prompt = draft.sample.prompts[index]
+  if (!prompt) return
+  if (prompt.prompt.trim() || prompt.negativePrompt?.trim()) {
+    try {
+      await ElMessageBox.confirm(
+        `将从当前草稿中删除第 ${index + 1} 组采样提示词，无法撤销。`,
+        '删除采样提示词',
+        { confirmButtonText: '删除', cancelButtonText: '保留', type: 'warning', autofocus: false },
+      )
+    } catch {
+      return
+    }
+  }
+  const currentIndex = draft.sample.prompts.indexOf(prompt)
+  if (currentIndex !== -1) draft.sample.prompts.splice(currentIndex, 1)
 }
 
 function applyDatasetResolution(prompt: SamplePromptDraft) {
@@ -84,43 +100,48 @@ function updateStepSchedule(value: number | undefined) {
 
 <template>
   <div class="sample-editor">
-    <div class="sample-toggle">
-      <strong>训练中生成预览图</strong>
+    <ParameterHelp class="sample-toggle" content="采样会延长训练时间；固定 Seed 便于比较训练前后的效果。" label="采样说明">
+      <span class="sample-label">
+        <strong>训练中生成预览图</strong>
+      </span>
       <el-switch
         v-model="draft.sample.enabled"
         inline-prompt
         aria-label="启用训练中采样"
       />
-    </div>
+    </ParameterHelp>
 
     <template v-if="draft.sample.enabled">
       <div class="sample-schedule">
-        <label for="sample-epochs">
-          <span>每 N 个 Epoch</span>
+        <ParameterHelp class="schedule-field" content="Epoch 与 Step 间隔二选一，填写一个会清空另一个。" label="采样间隔说明">
+          <span><label for="sample-epochs">每 N 个 Epoch</label></span>
           <el-input-number
             id="sample-epochs"
+            aria-label="每 N 个 Epoch 采样"
             :model-value="draft.sample.everyNEpochs"
             :min="1"
             controls-position="right"
             placeholder="不按 Epoch 采样"
             @update:model-value="updateEpochSchedule"
           />
-        </label>
-        <label for="sample-steps">
-          <span>每 N 个 Step（可选）</span>
+        </ParameterHelp>
+        <ParameterHelp as="label" class="schedule-field" for="sample-steps" content="Epoch 与 Step 间隔二选一，填写一个会清空另一个。" label="采样间隔说明">
+          <span>每 N 个 Step</span>
           <el-input-number
             id="sample-steps"
+            aria-label="每 N 个 Step 采样"
             :model-value="draft.sample.everyNSteps"
             :min="1"
             controls-position="right"
             placeholder="不按 Step 采样"
             @update:model-value="updateStepSchedule"
           />
-        </label>
+        </ParameterHelp>
         <label for="sample-sampler">
-          <span>采样器（可选）</span>
+          <span>采样器</span>
           <el-select
             id="sample-sampler"
+            aria-label="采样器"
             v-model="draft.sample.sampler"
             clearable
             filterable
@@ -135,7 +156,6 @@ function updateStepSchedule(value: number | undefined) {
             />
           </el-select>
         </label>
-        <p>Epoch 与 Step 间隔二选一；采样会延长训练时间，建议保留一个有代表性的固定 Seed。</p>
       </div>
 
       <div class="prompt-list">
@@ -169,9 +189,11 @@ function updateStepSchedule(value: number | undefined) {
           </header>
 
           <label class="prompt-field">
-            <span>Prompt <em v-if="!prompt.prompt">尚未填写</em></span>
+            <span>正向提示词 <em aria-label="必填">*</em></span>
             <el-input
               v-model="prompt.prompt"
+              :aria-label="`第 ${index + 1} 组正向提示词`"
+              aria-required="true"
               type="textarea"
               :autosize="{ minRows: 3, maxRows: 7 }"
               placeholder="描述希望在训练预览中看到的主体、构图与风格"
@@ -179,9 +201,10 @@ function updateStepSchedule(value: number | undefined) {
           </label>
 
           <label class="prompt-field">
-            <span>Negative Prompt <small>可选</small></span>
+            <span>负向提示词</span>
             <el-input
               v-model="prompt.negativePrompt"
+              :aria-label="`第 ${index + 1} 组负向提示词`"
               type="textarea"
               :autosize="{ minRows: 1, maxRows: 4 }"
               placeholder="不希望出现的内容"
@@ -191,27 +214,27 @@ function updateStepSchedule(value: number | undefined) {
           <div class="prompt-options">
             <label>
               <span>宽度</span>
-              <el-input-number v-model="prompt.width" :min="64" :step="64" controls-position="right" />
+              <el-input-number v-model="prompt.width" :aria-label="`第 ${index + 1} 组宽度`" :min="64" :step="64" controls-position="right" />
             </label>
             <label>
               <span>高度</span>
-              <el-input-number v-model="prompt.height" :min="64" :step="64" controls-position="right" />
+              <el-input-number v-model="prompt.height" :aria-label="`第 ${index + 1} 组高度`" :min="64" :step="64" controls-position="right" />
             </label>
             <label>
               <span>Steps</span>
-              <el-input-number v-model="prompt.steps" :min="1" controls-position="right" />
+              <el-input-number v-model="prompt.steps" :aria-label="`第 ${index + 1} 组 Steps`" :min="1" controls-position="right" />
             </label>
             <label>
               <span>Seed</span>
-              <el-input-number v-model="prompt.seed" controls-position="right" />
+              <el-input-number v-model="prompt.seed" :aria-label="`第 ${index + 1} 组 Seed`" controls-position="right" />
             </label>
             <label>
               <span>CFG</span>
-              <el-input-number v-model="prompt.cfgScale" :min="0" :step="0.5" controls-position="right" />
+              <el-input-number v-model="prompt.cfgScale" :aria-label="`第 ${index + 1} 组 CFG`" :min="0" :step="0.5" controls-position="right" />
             </label>
             <label v-if="usesGuidance">
               <span>Guidance</span>
-              <el-input-number v-model="prompt.guidanceScale" :min="0" :step="0.5" controls-position="right" />
+              <el-input-number v-model="prompt.guidanceScale" :aria-label="`第 ${index + 1} 组 Guidance`" :min="0" :step="0.5" controls-position="right" />
             </label>
           </div>
 
@@ -222,7 +245,7 @@ function updateStepSchedule(value: number | undefined) {
 
         <button class="add-prompt" type="button" @click="addPrompt">
           <span><el-icon><Plus /></el-icon></span>
-          <strong>添加一组采样提示词</strong>
+          <strong>添加采样提示词</strong>
         </button>
       </div>
     </template>
@@ -236,10 +259,11 @@ function updateStepSchedule(value: number | undefined) {
 }
 
 .sample-toggle {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 6px 20px;
   padding: 4px 0;
 }
 
@@ -249,14 +273,23 @@ function updateStepSchedule(value: number | undefined) {
   font-weight: 650;
 }
 
+.sample-label,
+.sample-schedule label > span,
+.schedule-field > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .sample-schedule {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
-  align-items: end;
+  align-items: start;
   gap: 14px;
 }
 
-.sample-schedule label,
+.sample-schedule > label,
+.schedule-field,
 .prompt-field,
 .prompt-options label {
   min-width: 0;
@@ -265,6 +298,7 @@ function updateStepSchedule(value: number | undefined) {
 }
 
 .sample-schedule label > span,
+.schedule-field > span,
 .prompt-field > span,
 .prompt-options label > span {
   color: var(--text-strong);

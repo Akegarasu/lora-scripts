@@ -187,7 +187,6 @@ function saveCurve() {
             {{ series.length }} 项 · {{ pointCount.toLocaleString('zh-CN') }} 个点
             <template v-if="lastEventLabel"> · {{ lastEventLabel }}</template>
           </span>
-          <span v-else>训练器上报 scalar 后会自动出现</span>
         </div>
       </div>
 
@@ -254,7 +253,6 @@ function saveCurve() {
       </div>
       <div v-else class="metric-group-empty">
         <strong>当前分组没有选中的曲线</strong>
-        <span>从上方列表选择原始指标，或添加一条自定义曲线。</span>
       </div>
 
       <div v-if="currentDefinitions.length" class="custom-curve-list" aria-label="当前分组的自定义曲线">

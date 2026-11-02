@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 
 import type { CaptionModelParam } from '@/api/types'
-import InfoHint from '@/components/InfoHint.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 
 const props = defineProps<{
   param: CaptionModelParam
@@ -35,6 +35,7 @@ const textValue = computed({
 
 const supplementaryInfo = computed(() => {
   const parts: string[] = []
+  if (props.param.description) parts.push(props.param.description)
   if (props.param.default !== undefined && props.param.default !== null && props.param.default !== '') {
     parts.push(`默认值：${formatValue(props.param.default)}`)
   }
@@ -69,32 +70,19 @@ function choiceLabel(choice: unknown) {
 </script>
 
 <template>
-  <label v-if="param.type === 'boolean'" class="boolean-control">
-    <span>
-      <span class="control-title">
-        <strong>{{ param.label }}</strong>
-        <InfoHint
-          v-if="supplementaryInfo"
-          :content="supplementaryInfo"
-          :label="`${param.label}的默认与范围信息`"
-        />
-      </span>
-      <small v-if="param.description">{{ param.description }}</small>
-    </span>
-    <el-switch v-model="booleanValue" :aria-label="param.label" />
-  </label>
+  <ParameterHelp v-if="param.type === 'boolean'" class="param-control" :content="supplementaryInfo" :label="`${param.label}说明`">
+    <div class="boolean-control">
+      <strong>{{ param.label }}</strong>
+      <el-switch v-model="booleanValue" :aria-label="param.label" />
+    </div>
+  </ParameterHelp>
 
-  <label v-else class="param-control">
+  <ParameterHelp v-else class="param-control" :content="supplementaryInfo" :label="`${param.label}说明`">
     <span class="param-label">
       <span>
         {{ param.label }}
         <em v-if="param.required">必填</em>
       </span>
-      <InfoHint
-        v-if="supplementaryInfo"
-        :content="supplementaryInfo"
-        :label="`${param.label}的默认与范围信息`"
-      />
     </span>
 
     <el-input-number
@@ -112,6 +100,7 @@ function choiceLabel(choice: unknown) {
       v-else-if="param.type === 'choice'"
       v-model="value"
       filterable
+      :aria-label="param.label"
       :placeholder="param.placeholder || `选择${param.label}`"
     >
       <el-option
@@ -129,6 +118,7 @@ function choiceLabel(choice: unknown) {
       :rows="4"
       :maxlength="8000"
       show-word-limit
+      :aria-label="param.label"
       :placeholder="param.placeholder"
     />
 
@@ -136,11 +126,11 @@ function choiceLabel(choice: unknown) {
       v-else
       v-model="textValue"
       clearable
+      :aria-label="param.label"
       :placeholder="param.placeholder"
     />
 
-    <small v-if="param.description">{{ param.description }}</small>
-  </label>
+  </ParameterHelp>
 </template>
 
 <style scoped>
@@ -164,12 +154,6 @@ function choiceLabel(choice: unknown) {
   font-weight: 640;
 }
 
-.control-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .param-label em {
   margin-left: 5px;
   color: var(--danger);
@@ -177,27 +161,14 @@ function choiceLabel(choice: unknown) {
   font-style: normal;
 }
 
-.param-control small,
-.boolean-control small {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
 .boolean-control {
   min-width: 0;
-  min-height: 58px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 8px 0;
-}
-
-.boolean-control > span {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
+  padding: 0;
 }
 
 .boolean-control strong {

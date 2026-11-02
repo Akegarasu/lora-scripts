@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 
 import { apiAssetUrl } from '@/api/client'
-import InfoHint from '@/components/InfoHint.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import { useCaptionStore } from '@/stores/caption'
 
 import CaptionPagedGallery, { type CaptionGalleryItem } from './CaptionPagedGallery.vue'
@@ -133,24 +133,20 @@ function changePageSize(size: number) {
         <el-option label="尚无 Caption" value="without" />
         <el-option label="存在错误" value="error" />
       </el-select>
-      <label class="selection-toggle">
+      <ParameterHelp class="selection-toggle" content="默认处理整个扫描结果。开启后，仅处理你手动选中的图片，选择会跨分页保留。" label="手动选择图片说明">
         <span>
           <span class="selection-title">
             <strong>手动选择图片</strong>
-            <InfoHint
-              content="默认处理整个扫描结果；仅在抽样或局部重跑时开启。"
-              label="手动选择图片说明"
-            />
           </span>
         </span>
         <el-switch
           :model-value="selectionEnabled"
+          aria-label="手动选择图片"
           @change="updateSelectionEnabled"
         />
-      </label>
+      </ParameterHelp>
       <span class="result-count">
-        当前筛选 {{ caption.datasetItemsTotal }} 项
-        <template v-if="selectionEnabled"> · 已选 {{ selectedIds.length }} 项</template>
+        {{ caption.datasetItemsTotal }} 张图片
       </span>
     </div>
 
@@ -222,7 +218,8 @@ function changePageSize(size: number) {
 }
 
 .selection-toggle {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
@@ -247,12 +244,6 @@ function changePageSize(size: number) {
 .selection-toggle strong {
   color: var(--text-strong);
   font-size: 14px;
-}
-
-.selection-toggle small {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.4;
 }
 
 .result-count {
@@ -289,8 +280,5 @@ function changePageSize(size: number) {
     grid-column: auto;
   }
 
-  .tag-editor-note {
-    display: grid;
-  }
 }
 </style>

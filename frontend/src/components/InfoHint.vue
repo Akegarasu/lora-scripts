@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
+const open = ref(false)
+
 withDefaults(
   defineProps<{
     content: string
@@ -17,16 +21,24 @@ withDefaults(
     :content="content"
     :placement="placement"
     :show-after="180"
+    :visible="open"
     effect="light"
     popper-class="info-hint-popper"
   >
     <span
       class="info-hint"
-      role="img"
+      role="button"
       tabindex="0"
       :aria-label="`${label}：${content}`"
-      @click.stop
-    >i</span>
+      @mouseenter="open = true"
+      @mouseleave="open = false"
+      @focus="open = true"
+      @blur="open = false"
+      @click.stop.prevent="open = true"
+      @keydown.enter.stop.prevent="open = true"
+      @keydown.space.stop.prevent="open = true"
+      @keydown.esc.stop.prevent="open = false"
+    ><span aria-hidden="true">i</span></span>
   </el-tooltip>
 </template>
 
@@ -34,11 +46,13 @@ withDefaults(
 .info-hint {
   width: 16px;
   height: 16px;
+  padding: 0;
   flex: none;
   display: inline-grid;
   place-items: center;
   border: 1px solid currentColor;
   border-radius: 50%;
+  background: transparent;
   color: var(--text-muted);
   font-family: Georgia, serif;
   font-size: 11px;
@@ -53,7 +67,11 @@ withDefaults(
 .info-hint:focus-visible {
   background: var(--surface-hover);
   color: var(--text-strong);
-  outline: none;
+}
+
+.info-hint:focus-visible {
+  outline: 2px solid var(--text-secondary);
+  outline-offset: 3px;
 }
 
 :global(.info-hint-popper) {

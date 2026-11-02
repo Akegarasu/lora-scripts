@@ -4,6 +4,7 @@ import { ArrowUpBold, Document, FolderOpened, RefreshRight } from '@element-plus
 
 import { apiClient } from '@/api/client'
 import type { FileItem } from '@/api/types'
+import InfoHint from './InfoHint.vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -72,18 +73,6 @@ const canConfirmSelection = computed(() => {
   if (!selectedItem.value) return false
   if (selectedItem.value.type === 'dir') return canSelectDirectory.value
   return !isFolderMode.value
-})
-const selectionHint = computed(() => {
-  if (selectedItem.value) {
-    if (selectedItem.value.type !== 'dir' && isFolderMode.value) {
-      return `已选中：${selectedItem.value.name} · 文件仅供查看，请选择一个文件夹`
-    }
-    const action = selectedItem.value.type === 'dir' ? '双击进入文件夹' : '双击直接选择文件'
-    return `已选中：${selectedItem.value.name} · ${action}`
-  }
-  return canSelectDirectory.value
-    ? '单击选中，双击文件夹可进入；也可直接选择当前文件夹'
-    : '单击选中文件，双击直接选择；双击文件夹可进入'
 })
 
 watch(
@@ -215,7 +204,7 @@ async function focusPathInput() {
   <el-dialog
     v-model="visible"
     class="file-picker-dialog"
-    title="选择路径"
+    :title="isFolderMode ? '选择文件夹' : canSelectDirectory ? '选择文件或文件夹' : '选择文件'"
     width="min(840px, calc(100vw - 24px))"
     destroy-on-close
     @opened="focusPathInput"
@@ -225,6 +214,7 @@ async function focusPathInput() {
       <el-icon aria-hidden="true"><FolderOpened /></el-icon>
       <span>当前位置</span>
       <strong :title="currentPathLabel">{{ currentPathLabel }}</strong>
+      <InfoHint content="单击选中，双击文件夹进入；也可使用每行的选择和进入按钮。" label="文件选择操作" />
     </div>
 
     <div class="file-picker-toolbar">
@@ -241,16 +231,15 @@ async function focusPathInput() {
         v-model="pathInput"
         clearable
         aria-label="输入要打开的路径"
-        :placeholder="`输入路径，当前根目录为${rootLabel}`"
+        placeholder="输入目录路径"
         @keyup.enter="openTypedPath"
       />
       <el-button :icon="RefreshRight" :loading="loading" aria-label="刷新当前目录" @click="load(currentPath)">
         刷新
       </el-button>
-      <el-button type="primary" :disabled="loading" @click="openTypedPath">打开路径</el-button>
+      <el-button :disabled="loading" @click="openTypedPath">打开路径</el-button>
     </div>
 
-    <p class="picker-instruction">{{ selectionHint }}</p>
     <el-alert v-if="error" type="error" :title="error" show-icon :closable="false" />
 
     <el-table
@@ -284,7 +273,7 @@ async function focusPathInput() {
       >
         <template #default="{ row }">{{ row.type === 'dir' ? '—' : formatSize(row.size) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="132" align="right">
+      <el-table-column class-name="picker-row-actions" label="操作" width="152" align="right">
         <template #default="{ row }">
           <template v-if="row.type === 'dir'">
             <el-button
@@ -305,7 +294,7 @@ async function focusPathInput() {
               进入
             </el-button>
           </template>
-          <el-button v-else-if="!isFolderMode" size="small" text @click.stop="choose(row.path)">选择</el-button>
+          <el-button v-else-if="!isFolderMode" size="small" text :aria-label="`选择文件 ${row.name}`" @click.stop="choose(row.path)">选择</el-button>
           <span v-else class="view-only-label">仅查看</span>
         </template>
       </el-table-column>
@@ -313,7 +302,6 @@ async function focusPathInput() {
         <div class="picker-empty">
           <el-icon aria-hidden="true"><FolderOpened /></el-icon>
           <strong>当前目录为空</strong>
-          <span>这里没有符合当前类型的内容</span>
         </div>
       </template>
     </el-table>
@@ -329,7 +317,7 @@ async function focusPathInput() {
             选择当前文件夹
           </el-button>
           <el-button type="primary" :disabled="!canConfirmSelection" @click="confirmSelection">
-            {{ selectedItem?.type === 'dir' ? '选择所选文件夹' : '选择文件' }}
+            {{ isFolderMode || selectedItem?.type === 'dir' ? '选择文件夹' : '选择文件' }}
           </el-button>
         </div>
       </div>
@@ -340,7 +328,7 @@ async function focusPathInput() {
 <style scoped>
 .current-location {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 7px;
   margin-bottom: 10px;
@@ -361,18 +349,24 @@ async function focusPathInput() {
   display: grid;
   grid-template-columns: auto minmax(180px, 1fr) auto auto;
   gap: 8px;
-}
-
-.picker-instruction {
-  margin: 10px 2px;
-  color: var(--el-text-color-secondary);
-  font-size: 12px;
-  line-height: 1.5;
+  margin-bottom: 16px;
 }
 
 .file-icon {
   color: var(--el-color-primary);
   font-size: 17px;
+}
+
+:deep(.picker-row-actions .cell) {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+:deep(.picker-row-actions .el-button + .el-button) {
+  margin-left: 0;
 }
 
 .view-only-label {

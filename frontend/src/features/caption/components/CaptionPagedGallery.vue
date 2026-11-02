@@ -39,7 +39,7 @@ const props = withDefaults(defineProps<{
   selectionEnabled: false,
   selectedIds: () => [],
   emptyTitle: '没有符合条件的图片',
-  emptyDescription: '尝试调整筛选条件或重新扫描数据集。',
+  emptyDescription: '',
 })
 
 const emit = defineEmits<{
@@ -55,7 +55,7 @@ const viewerVisible = ref(false)
 const viewerIndex = ref(0)
 let resizeObserver: ResizeObserver | undefined
 
-const rowHeight = 300
+const rowHeight = 276
 const columnCount = computed(() => {
   const width = containerWidth.value
   if (width < 520) return 1
@@ -149,7 +149,7 @@ function closeViewer() {
       <el-button :disabled="selectableItems.length === 0" @click="togglePage">
         {{ pageAllSelected ? '取消选择本页' : '选择本页可用图片' }}
       </el-button>
-      <span>已选 {{ selectedIds.length }} 张；选择会跨分页保留。</span>
+      <span>已选 {{ selectedIds.length }} 张</span>
     </div>
 
     <div v-loading="loading" class="gallery-stage" aria-live="polite">
@@ -213,10 +213,7 @@ function closeViewer() {
                 <p v-else-if="item.captionText" class="caption-preview" :title="item.captionText">
                   {{ item.captionText }}
                 </p>
-                <p v-else class="caption-empty">{{ item.emptyText || '当前没有 Caption' }}</p>
-                <button class="preview-link" type="button" @click="openViewer(item)">
-                  查看大图
-                </button>
+                <p v-else class="caption-empty">{{ item.emptyText || '无 Caption' }}</p>
               </div>
             </article>
           </div>
@@ -226,7 +223,7 @@ function closeViewer() {
       <div v-else-if="!loading" class="empty-result">
         <el-icon><Picture /></el-icon>
         <strong>{{ emptyTitle }}</strong>
-        <span>{{ emptyDescription }}</span>
+        <span v-if="emptyDescription">{{ emptyDescription }}</span>
       </div>
     </div>
 
@@ -288,14 +285,14 @@ function closeViewer() {
 
 .gallery-scroller {
   width: 100%;
-  min-height: 300px;
+  min-height: 276px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 .gallery-cell {
   width: 100%;
-  height: 300px;
+  height: 276px;
   padding: 6px;
 }
 
@@ -428,18 +425,6 @@ function closeViewer() {
 
 .item-error {
   color: var(--danger);
-}
-
-.preview-link {
-  justify-self: start;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--brand-strong);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 640;
-  cursor: zoom-in;
 }
 
 .empty-result {

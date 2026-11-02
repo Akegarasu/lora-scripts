@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Check, CopyDocument, DocumentChecked, Promotion, WarningFilled } from '@element-plus/icons-vue'
+import { ArrowRight, Check, CopyDocument, DocumentChecked, Promotion, WarningFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
 import type { ParamDefinition, ValidationMessage } from '@/api/types'
+import InfoHint from '@/components/InfoHint.vue'
 import { useCatalogStore } from '@/stores/catalog'
 import { useDraftStore } from '@/stores/draft'
 import { useJobsStore } from '@/stores/jobs'
@@ -27,24 +28,28 @@ const previewTab = ref('train')
 const localChecks = computed(() => [
   {
     id: 'trainer',
+    target: 'trainer-select',
     label: '训练器',
     detail: catalog.selectedTrainer?.title || '尚未选择',
     done: !!catalog.selectedTrainerId,
   },
   {
     id: 'assets',
+    target: props.missingParams[0] ? `param-${props.missingParams[0].name}` : 'section-model',
     label: '必要资产',
     detail: props.missingParams.length ? `还缺 ${props.missingParams.length} 项` : '已填写',
     done: props.missingParams.length === 0,
   },
   {
     id: 'dataset',
+    target: 'dataset-path',
     label: '训练数据',
     detail: draft.dataset.root || '尚未选择目录',
     done: !!draft.dataset.root.trim(),
   },
   {
     id: 'output',
+    target: 'output-name',
     label: '输出名称',
     detail: draft.name.trim() || '尚未命名',
     done: !!draft.name.trim(),
@@ -53,6 +58,7 @@ const localChecks = computed(() => [
     ? [
         {
           id: 'sampling',
+          target: 'section-sampling',
           label: '采样预览',
           detail: draft.sample.prompts.some((item) => !!item.prompt.trim()) ? '已填写' : '尚未填写 Prompt',
           done: draft.sample.prompts.some((item) => !!item.prompt.trim()),
@@ -66,9 +72,6 @@ const readiness = computed(() => Math.round((completedChecks.value / localChecks
 const compileErrors = computed(() => draft.compileResult?.errors || [])
 const compileWarnings = computed(() => draft.compileResult?.warnings || [])
 const localReady = computed(() => localChecks.value.every((item) => item.done))
-const compiledClean = computed(
-  () => props.previewFresh && !!draft.compileResult && compileErrors.value.length === 0,
-)
 
 const readinessLabel = computed(() => {
   if (!localReady.value) return '仍需补充配置'
@@ -117,17 +120,24 @@ async function copyPreview() {
   <aside class="compile-inspector" aria-label="配置检查与启动">
     <section class="readiness-card">
       <div class="readiness-head">
-        <div class="progress-ring" :style="{ '--progress': `${readiness * 3.6}deg` }">
+        <div class="progress-ring" role="img" :aria-label="`基础配置已完成 ${completedChecks} / ${localChecks.length} 项`" :style="{ '--progress': `${readiness * 3.6}deg` }">
           <span>{{ readiness }}<small>%</small></span>
         </div>
         <div>
           <h2>{{ readinessLabel }}</h2>
-          <p>{{ completedChecks }} / {{ localChecks.length }} 项基础检查完成</p>
         </div>
       </div>
 
       <div class="check-list">
-        <div v-for="item in localChecks" :key="item.id" class="check-item" :class="{ done: item.done }">
+        <button
+          v-for="item in localChecks"
+          :key="item.id"
+          type="button"
+          class="check-item"
+          :class="{ done: item.done }"
+          :aria-label="`${item.label}：${item.detail}，前往配置`"
+          @click="emit('locate', item.target)"
+        >
           <span class="check-icon" aria-hidden="true">
             <el-icon v-if="item.done"><Check /></el-icon>
             <span v-else />
@@ -136,7 +146,8 @@ async function copyPreview() {
             <strong>{{ item.label }}</strong>
             <small :title="item.detail">{{ item.detail }}</small>
           </span>
-        </div>
+          <el-icon class="check-link" aria-hidden="true"><ArrowRight /></el-icon>
+        </button>
       </div>
     </section>
 
@@ -155,86 +166,27 @@ async function copyPreview() {
         :key="`${issue.code}-${issue.field}`"
         class="issue-line danger"
         type="button"
+        :aria-label="`${issue.message}${issueTarget(issue) ? '，定位问题' : ''}`"
         @click="focusIssue(issue)"
       >
         <strong>{{ issue.message }}</strong>
-        <small v-if="issue.field">{{ issue.field }} · 点击定位</small>
+        <el-icon v-if="issueTarget(issue)" aria-hidden="true"><ArrowRight /></el-icon>
       </button>
       <button
         v-for="issue in compileWarnings"
         :key="`${issue.code}-${issue.field}`"
         class="issue-line warning"
         type="button"
+        :aria-label="`${issue.message}${issueTarget(issue) ? '，定位提醒' : ''}`"
         @click="focusIssue(issue)"
       >
         <strong>{{ issue.message }}</strong>
-        <small v-if="issue.field">{{ issue.field }} · 点击定位</small>
+        <el-icon v-if="issueTarget(issue)" aria-hidden="true"><ArrowRight /></el-icon>
       </button>
       <div v-if="draft.compileError" class="issue-line danger static">{{ draft.compileError }}</div>
     </section>
 
-    <section class="preview-card" :class="{ stale: draft.compileResult && !previewFresh }">
-      <header class="preview-header">
-        <div>
-          <h2>{{ draft.compileResult ? '运行配置快照' : '等待首次预检' }}</h2>
-        </div>
-        <el-button
-          v-if="draft.compileResult"
-          text
-          circle
-          :icon="CopyDocument"
-          aria-label="复制当前预览"
-          @click="copyPreview"
-        />
-      </header>
-
-      <div v-if="draft.compileResult && !previewFresh" class="stale-notice">
-        草稿已修改，当前预览不是最新版本。
-      </div>
-
-      <template v-if="draft.compileResult">
-        <el-tabs v-model="previewTab" class="preview-tabs">
-          <el-tab-pane label="训练" name="train" />
-          <el-tab-pane label="数据集" name="dataset" />
-          <el-tab-pane label="采样" name="sample" />
-          <el-tab-pane label="命令" name="command" />
-        </el-tabs>
-        <pre>{{ previewText || '此配置未生成内容' }}</pre>
-      </template>
-
-      <div v-else class="preview-empty">
-        <span><el-icon><DocumentChecked /></el-icon></span>
-        <strong>生成 TOML 与启动命令</strong>
-        <p>预检不会启动训练，也不会写入正式 Run 目录。</p>
-      </div>
-    </section>
-
     <section class="launch-card">
-      <div class="launch-summary">
-        <span>
-          <small>训练器</small>
-          <strong>{{ catalog.selectedTrainer?.family?.toUpperCase() || '—' }}</strong>
-        </span>
-        <span>
-          <small>GPU</small>
-          <strong>{{ draft.runtime.gpuIds.length ? draft.runtime.gpuIds.join(', ') : '自动' }}</strong>
-        </span>
-        <span>
-          <small>输出名</small>
-          <strong :title="draft.name">{{ draft.name || '—' }}</strong>
-        </span>
-      </div>
-
-      <el-button
-        class="compile-button"
-        size="large"
-        :loading="draft.compiling"
-        :disabled="!catalog.selectedTrainerId"
-        :icon="DocumentChecked"
-        @click="emit('compile')"
-      >
-        {{ previewFresh && draft.compileResult ? '重新预检' : '检查配置' }}
-      </el-button>
       <el-tooltip
         :disabled="localReady"
         content="请先补全上方列出的训练准备项"
@@ -254,11 +206,39 @@ async function copyPreview() {
           </el-button>
         </span>
       </el-tooltip>
-      <p>
-        <template v-if="compiledClean">当前草稿已通过非路径预检；启动时仍会检查真实文件。</template>
-        <template v-else>启动前会使用最新草稿执行完整路径校验。</template>
-      </p>
+      <div class="compile-action">
+        <el-button
+          class="compile-button"
+          :loading="draft.compiling"
+          :disabled="!catalog.selectedTrainerId"
+          :icon="DocumentChecked"
+          @click="emit('compile')"
+        >
+          {{ previewFresh && draft.compileResult ? '重新检查配置' : '仅检查配置' }}
+        </el-button>
+        <InfoHint content="预检生成配置与命令，不启动训练；开始训练时会进一步检查真实文件路径。" label="配置预检说明" />
+      </div>
     </section>
+
+    <details v-if="draft.compileResult" class="preview-card">
+      <summary>
+        配置预览
+        <span v-if="!previewFresh" class="preview-stale-label">已过期</span>
+      </summary>
+      <div v-if="!previewFresh" class="stale-notice" role="status">
+        草稿已修改，请重新检查配置。
+      </div>
+      <div class="preview-tools">
+        <el-button text size="small" :icon="CopyDocument" aria-label="复制当前配置预览" @click="copyPreview">复制</el-button>
+      </div>
+      <el-tabs v-model="previewTab" class="preview-tabs">
+        <el-tab-pane label="训练" name="train" />
+        <el-tab-pane label="数据集" name="dataset" />
+        <el-tab-pane label="采样" name="sample" />
+        <el-tab-pane label="命令" name="command" />
+      </el-tabs>
+      <pre>{{ previewText || '此配置未生成内容' }}</pre>
+    </details>
   </aside>
 </template>
 
@@ -342,13 +322,23 @@ h2 {
 }
 
 .check-item {
+  width: 100%;
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: 22px minmax(0, 1fr) 14px;
   align-items: center;
   gap: 7px;
   min-height: 39px;
   padding: 5px 3px;
-  border-top: 1px solid var(--border-subtle);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.check-item:hover {
+  background: var(--surface-hover);
 }
 
 .check-icon {
@@ -368,12 +358,17 @@ h2 {
   color: var(--success);
 }
 
-.check-item > span:last-child {
+.check-item > span:nth-child(2) {
   min-width: 0;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: baseline;
   gap: 8px;
+}
+
+.check-link {
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .check-item strong {
@@ -419,7 +414,9 @@ h2 {
 .issue-line {
   width: 100%;
   display: grid;
-  gap: 3px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
   padding: 8px 9px;
   border: 0;
   border-radius: var(--radius-sm);
@@ -457,6 +454,26 @@ h2 {
 
 .preview-card {
   position: relative;
+}
+
+.preview-card > summary {
+  padding: 13px 14px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.preview-stale-label {
+  margin-left: 8px;
+  color: var(--warning);
+  font-size: 12px;
+}
+
+.preview-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding-inline: 10px;
 }
 
 .preview-card.stale::after {
@@ -560,6 +577,12 @@ pre {
   display: grid;
   gap: 9px;
   background: transparent;
+}
+
+.compile-action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .launch-summary {

@@ -4,7 +4,6 @@ import {
   MagicStick,
   Refresh,
   Search,
-  Setting,
   WarningFilled,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -12,8 +11,7 @@ import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 
 import FilePicker from '@/components/FilePicker.vue'
-import InfoHint from '@/components/InfoHint.vue'
-import SegmentedControl from '@/components/SegmentedControl.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import type {
   TagEditorChangeSetSummary,
   TagEditorDatasetItem,
@@ -47,10 +45,6 @@ const viewportWidth = ref(typeof window === 'undefined' ? 1200 : window.innerWid
 const draftText = ref('')
 const draftItemId = ref('')
 const editorMode = ref<'tags' | 'text'>('tags')
-const editorModeOptions = [
-  { label: '标签', value: 'tags' },
-  { label: '自然语言', value: 'text' },
-] as const
 const batchScopeMode = ref<'all' | 'selection'>('all')
 const queryInput = ref('')
 const stateInput = ref<TagEditorItemState>('all')
@@ -97,16 +91,6 @@ const previewForDialog = computed<PreviewWithWarnings | null>(() => {
   return { ...previewBase.value, ...current }
 })
 const sourceLabel = computed(() => (source.path.trim() ? source.path.trim() : '尚未选择数据集目录'))
-const itemCountLabel = computed(() => {
-  if (!dataset.value) return '扫描后显示统计'
-  return `${dataset.value.total} 张图片 · ${dataset.value.withCaption} 已有 · ${dataset.value.missing} 缺失`
-})
-const scopeLabel = computed(() => {
-  if (editor.selectionMode === 'filter') {
-    return `当前筛选全部 ${editor.selectionCount} 项`
-  }
-  return editor.selectionCount ? `已选择 ${editor.selectionCount} 项` : '未选择图片'
-})
 const stateOptions: Array<{ label: string; value: TagEditorItemState }> = [
   { label: '全部图片', value: 'all' },
   { label: '已有 Caption', value: 'with' },
@@ -408,7 +392,7 @@ async function handleHistoryDetails(change: TagEditorChangeSetSummary) {
 async function rollbackChange(change: TagEditorChangeSetSummary) {
   try {
     await ElMessageBox.confirm(
-      `将按变更集 ${change.id} 的 manifest 恢复已写入文件；外部修改文件会保留为冲突。`,
+      '将恢复本次修改前的 Caption，并移除本次新建的 Caption 文件；之后被其他程序修改的文件会跳过。',
       '确认回滚变更',
       { confirmButtonText: '确认回滚', cancelButtonText: '取消', type: 'warning' },
     )
@@ -527,11 +511,7 @@ onBeforeUnmount(() => {
       <div class="source-heading">
         <div>
           <div class="source-title-row">
-            <h2 id="source-title">选择并扫描 Caption 目录</h2>
-            <InfoHint
-              content="可直接输入任意本地目录；浏览窗口仍只显示所选浏览根目录中的内容。"
-              label="Caption 目录说明"
-            />
+            <h2 id="source-title">数据集</h2>
           </div>
         </div>
         <div class="source-actions">
@@ -540,29 +520,23 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="source-grid">
-        <label class="field">
-          <span class="label-with-info">
-            <span>浏览根目录</span>
-            <InfoHint content="仅影响浏览窗口和相对路径的基准，不限制手动输入的绝对路径。" label="浏览根目录说明" />
-          </span>
-          <el-select v-model="source.root">
+        <ParameterHelp class="field" content="仅影响浏览窗口和相对路径的基准，不限制手动输入的绝对路径。" label="浏览根目录说明">
+          <label for="tag-editor-root">浏览根目录</label>
+          <el-select id="tag-editor-root" v-model="source.root" aria-label="浏览根目录">
             <el-option label="train" value="train" />
             <el-option label="datasets" value="datasets" />
             <el-option label="workspace" value="workspace" />
           </el-select>
-        </label>
-        <label class="field field-wide">
-          <span class="label-with-info">
-            <span>图片目录</span>
-            <InfoHint content="支持直接输入任意本地目录；相对路径按浏览根目录解析。" label="图片目录说明" />
-          </span>
-          <el-input v-model="source.path" clearable :placeholder="sourceLabel">
+        </ParameterHelp>
+        <ParameterHelp class="field field-wide" content="支持直接输入任意本地目录；相对路径按浏览根目录解析。" label="图片目录说明">
+          <label for="tag-editor-path">图片目录</label>
+          <el-input id="tag-editor-path" v-model="source.path" clearable :placeholder="sourceLabel" aria-label="图片目录">
             <template #append><el-button :icon="FolderOpened" @click="pickerVisible = true">浏览</el-button></template>
           </el-input>
-        </label>
+        </ParameterHelp>
         <label class="field">
           <span>Caption 后缀</span>
-          <el-select v-model="source.captionExtension">
+          <el-select v-model="source.captionExtension" aria-label="Caption 后缀">
             <el-option label=".txt" value=".txt" />
             <el-option label=".caption" value=".caption" />
             <el-option label=".tags" value=".tags" />
@@ -570,12 +544,14 @@ onBeforeUnmount(() => {
         </label>
         <label class="field">
           <span>扫描上限</span>
-          <el-input-number v-model="source.maxImages" :min="1" :max="50000" :step="1000" controls-position="right" />
+          <el-input-number v-model="source.maxImages" :min="1" :max="50000" :step="1000" controls-position="right" aria-label="扫描上限" />
         </label>
-        <label class="option-card">
-          <span><strong>扫描子文件夹</strong><small>跳过隐藏目录和符号链接。</small></span>
-          <el-switch v-model="source.recursive" />
-        </label>
+        <ParameterHelp class="field" content="扫描时跳过隐藏目录和符号链接。" label="子文件夹扫描规则">
+          <label class="option-card" for="tag-editor-recursive">
+            <strong>包含子文件夹</strong>
+            <el-switch id="tag-editor-recursive" v-model="source.recursive" aria-label="包含子文件夹" />
+          </label>
+        </ParameterHelp>
         <div class="scan-action">
           <el-button :type="dataset ? 'default' : 'primary'" :icon="Search" :loading="editor.inspecting" :disabled="!source.path.trim()" @click="inspectDataset">扫描数据集</el-button>
           <span v-if="editor.inspectError" class="error-text"><el-icon><WarningFilled /></el-icon>{{ editor.inspectError }}</span>
@@ -598,9 +574,9 @@ onBeforeUnmount(() => {
           <span><strong>{{ dataset.total }}</strong> 图片</span>
           <span class="success"><strong>{{ dataset.withCaption }}</strong> 已有</span>
           <span class="info"><strong>{{ dataset.missing }}</strong> 缺失</span>
-          <span class="warning"><strong>{{ dataset.empty }}</strong> 空白</span>
-          <span class="danger"><strong>{{ dataset.errors }}</strong> 错误</span>
-          <span><strong>{{ dataset.duplicates }}</strong> 重复</span>
+          <span v-if="dataset.empty" class="warning"><strong>{{ dataset.empty }}</strong> 空白</span>
+          <span v-if="dataset.errors" class="danger"><strong>{{ dataset.errors }}</strong> 错误</span>
+          <span v-if="dataset.duplicates"><strong>{{ dataset.duplicates }}</strong> 重复</span>
         </div>
       </section>
 
@@ -608,14 +584,13 @@ onBeforeUnmount(() => {
         <span class="batch-priority-icon" aria-hidden="true"><el-icon><MagicStick /></el-icon></span>
         <div class="batch-priority-copy">
           <strong id="batch-priority-title">批量处理</strong>
-          <span>直接处理整个数据集，无需在每一页重复选择。</span>
         </div>
         <div class="batch-priority-actions">
           <el-button v-if="editor.selectionCount" @click="openBatchDrawer('selection')">
-            处理已选 {{ editor.selectionCount }} 项
+            编辑已选 {{ editor.selectionCount }} 张
           </el-button>
-          <el-button type="primary" size="large" :disabled="dataset.total === 0" @click="openBatchDrawer('all')">
-            处理全部 {{ dataset.total }} 张
+          <el-button type="primary" :disabled="dataset.total === 0" @click="openBatchDrawer('all')">
+            批量编辑全部 {{ dataset.total }} 张
           </el-button>
         </div>
       </section>
@@ -628,18 +603,10 @@ onBeforeUnmount(() => {
         <el-select v-model="sortInput" aria-label="排序图片">
           <el-option v-for="option in sortOptions" :key="option.value" :label="option.label" :value="option.value" />
         </el-select>
-        <SegmentedControl
-          class="mode-switch"
-          :model-value="editorMode"
-          :options="editorModeOptions"
-          accessible-label="默认编辑模式"
-          @update:model-value="(value) => (editorMode = value as 'tags' | 'text')"
-        />
       </section>
 
       <div class="scope-line" aria-live="polite">
-        <span>{{ itemCountLabel }} · 当前筛选 {{ editor.itemsTotal }} 项</span>
-        <strong>{{ scopeLabel }}</strong>
+        <span>当前筛选 {{ editor.itemsTotal }} 张</span>
         <span v-if="editor.previewError" class="error-text">{{ editor.previewError }}</span>
       </div>
 
@@ -660,10 +627,6 @@ onBeforeUnmount(() => {
             @previous="() => navigateItem(-1)"
             @next="() => navigateItem(1)"
           />
-          <div class="inspector-actions">
-            <el-button :disabled="!hasDraft" @click="resetDraft">撤销本项修改</el-button>
-            <el-button type="primary" :loading="editor.previewing" :disabled="!hasDraft" @click="previewSingle">预览单项写入</el-button>
-          </div>
         </aside>
 
         <main class="gallery-panel">
@@ -690,16 +653,15 @@ onBeforeUnmount(() => {
       </section>
 
       <div v-if="hasDraft" class="pending-bar" role="status" aria-live="polite">
-        <div><span class="pending-dot" aria-hidden="true" /><strong>当前有 1 项单项修改</strong><span>尚未写入文件</span></div>
-        <div><el-button @click="resetDraft">放弃修改</el-button><el-button type="primary" :loading="editor.previewing" @click="previewSingle">打开变更预览</el-button></div>
+        <div><span class="pending-dot" aria-hidden="true" /><strong>1 项修改尚未写入</strong></div>
+        <div><el-button @click="resetDraft">放弃修改</el-button><el-button type="primary" :loading="editor.previewing" @click="previewSingle">预览修改</el-button></div>
       </div>
 
     </template>
 
     <div v-else class="empty-workspace">
-      <el-icon><Setting /></el-icon>
-      <strong>扫描一个 Caption 数据集开始编辑</strong>
-      <span>可先浏览图片；文件写入只会发生在确认变更预览之后。</span>
+      <el-icon><FolderOpened /></el-icon>
+      <strong>选择图片目录，扫描后开始编辑</strong>
     </div>
 
     <ChangeSetHistory
@@ -774,7 +736,7 @@ onBeforeUnmount(() => {
       <template #footer>
         <div class="mobile-inspector-footer">
           <el-button :disabled="!hasDraft" @click="resetDraft">放弃修改</el-button>
-          <el-button type="primary" :loading="editor.previewing" :disabled="!hasDraft" @click="previewSingle">预览单项写入</el-button>
+          <el-button type="primary" :loading="editor.previewing" :disabled="!hasDraft" @click="previewSingle">预览修改</el-button>
         </div>
       </template>
     </el-drawer>
@@ -800,7 +762,6 @@ onBeforeUnmount(() => {
 .scope-line,
 .pending-bar,
 .pending-bar > div,
-.inspector-actions,
 .mobile-inspector-footer {
   display: flex;
   align-items: center;
@@ -874,7 +835,10 @@ onBeforeUnmount(() => {
 .source-section {
   display: grid;
   gap: 18px;
-  padding: 10px 4px 28px;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
 }
 
 .source-heading {
@@ -886,15 +850,10 @@ onBeforeUnmount(() => {
   min-width: 0;
 }
 
-.source-title-row,
-.label-with-info {
+.source-title-row {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.label-with-info {
-  justify-self: start;
 }
 
 .source-heading h2 {
@@ -911,8 +870,8 @@ onBeforeUnmount(() => {
 
 .source-grid {
   display: grid;
-  grid-template-columns: 180px minmax(260px, 1fr) 170px 150px;
-  align-items: end;
+  grid-template-columns: 160px minmax(0, 1fr) 220px;
+  align-items: start;
   gap: 12px 14px;
 }
 
@@ -924,6 +883,7 @@ onBeforeUnmount(() => {
 }
 
 .field > span,
+.field > label,
 .option-card strong {
   color: var(--text-secondary);
   font-size: 13px;
@@ -947,18 +907,15 @@ onBeforeUnmount(() => {
 
 .option-card > span {
   min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-.option-card small {
-  color: var(--text-muted);
-  font-size: 12px;
+  display: inline-flex;
+  gap: 6px;
 }
 
 .scan-action {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -976,6 +933,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   margin-top: 16px;
   padding: 14px 0;
+  border: 0;
 }
 
 .batch-priority {
@@ -983,21 +941,21 @@ onBeforeUnmount(() => {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 13px;
-  margin-top: 16px;
-  padding: 14px 16px;
+  margin-top: 8px;
+  padding: 12px 14px;
   border: 0;
   background: var(--surface-sunken);
 }
 
 .batch-priority-icon {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   display: grid;
   place-items: center;
   border-radius: 9px;
   background: var(--brand-soft);
   color: var(--brand-strong);
-  font-size: 20px;
+  font-size: 17px;
 }
 
 .batch-priority-copy {
@@ -1008,12 +966,7 @@ onBeforeUnmount(() => {
 
 .batch-priority-copy strong {
   color: var(--text-strong);
-  font-size: 16px;
-}
-
-.batch-priority-copy span {
-  color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .batch-priority-actions {
@@ -1062,16 +1015,12 @@ onBeforeUnmount(() => {
 
 .editor-toolbar {
   display: grid;
-  grid-template-columns: minmax(200px, 1fr) 160px 150px auto;
+  grid-template-columns: minmax(200px, 1fr) 160px 150px;
   margin-top: 10px;
   padding: 10px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
-}
-
-.mode-switch {
-  justify-self: end;
 }
 
 .query-input {
@@ -1110,11 +1059,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.inspector-actions {
-  justify-content: flex-end;
-  padding: 0 18px 18px;
-}
-
 .pending-bar {
   position: sticky;
   z-index: 10;
@@ -1148,7 +1092,7 @@ onBeforeUnmount(() => {
 }
 
 .empty-workspace {
-  min-height: 360px;
+  min-height: 180px;
   display: grid;
   place-items: center;
   align-content: center;
@@ -1180,7 +1124,7 @@ onBeforeUnmount(() => {
   }
 
   .source-grid {
-    grid-template-columns: 170px minmax(0, 1fr) 150px;
+    grid-template-columns: 150px minmax(0, 1fr) 210px;
   }
 
   .source-grid .field-wide {
@@ -1188,7 +1132,7 @@ onBeforeUnmount(() => {
   }
 
   .editor-toolbar {
-    grid-template-columns: minmax(180px, 1fr) 150px 140px auto;
+    grid-template-columns: minmax(180px, 1fr) 150px 140px;
   }
 }
 
@@ -1215,7 +1159,10 @@ onBeforeUnmount(() => {
     justify-content: flex-end;
   }
 
-  .source-grid .field-wide,
+  .source-grid .field-wide {
+    grid-column: auto;
+  }
+
   .editor-toolbar .query-input {
     grid-column: 1 / -1;
   }
@@ -1254,10 +1201,6 @@ onBeforeUnmount(() => {
     width: 100%;
     display: grid;
     grid-template-columns: 1fr;
-  }
-
-  .mode-switch {
-    justify-self: stretch;
   }
 
   .scan-action,

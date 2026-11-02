@@ -557,7 +557,7 @@ watch(
             :image-size="72"
             description="还没有训练任务"
           >
-            <el-button :loading="jobs.loading" @click="jobs.loadJobs()">重新检查</el-button>
+            <el-button type="primary" @click="router.push('/train')">新建训练</el-button>
           </el-empty>
 
           <el-empty
@@ -667,10 +667,6 @@ watch(
               <div class="section-heading log-heading monitor-heading">
                 <div>
                   <h3 id="job-monitor-heading">{{ monitorTab === 'metrics' ? '训练指标' : '运行日志' }}</h3>
-                  <p v-if="monitorTab === 'logs' && jobs.streamStatus === 'connecting'">正在建立实时日志连接</p>
-                  <p v-else-if="monitorTab === 'logs' && jobs.streamStatus === 'live'">训练输出会持续追加到这里</p>
-                  <p v-else-if="monitorTab === 'logs' && jobs.streamStatus === 'disconnected'">实时连接已中断，当前显示日志快照</p>
-                  <p v-else-if="monitorTab === 'logs'">任务已结束，显示最终日志</p>
                 </div>
                 <div class="monitor-tabs" role="tablist" aria-label="训练监控内容">
                   <button
@@ -801,7 +797,6 @@ watch(
 
             <div class="artifact-panel">
               <div class="artifact-toolbar">
-                <span>配置、提示词与启动快照</span>
               <el-button
                 size="small"
                 plain
@@ -860,7 +855,6 @@ watch(
               <small>{{ selected.command.length }} 个参数</small>
             </summary>
             <div class="command-toolbar">
-              <span>已按参数边界补充必要引号</span>
               <el-button
                 size="small"
                 plain

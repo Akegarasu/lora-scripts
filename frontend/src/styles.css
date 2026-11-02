@@ -8,14 +8,14 @@
     "Segoe UI", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", "Cascadia Code", Consolas, monospace;
 
-  --sidebar-width: 260px;
+  --sidebar-width: 220px;
   --sidebar-rail-width: 64px;
   --page-max: 1650px;
   --font-caption: 12px;
   --font-ui: 13px;
   --font-body: 15px;
   --font-section: 17px;
-  --font-page-title: 30px;
+  --font-page-title: 28px;
 
   --canvas: #ffffff;
   --canvas-tint: #f7f7f7;
@@ -276,8 +276,8 @@ kbd {
 }
 
 .el-button--default:not(.is-link):not(.is-text) {
-  border-color: transparent;
-  background: transparent;
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .el-button--default:not(.is-link):not(.is-text):hover,

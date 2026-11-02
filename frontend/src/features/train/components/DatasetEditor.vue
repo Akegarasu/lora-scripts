@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { FolderOpened, Picture, WarningFilled } from '@element-plus/icons-vue'
+import { WarningFilled } from '@element-plus/icons-vue'
 
 import FilePicker from '@/components/FilePicker.vue'
+import ParameterHelp from '@/components/ParameterHelp.vue'
 import { useCatalogStore } from '@/stores/catalog'
 import { useDraftStore } from '@/stores/draft'
 
@@ -10,7 +11,6 @@ const catalog = useCatalogStore()
 const draft = useDraftStore()
 const pickerVisible = ref(false)
 
-const resolutionLabel = computed(() => `${draft.dataset.resolution[0]} × ${draft.dataset.resolution[1]}`)
 const bucketAlignment = computed(() => {
   const value = Number(catalog.selectedTrainer?.datasetDefaults.bucketResoSteps)
   return Number.isFinite(value) && value > 0 ? value : 64
@@ -29,48 +29,33 @@ const bucketRangeValid = computed(
 
 <template>
   <div class="dataset-editor">
-    <div class="dataset-source" :class="{ empty: !draft.dataset.root }">
-      <span class="source-icon" aria-hidden="true">
-        <el-icon><Picture /></el-icon>
-      </span>
-      <div class="source-copy">
-        <strong>{{ draft.dataset.root ? '训练图像目录' : '还没有选择数据集' }}</strong>
-        <span v-if="draft.dataset.root" :title="draft.dataset.root">{{ draft.dataset.root }}</span>
-        <span v-else>选择包含图片与同名 Caption 的文件夹</span>
-      </div>
-      <el-button :icon="FolderOpened" @click="pickerVisible = true">
-        {{ draft.dataset.root ? '更换目录' : '选择目录' }}
-      </el-button>
-    </div>
-
     <div class="config-block">
-      <div class="block-heading">
-        <div>
-          <h3>基础设置</h3>
-        </div>
-        <span class="summary-chip">{{ resolutionLabel }} · Batch {{ draft.dataset.batchSize }}</span>
-      </div>
-
       <div class="form-grid">
-        <label class="field field-wide" for="dataset-path">
-          <span class="field-label">图片目录 <em>必填</em></span>
+        <ParameterHelp class="field field-wide" content="包含训练图片与同名 Caption 文件的目录。启动时会检查目录中是否有可用图片。" label="图片目录说明">
+          <span class="field-label">
+            <label for="dataset-path">图片目录 <em>必填</em></label>
+          </span>
           <el-input
             id="dataset-path"
+            aria-label="图片目录"
             v-model="draft.dataset.root"
             clearable
+            aria-required="true"
             placeholder="例如 C:/datasets/my_character"
           >
             <template #append>
-              <el-button aria-label="浏览数据集目录" @click="pickerVisible = true">浏览</el-button>
+              <el-button aria-label="选择训练图片目录" @click="pickerVisible = true">选择目录</el-button>
             </template>
           </el-input>
-          <small>目录中至少需要一张受支持的图片；正式启动时会由后端检查。</small>
-        </label>
+        </ParameterHelp>
 
-        <label class="field" for="caption-extension">
-          <span class="field-label">Caption 后缀</span>
+        <ParameterHelp class="field" content="与图片同名的描述文件后缀。" label="Caption 后缀说明">
+          <span class="field-label">
+            <label for="caption-extension">Caption 后缀</label>
+          </span>
           <el-select
             id="caption-extension"
+            aria-label="Caption 后缀"
             v-model="draft.dataset.captionExtension"
             allow-create
             default-first-option
@@ -80,15 +65,16 @@ const bucketRangeValid = computed(
             <el-option label=".txt（常用）" value=".txt" />
             <el-option label=".caption" value=".caption" />
           </el-select>
-          <small>与图片同名的描述文件后缀。</small>
-        </label>
+        </ParameterHelp>
 
-        <div class="field">
-          <span class="field-label">训练分辨率</span>
+        <ParameterHelp class="field" content="建议与目标模型的原生分辨率一致。" label="训练分辨率建议">
+          <span class="field-label">
+            训练分辨率
+          </span>
           <div class="number-pair" aria-label="训练分辨率">
             <el-input-number
               v-model="draft.dataset.resolution[0]"
-              aria-label="宽度"
+              aria-label="训练分辨率宽度"
               :min="64"
               :step="bucketAlignment"
               controls-position="right"
@@ -96,36 +82,39 @@ const bucketRangeValid = computed(
             <span aria-hidden="true">×</span>
             <el-input-number
               v-model="draft.dataset.resolution[1]"
-              aria-label="高度"
+              aria-label="训练分辨率高度"
               :min="64"
               :step="bucketAlignment"
               controls-position="right"
             />
           </div>
-          <small>建议与目标模型的原生分辨率一致。</small>
-        </div>
+        </ParameterHelp>
 
-        <label class="field" for="dataset-batch">
-          <span class="field-label">Batch Size</span>
+        <ParameterHelp class="field" content="每批训练的图片数量；显存不足时保持为 1。" label="Batch Size 说明">
+          <span class="field-label">
+            <label for="dataset-batch">Batch Size</label>
+          </span>
           <el-input-number
             id="dataset-batch"
+            aria-label="Batch Size"
             v-model="draft.dataset.batchSize"
             :min="1"
             controls-position="right"
           />
-          <small>显存不足时保持为 1。</small>
-        </label>
+        </ParameterHelp>
 
-        <label class="field" for="dataset-repeats">
-          <span class="field-label">重复次数</span>
+        <ParameterHelp class="field" content="每个 Epoch 重复读取该数据集的次数。" label="重复次数说明">
+          <span class="field-label">
+            <label for="dataset-repeats">重复次数</label>
+          </span>
           <el-input-number
             id="dataset-repeats"
+            aria-label="重复次数"
             v-model="draft.dataset.numRepeats"
             :min="1"
             controls-position="right"
           />
-          <small>每个 epoch 重复读取该数据集的次数。</small>
-        </label>
+        </ParameterHelp>
       </div>
     </div>
 
@@ -136,18 +125,26 @@ const bucketRangeValid = computed(
         </div>
         <label class="switch-label">
           <span>启用分桶</span>
-          <el-switch v-model="draft.dataset.enableBucket" />
+          <el-switch v-model="draft.dataset.enableBucket" aria-label="启用分桶" />
         </label>
       </div>
 
       <div class="form-grid">
-        <div class="field field-wide" :class="{ disabled: !draft.dataset.enableBucket }">
-          <span class="field-label">Bucket 范围</span>
+        <ParameterHelp
+          class="field field-wide"
+          :class="{ disabled: !draft.dataset.enableBucket }"
+          :content="`基础粒度为 ${bucketAlignment}；根据图片宽高比匹配分桶。范围边界必须能被步长整除。`"
+          label="分桶范围说明"
+        >
+          <span class="field-label">
+            分桶范围
+          </span>
           <div class="bucket-grid">
             <label>
               <span>最小边长</span>
               <el-input-number
                 v-model="draft.dataset.minBucketReso"
+                aria-label="分桶最小边长"
                 :disabled="!draft.dataset.enableBucket"
                 :min="64"
                 :step="bucketAlignment"
@@ -158,6 +155,7 @@ const bucketRangeValid = computed(
               <span>最大边长</span>
               <el-input-number
                 v-model="draft.dataset.maxBucketReso"
+                aria-label="分桶最大边长"
                 :disabled="!draft.dataset.enableBucket"
                 :min="64"
                 :step="bucketAlignment"
@@ -168,6 +166,7 @@ const bucketRangeValid = computed(
               <span>步长</span>
               <el-input-number
                 v-model="draft.dataset.bucketResoSteps"
+                aria-label="分桶步长"
                 :disabled="!draft.dataset.enableBucket"
                 :min="1"
                 :step="bucketAlignment"
@@ -175,41 +174,38 @@ const bucketRangeValid = computed(
               />
             </label>
           </div>
-          <small v-if="bucketRangeValid">
-            当前训练器以 {{ bucketAlignment }} 为基础粒度，系统会自动匹配最接近的宽高比。
-          </small>
-          <small v-else class="field-error">
+          <small v-if="!bucketRangeValid" class="field-error" role="alert">
             <el-icon><WarningFilled /></el-icon>
             最大边长需不小于最小边长；步长需为 {{ bucketAlignment }} 的倍数，范围边界也必须能被步长整除。
           </small>
-        </div>
+        </ParameterHelp>
 
         <label class="option-card" :class="{ disabled: !draft.dataset.enableBucket }">
           <span>
             <strong>禁止放大图片</strong>
-            <small>只缩小超出范围的图片，避免低清素材被强行放大。</small>
           </span>
-          <el-switch v-model="draft.dataset.bucketNoUpscale" :disabled="!draft.dataset.enableBucket" />
+          <el-switch v-model="draft.dataset.bucketNoUpscale" aria-label="禁止放大图片" :disabled="!draft.dataset.enableBucket" />
         </label>
 
-        <label class="option-card">
+        <ParameterHelp class="option-card" content="适合逗号分隔标签；与文本编码器缓存可能冲突。" label="随机打乱 Caption 说明">
           <span>
-            <strong>随机打乱 Caption</strong>
-            <small>适合逗号分隔标签；与文本编码器缓存可能冲突。</small>
+            <label for="dataset-shuffle-caption"><strong>随机打乱 Caption</strong></label>
           </span>
-          <el-switch v-model="draft.dataset.shuffleCaption" />
-        </label>
+          <el-switch id="dataset-shuffle-caption" v-model="draft.dataset.shuffleCaption" aria-label="随机打乱 Caption" />
+        </ParameterHelp>
 
-        <label class="field" for="keep-tokens">
-          <span class="field-label">固定前置 Token</span>
+        <ParameterHelp class="field" content="打乱 Caption 时保留开头若干标签。" label="固定前置 Token 说明">
+          <span class="field-label">
+            <label for="keep-tokens">固定前置 Token</label>
+          </span>
           <el-input-number
             id="keep-tokens"
+            aria-label="固定前置 Token"
             v-model="draft.dataset.keepTokens"
             :min="0"
             controls-position="right"
           />
-          <small>打乱 Caption 时保留开头若干标签。</small>
-        </label>
+        </ParameterHelp>
       </div>
     </div>
 
@@ -321,6 +317,7 @@ const bucketRangeValid = computed(
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 18px 20px;
 }
 
@@ -337,6 +334,9 @@ const bucketRangeValid = computed(
 }
 
 .field-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   color: var(--text-strong);
   font-size: 13px;
   font-weight: 620;
@@ -398,11 +398,12 @@ const bucketRangeValid = computed(
 
 .option-card {
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  min-height: 72px;
+  gap: 6px 18px;
+  min-height: 54px;
   padding: 12px 14px;
   border: 0;
   border-radius: var(--radius-md);
@@ -410,8 +411,9 @@ const bucketRangeValid = computed(
 }
 
 .option-card > span {
-  display: grid;
-  gap: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .option-card strong {

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, reactive, watch } from 'vue'
-import { Check } from '@element-plus/icons-vue'
 
 import type { ParamDefinition } from '@/api/types'
 import { useDraftStore } from '@/stores/draft'
@@ -62,37 +61,30 @@ function assetDescription(param: ParamDefinition) {
       role="group"
       :aria-labelledby="`asset-title-${param.name}`"
     >
-      <div class="asset-head">
-        <div class="asset-title">
-          <strong :id="`asset-title-${param.name}`">
-            {{ param.label || param.name }}
-            <span v-if="isRequired(param)" class="required-mark" aria-label="必填">*</span>
-          </strong>
-          <el-tag v-if="param.deprecated" size="small" type="warning" effect="plain">
-            已弃用
-          </el-tag>
-        </div>
-        <el-tag v-if="hasValue(param)" class="asset-status" size="small" type="success" effect="light">
-          <el-icon aria-hidden="true"><Check /></el-icon>
-          已选择
-        </el-tag>
-        <el-tag
-          v-else
-          size="small"
-          :class="{ 'meta-tag': !isRequired(param) }"
-          :type="isRequired(param) ? 'warning' : 'info'"
-          effect="plain"
-        >
-          {{ isRequired(param) ? '需要配置' : '可选' }}
-        </el-tag>
-      </div>
-      <code class="asset-flag">{{ param.name }}</code>
-      <p v-if="assetDescription(param)" class="asset-description">{{ assetDescription(param) }}</p>
       <ParamControl
         :param="param"
         :model-value="draft.getValue(param)"
         @update:model-value="updateValue(param, $event)"
-      />
+      >
+        <template #label>
+          <div>
+            <div class="asset-head">
+              <div class="asset-title">
+                <strong :id="`asset-title-${param.name}`">
+                  {{ param.label || param.name }}
+                  <span v-if="isRequired(param)" class="required-mark" aria-label="必填">*</span>
+                </strong>
+                <el-tag v-if="param.deprecated" size="small" type="warning" effect="plain">
+                  已弃用
+                </el-tag>
+              </div>
+            </div>
+            <p v-if="param.priority === 'dangerous' && assetDescription(param)" class="asset-description">
+              {{ assetDescription(param) }}
+            </p>
+          </div>
+        </template>
+      </ParamControl>
       <span v-if="isMissing(param)" class="asset-error" role="alert">请选择或输入有效路径</span>
     </section>
   </div>
@@ -108,16 +100,20 @@ function assetDescription(param: ParamDefinition) {
 .asset-card {
   display: grid;
   align-content: start;
-  gap: 7px;
+  gap: 12px;
   min-width: 0;
-  padding: 14px;
-  border: 0;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
   border-radius: 8px;
-  background: var(--surface-sunken);
+  background: var(--surface);
   scroll-margin-top: 20px;
   transition:
     border-color 160ms ease,
     box-shadow 160ms ease;
+}
+
+.asset-card :deep(.param-control) {
+  gap: 12px;
 }
 
 .asset-required {

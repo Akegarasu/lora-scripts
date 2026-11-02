@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Check, DocumentChecked, RefreshRight, WarningFilled } from '@element-plus/icons-vue'
 import { computed, ref, watch } from 'vue'
+import InfoHint from '@/components/InfoHint.vue'
 
 import type {
   TagEditorChangeResult,
@@ -98,10 +99,10 @@ function resultType(state: TagEditorChangeResultState) {
       <header class="preview-header">
         <div class="preview-title">
           <span class="preview-icon"><el-icon><DocumentChecked /></el-icon></span>
-          <div>
-            <span>变更集 {{ changeSet.id }}</span>
-            <strong>{{ STATE_LABEL[changeSet.state] }}</strong>
+          <div class="preview-dataset">
+            <strong :title="changeSet.datasetPath">{{ changeSet.datasetPath || 'Caption 文件' }}</strong>
           </div>
+          <InfoHint :content="changeSet.id" label="变更编号" />
         </div>
         <el-tag :type="stateType(changeSet.state)">{{ STATE_LABEL[changeSet.state] }}</el-tag>
       </header>
@@ -143,10 +144,9 @@ function resultType(state: TagEditorChangeResultState) {
       <section class="diff-section" aria-labelledby="diff-title">
         <div class="diff-heading">
           <div>
-            <span>有界样本</span>
-            <h3 id="diff-title">前后对比</h3>
+            <h3 id="diff-title">修改对比</h3>
           </div>
-          <span>展示 {{ preview.diffs.length }} 项</span>
+          <span>样本 {{ preview.diffs.length }} / {{ changeSet.changed }} 项</span>
         </div>
 
         <div v-if="preview.diffs.length" class="diff-list">
@@ -175,8 +175,7 @@ function resultType(state: TagEditorChangeResultState) {
       <section v-if="preview.issues.length" class="issue-section" aria-labelledby="issue-title">
         <div class="diff-heading">
           <div>
-            <span>不会写入</span>
-            <h3 id="issue-title">冲突项目样本</h3>
+            <h3 id="issue-title">跳过的冲突文件</h3>
           </div>
           <span>展示 {{ preview.issues.length }} 项</span>
         </div>
@@ -199,7 +198,6 @@ function resultType(state: TagEditorChangeResultState) {
       >
         <div class="diff-heading">
           <div>
-            <span>批次结果</span>
             <h3 id="result-title">逐项写入状态</h3>
           </div>
           <span>显示 {{ results?.length || 0 }} / {{ resultsTotal || 0 }} 项</span>
@@ -232,18 +230,15 @@ function resultType(state: TagEditorChangeResultState) {
       </div>
 
       <label v-if="changeSet.state === 'previewed' && !readonly" class="backup-option">
-        <span>
-          <strong>备份已有 Caption</strong>
-          <small>写入前为现有 sidecar 创建批次备份和 manifest。</small>
-        </span>
-        <el-switch v-model="backupExisting" />
+        <span><strong>写入前备份已有 Caption</strong></span>
+        <el-switch v-model="backupExisting" aria-label="写入前备份已有 Caption" />
       </label>
       <el-alert
         v-if="changeSet.state === 'previewed' && !readonly && !backupExisting"
         class="backup-warning"
         type="warning"
         title="已关闭已有文件备份"
-        description="本批次仍会写入文件，但已有 sidecar 无法通过本批次自动回滚；新建 sidecar 仍可在回滚时移除。"
+        description="已有 Caption 被覆盖后无法通过本次记录恢复。"
         :closable="false"
         show-icon
       />
@@ -251,11 +246,11 @@ function resultType(state: TagEditorChangeResultState) {
 
     <template #footer>
       <div class="preview-footer">
-        <span v-if="changeSet?.state === 'previewed'">
-          <el-icon><WarningFilled /></el-icon> 应用时会重新核对扫描 revision 与文件指纹
+        <span v-if="changeSet?.state === 'previewed' && !readonly" class="write-consequence">
+          <el-icon><WarningFilled /></el-icon> 确认后将写入 {{ changeSet.changed }} 个 Caption 文件，替换原内容。
         </span>
         <span v-else-if="changeSet?.state === 'completed'">
-          <el-icon><Check /></el-icon> 变更已完成，可从历史记录发起回滚
+          <el-icon><Check /></el-icon> 已写入 {{ changeSet.applied }} 项
         </span>
         <span v-else />
         <div>
@@ -269,7 +264,7 @@ function resultType(state: TagEditorChangeResultState) {
             :disabled="!canApply"
             @click="emit('apply', backupExisting)"
           >
-            确认应用 {{ changeSet.changed }} 项
+            确认写入 {{ changeSet.changed }} 项
           </el-button>
         </div>
       </div>
@@ -316,6 +311,21 @@ function resultType(state: TagEditorChangeResultState) {
 .preview-title > div {
   display: grid;
   gap: 2px;
+}
+
+.preview-title,
+.preview-dataset {
+  min-width: 0;
+}
+
+.preview-dataset strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-header > .el-tag {
+  flex-shrink: 0;
 }
 
 .preview-title span,
@@ -602,6 +612,16 @@ function resultType(state: TagEditorChangeResultState) {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+.preview-footer > .write-consequence {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.write-consequence > .el-icon {
+  flex: none;
+  color: var(--warning);
 }
 
 @media (max-width: 760px) {

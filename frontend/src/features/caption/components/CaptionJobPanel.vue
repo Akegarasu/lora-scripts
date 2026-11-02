@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   CircleCheck,
   Document,
+  EditPen,
   Picture,
   Refresh,
   Search,
@@ -14,6 +15,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 
 import { apiAssetUrl } from '@/api/client'
+import InfoHint from '@/components/InfoHint.vue'
 import type {
   CaptionConflictPolicy,
   CaptionItemState,
@@ -233,7 +235,7 @@ async function commit(selectedOnly: boolean) {
   const scope = selectedOnly ? `${commitIds.value.length} 个已选结果` : '所有可写结果'
   try {
     await ElMessageBox.confirm(
-      `即将把${scope}写入数据集，策略为“${policyLabel(commitPolicy.value)}”。${backupExisting.value ? '已有文件会先创建备份。' : '已有文件不会创建备份。'}`,
+      `即将把${scope}写入数据集，策略为“${policyLabel(commitPolicy.value)}”。${backupExisting.value ? '已有文件会先创建备份。' : '未开启备份；被修改的原内容无法通过本任务恢复。'}`,
       '确认写入 Caption',
       {
         confirmButtonText: '确认写入',
@@ -271,11 +273,14 @@ function policyLabel(policy: CaptionConflictPolicy) {
   <section class="job-detail" aria-labelledby="caption-job-title">
     <header class="job-header">
       <div class="header-copy">
-        <el-button text :icon="ArrowLeft" @click="router.push('/caption')">返回 Caption 工作台</el-button>
+        <el-button text :icon="ArrowLeft" @click="router.push('/caption')">返回数据标注</el-button>
         <div v-if="job" class="job-title-row">
           <div>
-            <h1 id="caption-job-title">{{ job.name || job.modelTitle }}</h1>
-            <p>{{ job.modelTitle }} · {{ job.reviewMode ? '生成后复核' : '直接安全写入' }} · {{ job.id }}</p>
+            <div class="heading-with-info">
+              <h1 id="caption-job-title">{{ job.name || job.modelTitle }}</h1>
+              <InfoHint :content="`模型：${job.modelTitle}；任务 ID：${job.id}`" label="任务信息" />
+            </div>
+            <p>{{ job.reviewMode ? '复核后写入' : '直接写入' }}</p>
           </div>
           <el-tag :type="stateType(job.state)" effect="plain">{{ STATE_LABELS[job.state] }}</el-tag>
         </div>
@@ -339,9 +344,7 @@ function policyLabel(policy: CaptionConflictPolicy) {
           <span class="log-icon"><el-icon><Document /></el-icon></span>
           <span>
             <strong id="caption-log-title">运行日志</strong>
-            <small v-if="logsNeedAttention">任务没有完全成功，日志已展开以便定位原因。</small>
-            <small v-else-if="lastLogLine" class="last-log-line">{{ lastLogLine }}</small>
-            <small v-else>暂无日志</small>
+            <small v-if="!logsOpen && lastLogLine" class="last-log-line">{{ lastLogLine }}</small>
           </span>
           <el-tag v-if="caption.currentLogs.length" type="info">最近 {{ caption.currentLogs.length }} 行</el-tag>
           <span class="log-toggle-label">{{ logsOpen ? '收起' : '展开' }}</span>
@@ -371,22 +374,18 @@ function policyLabel(policy: CaptionConflictPolicy) {
 
     <section v-if="job" class="review-panel">
       <div class="review-heading">
-        <div>
-          <h2>{{ job.reviewMode ? (reviewable ? '检查并提交抽样结果' : '复核任务明细') : '执行明细与异常' }}</h2>
+        <div class="heading-with-info">
+          <h2>{{ job.reviewMode ? '复核结果' : '执行明细' }}</h2>
+          <InfoHint
+            v-if="!job.reviewMode"
+            :content="job.detailsState === 'compacted'
+              ? '任务已清理临时文本，状态与异常仍保留。已写入的 Caption 可在人工编辑中查看和修改。'
+              : '已写入的 Caption 可在人工编辑中查看和修改。'"
+            label="任务结果说明"
+          />
         </div>
         <span class="result-summary">当前筛选 {{ caption.currentItemsTotal }} 项</span>
       </div>
-
-      <el-alert
-        v-if="!job.reviewMode"
-        type="info"
-        :title="job.detailsState === 'compacted' ? '任务详情已轻量化保存' : '人工编辑已从批量生成流程中分离'"
-        :description="job.detailsState === 'compacted'
-          ? 'Caption 文件是最终数据源；成功项的临时文本和标签已清理，状态与异常仍保留。长期修订请使用人工编辑工作台。'
-          : '直接写入任务完成后会压缩临时详情；查找、批量替换和人工打标请使用人工编辑工作台。'"
-        :closable="false"
-        show-icon
-      />
 
       <div class="review-toolbar">
         <el-input
@@ -412,10 +411,11 @@ function policyLabel(policy: CaptionConflictPolicy) {
         >
           {{ pageAllSelected ? '取消选择本页' : '选择本页可写结果' }}
         </el-button>
+        <el-button v-else :icon="EditPen" @click="router.push('/tag-editor')">人工编辑</el-button>
       </div>
 
       <div v-loading="caption.currentLoading" class="result-list">
-        <article v-for="item in caption.currentItems" :key="item.id" class="result-card">
+        <article v-for="item in caption.currentItems" :key="item.id" class="result-card" :class="{ 'direct-result': !job.reviewMode }">
           <div class="result-media">
             <img
               v-if="!failedImages.has(item.id)"
@@ -471,14 +471,6 @@ function policyLabel(policy: CaptionConflictPolicy) {
               </div>
             </div>
 
-            <div v-else class="direct-result-summary">
-              <strong>{{ item.written ? 'Caption 已安全写入' : ITEM_LABELS[item.state] }}</strong>
-              <span v-if="item.state === 'skipped'">已有 Caption 按当前策略保留。</span>
-              <span v-else-if="item.error">请根据上方错误信息检查该图片。</span>
-              <span v-else-if="item.written">临时生成内容无需长期保存在任务数据库中。</span>
-              <span v-else>任务仍在处理，状态会自动更新。</span>
-            </div>
-
             <div v-if="item.tags.length" class="tag-list" aria-label="模型返回标签">
               <el-tag v-for="tag in item.tags.slice(0, 18)" :key="`${tag.category}-${tag.text}`" type="info">
                 {{ tag.text }}<span v-if="tag.score != null"> {{ Math.round(tag.score * 100) }}%</span>
@@ -492,7 +484,6 @@ function policyLabel(policy: CaptionConflictPolicy) {
         <div v-if="!caption.currentLoading && caption.currentItems.length === 0" class="empty-result">
           <el-icon><Picture /></el-icon>
           <strong>没有符合条件的结果</strong>
-          <span>任务可能尚未生成结果，或当前筛选条件过窄。</span>
         </div>
       </div>
 
@@ -512,15 +503,15 @@ function policyLabel(policy: CaptionConflictPolicy) {
       <div class="commit-copy">
         <el-icon><CircleCheck /></el-icon>
         <div>
-          <strong>复核完成后写入数据集</strong>
-          <span>已选择 {{ commitIds.length }} 项；可逐页检查后写入，长期修订请使用人工编辑工作台。</span>
+          <strong>写入 Caption 文件</strong>
+          <span>已选 {{ commitIds.length }} 项</span>
         </div>
       </div>
       <div class="commit-options">
         <label>
-          <span>已有 Caption 的处理方式</span>
-          <el-select v-model="commitPolicy">
-            <el-option label="跳过已有文件（最安全）" value="skip" />
+          <span>已有 Caption</span>
+          <el-select v-model="commitPolicy" aria-label="已有 Caption 的处理方式">
+            <el-option label="跳过已有文件" value="skip" />
             <el-option label="只填充空文件" value="fill_empty" />
             <el-option label="覆盖已有内容" value="overwrite" />
             <el-option label="生成结果放在原内容前" value="prepend" />
@@ -530,9 +521,8 @@ function policyLabel(policy: CaptionConflictPolicy) {
         <label class="backup-switch">
           <span>
             <strong>备份已有文件</strong>
-            <small>防止覆盖后无法恢复。</small>
           </span>
-          <el-switch v-model="backupExisting" />
+          <el-switch v-model="backupExisting" aria-label="备份已有文件" />
         </label>
       </div>
       <div class="commit-actions">
@@ -547,6 +537,14 @@ function policyLabel(policy: CaptionConflictPolicy) {
           写入所有可用结果
         </el-button>
       </div>
+      <el-alert
+        v-if="['overwrite', 'prepend', 'append'].includes(commitPolicy)"
+        class="commit-warning"
+        type="warning"
+        :title="backupExisting ? '写入将修改已有 Caption，原文件会先备份。' : '写入将修改已有 Caption；未开启备份，原内容无法通过本任务恢复。'"
+        :closable="false"
+        show-icon
+      />
     </section>
 
     <div v-if="!job && !caption.currentLoading" class="job-missing">
@@ -577,6 +575,12 @@ function policyLabel(policy: CaptionConflictPolicy) {
 
 .header-copy {
   min-width: 0;
+}
+
+.heading-with-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .header-copy > .el-button {
@@ -818,12 +822,6 @@ function policyLabel(policy: CaptionConflictPolicy) {
   font-weight: 700;
 }
 
-.review-heading p {
-  margin: 5px 0 0;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-
 .result-summary {
   color: var(--text-muted);
   font-size: 13px;
@@ -861,6 +859,14 @@ function policyLabel(policy: CaptionConflictPolicy) {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.result-card.direct-result {
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+
+.direct-result .result-media {
+  min-height: 96px;
 }
 
 .image-fallback {
@@ -939,26 +945,6 @@ function policyLabel(policy: CaptionConflictPolicy) {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 9px;
-}
-
-.direct-result-summary {
-  display: grid;
-  gap: 4px;
-  padding: 11px 12px;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  background: var(--surface-sunken);
-}
-
-.direct-result-summary strong {
-  color: var(--text-strong);
-  font-size: 14px;
-}
-
-.direct-result-summary span {
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.5;
 }
 
 .text-block {
@@ -1040,16 +1026,12 @@ function policyLabel(policy: CaptionConflictPolicy) {
   font-size: 15px;
 }
 
-.empty-result span {
-  font-size: 13px;
-}
-
 .commit-panel {
   position: sticky;
   z-index: 8;
   bottom: 14px;
   display: grid;
-  grid-template-columns: minmax(220px, 0.7fr) minmax(340px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 18px;
   padding: 16px 18px;
@@ -1083,6 +1065,8 @@ function policyLabel(policy: CaptionConflictPolicy) {
 }
 
 .commit-options {
+  grid-column: 1 / -1;
+  grid-row: 2;
   display: grid;
   grid-template-columns: minmax(210px, 1fr) minmax(180px, 0.7fr);
   gap: 10px;
@@ -1121,15 +1105,16 @@ function policyLabel(policy: CaptionConflictPolicy) {
   font-size: 13px;
 }
 
-.backup-switch small {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
 .commit-actions {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+.commit-warning {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 1180px) {
@@ -1139,13 +1124,21 @@ function policyLabel(policy: CaptionConflictPolicy) {
 
   .commit-panel {
     position: static;
-    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 760px) {
   .job-detail {
     padding: 18px 14px 34px;
+  }
+
+  .commit-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .commit-actions {
+    grid-column: 1;
+    grid-row: auto;
   }
 
   .job-header,

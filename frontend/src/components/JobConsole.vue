@@ -193,11 +193,9 @@ watch(
     >
       <div v-if="lines.length === 0" class="console-empty">
         <span class="empty-title">暂无日志输出</span>
-        <span>{{ streaming ? '任务有新输出时会自动显示在这里' : '这个任务没有可显示的日志' }}</span>
       </div>
       <div v-else-if="visibleLines.length === 0" class="console-empty">
         <span class="empty-title">没有匹配的日志</span>
-        <span>换一个关键词，或清除当前筛选。</span>
         <el-button class="empty-action" size="small" text @click="clearFilter">清除筛选</el-button>
       </div>
       <pre v-else class="console-text">{{ visibleText }}</pre>
