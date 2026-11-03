@@ -1,5 +1,5 @@
 # priority controls UI visibility, not whether a flag is enabled.
-# Evidence and model-specific decisions: docs/sd-scripts-catalog-review.md.
+# Evidence and model-specific decisions: docs/agent/dev/README.md.
 groups:
   - id: model
     title: 模型

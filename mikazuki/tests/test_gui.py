@@ -27,6 +27,7 @@ class GuiLaunchTests(unittest.TestCase):
         self.prepare.assert_called_once_with(disable_auto_mirror=False, prepare_onnxruntime=True)
         self.assertEqual(self.serve.call_args.kwargs["host"], "127.0.0.1")
         self.assertEqual(self.serve.call_args.kwargs["port"], 28000)
+        self.assertEqual(os.environ["MIKAZUKI_BIND_HOST"], "127.0.0.1")
 
     def test_listen_and_fallback_port_preserve_callers_arguments(self):
         args = gui.parser.parse_args(["--listen", "--port", "28001", "--skip-prepare-environment"])
@@ -39,6 +40,7 @@ class GuiLaunchTests(unittest.TestCase):
         self.assertEqual(self.serve.call_args.kwargs["port"], 30001)
         self.assertEqual(os.environ["MIKAZUKI_HOST"], "127.0.0.1")
         self.assertEqual(os.environ["MIKAZUKI_PORT"], "30001")
+        self.assertEqual(os.environ["MIKAZUKI_BIND_HOST"], "0.0.0.0")
         self.prepare.assert_not_called()
 
 

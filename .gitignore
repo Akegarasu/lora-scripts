@@ -22,6 +22,7 @@ logs/*
 models/*
 config/runs/*
 config/frontend-download.json
+config/app-settings.json*
 
 !models/put stable diffusion model here.txt
 !logs/.keep

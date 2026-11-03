@@ -20,7 +20,7 @@ class TrainingRuntimeTests(unittest.TestCase):
             errors = validate_training_runtime("moss_image.lora", None)
         self.assertEqual(len(errors), 2)
         self.assertTrue(all(error.code == "runtime.moss_dependency" for error in errors))
-        self.assertIn("docs/moss-image-training.md", errors[0].message)
+        self.assertIn("docs/human/moss-image.md", errors[0].message)
 
     def test_bf16_convrot_fallback_does_not_require_triton(self):
         with (

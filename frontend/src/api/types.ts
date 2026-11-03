@@ -16,6 +16,14 @@ export interface HealthResponse {
   devMode: boolean
 }
 
+export interface McpSettingsResponse {
+  enabled: boolean
+  running: boolean
+  transport: 'streamable-http'
+  endpoint: string
+  error: string | null
+}
+
 export interface TrainerSummary {
   id: string
   title: string

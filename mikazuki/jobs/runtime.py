@@ -33,7 +33,7 @@ def validate_training_runtime(trainer_id: str, train_config: Optional[str]) -> L
                 field="trainerId",
                 message=(
                     f"MOSS-Image 需要 {package}>={minimum}，当前为 {installed}。"
-                    "请按 docs/moss-image-training.md 更新 requirements.txt 中的依赖后重启 GUI。"
+                    "请按 docs/human/moss-image.md 更新 requirements.txt 中的依赖后重启 GUI。"
                 ),
             ))
 

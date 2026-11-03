@@ -30,6 +30,34 @@ def flatten_toml(content: str) -> dict:
 
 
 class CompilerParameterChainTests(unittest.TestCase):
+    def test_simple_dataset_requires_images_directly_in_selected_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            nested = root / "dataset" / "10_subject"
+            nested.mkdir(parents=True)
+            (nested / "image.png").write_bytes(b"enough-for-path-validation")
+
+            parent_result = compile_draft(
+                make_draft(dataset={"mode": "simple", "root": "dataset"}),
+                persist=True,
+                validate_paths=True,
+                base_dir=root,
+            )
+            nested_result = compile_draft(
+                make_draft(dataset={"mode": "simple", "root": "dataset/10_subject", "numRepeats": 3}),
+                persist=False,
+                validate_paths=True,
+                base_dir=root,
+            )
+
+            self.assertIn("dataset.images.empty", {error.code for error in parent_result.errors})
+            self.assertIn("不会递归", parent_result.errors[0].message)
+            self.assertFalse((root / "config" / "runs").exists())
+            self.assertEqual(nested_result.errors, [])
+            subset = toml.loads(nested_result.datasetConfig)["datasets"][0]["subsets"][0]
+            self.assertEqual(subset["image_dir"], str(nested.resolve()).replace("\\", "/"))
+            self.assertEqual(subset["num_repeats"], 3)
+
     def test_partial_dataset_uses_the_selected_trainer_defaults(self) -> None:
         result = compile_draft(
             make_draft(dataset={"mode": "simple", "root": "dataset"}),

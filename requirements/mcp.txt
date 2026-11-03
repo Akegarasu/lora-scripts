@@ -1,0 +1,4 @@
+# Standalone adapter dependencies; the GUI also includes MCP in requirements.txt.
+# Stay on the official SDK's v1 maintenance line for existing MCP hosts.
+mcp>=1.28,<2
+httpx>=0.28,<1

@@ -72,13 +72,16 @@ def build_simple_dataset(
                     message=f"数据集路径必须是目录：{_display_path(root)}",
                 )
             )
-        elif not any(p.suffix.lower() in IMAGE_EXTENSIONS for p in root.rglob("*") if p.is_file()):
+        elif not any(p.suffix.lower() in IMAGE_EXTENSIONS for p in root.iterdir() if p.is_file()):
             errors.append(
                 ValidationMessage(
                     severity="error",
                     code="dataset.images.empty",
                     field="dataset.root",
-                    message=f"数据集目录中没有支持的图片文件：{_display_path(root)}",
+                    message=(
+                        f"数据集目录当前层没有支持的图片文件：{_display_path(root)}。"
+                        "simple 模式不会递归训练子目录，请选择直接包含图片的目录。"
+                    ),
                 )
             )
 

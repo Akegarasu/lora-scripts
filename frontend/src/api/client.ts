@@ -23,6 +23,7 @@ import type {
   JobMetricStateEvent,
   JobRecord,
   JobStartResult,
+  McpSettingsResponse,
   RevealOutputPathResponse,
   SafetensorsMetadataResponse,
   TagEditorApplyRequest,
@@ -116,6 +117,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const apiClient = {
   getHealth() {
     return request<HealthResponse>('/api/v2/health')
+  },
+  getMcpSettings() {
+    return request<McpSettingsResponse>('/api/v2/settings/mcp')
+  },
+  setMcpEnabled(enabled: boolean) {
+    return request<McpSettingsResponse>('/api/v2/settings/mcp', {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled }),
+    })
   },
   listTrainers() {
     return request<TrainersResponse>('/api/v2/trainers')

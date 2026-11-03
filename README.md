@@ -1,43 +1,15 @@
-<div align="center">
-
-<img src="https://github.com/Akegarasu/lora-scripts/assets/36563862/3b177f4a-d92a-4da4-85c8-a0d163061a40" width="200" height="200" alt="SD-Trainer" style="border-radius: 25px">
-
 # SD-Trainer
 
-_✨ Enjoy Stable Diffusion Train！ ✨_
-
-</div>
-
-<p align="center">
-  <a href="https://github.com/Akegarasu/lora-scripts" style="margin: 2px;">
-    <img alt="GitHub Repo stars" src="https://img.shields.io/github/stars/Akegarasu/lora-scripts">
-  </a>
-  <a href="https://github.com/Akegarasu/lora-scripts" style="margin: 2px;">
-    <img alt="GitHub forks" src="https://img.shields.io/github/forks/Akegarasu/lora-scripts">
-  </a>
-  <a href="LICENSE" style="margin: 2px;">
-    <img src="https://img.shields.io/github/license/Akegarasu/lora-scripts" alt="license">
-  </a>
-  <a href="https://github.com/Akegarasu/lora-scripts/releases" style="margin: 2px;">
-    <img src="https://img.shields.io/github/v/release/Akegarasu/lora-scripts?color=blueviolet&include_prereleases" alt="release">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Akegarasu/lora-scripts/releases">Download</a>
-  ·
-  <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README.md">Documents</a>
-  ·
-  <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README-zh.md">中文README</a>
-</p>
-
 LoRA-scripts (SD-Trainer) is a local training and dataset workspace built on [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts). The v2 interface brings training configuration, caption generation, manual tag editing, job logs and metrics into one application.
+
+[中文](README-zh.md) · [Human guide](docs/human/README.md) · [MCP setup](docs/human/mcp.md) · [Agent usage](docs/agent/usage/README.md) · [Agent development](docs/agent/dev/README.md)
+
 
 ## Training workspace
 
 Choose a trainer, configure model assets and datasets, and inspect parameter help and validation before starting a job. The form follows each trainer's supported parameters, with common and full parameter views, search, and a configuration checklist.
 
-The current catalog includes SD, SDXL, SD3, FLUX.1, Chroma, Lumina, HunyuanImage 2.1, Anima and MOSS-Image Base / SFT LoRA. Experimental trainers are marked in the interface. Training code is vendored under `scripts/dev` and tracks sd-scripts v0.12.3; see the [MOSS-Image setup guide](docs/moss-image-training.md) for its model and dependency requirements.
+The current catalog includes SD, SDXL, SD3, FLUX.1, Chroma, Lumina, HunyuanImage 2.1, Anima and MOSS-Image Base / SFT LoRA. Experimental trainers are marked in the interface. Training code is vendored under `scripts/dev` and tracks sd-scripts v0.12.3; see the [MOSS-Image setup guide](docs/human/moss-image.md) for its model and dependency requirements.
 
 ![v2 training workspace](assets/screenshots/training-workspace.jpg)
 
@@ -51,13 +23,17 @@ The Caption workspace scans datasets and generates tags or natural-language desc
 
 The separate Tag Editor supports individual edits, filtering, tag suggestions, batch add/remove, text or regular-expression replacement, and normalization. Preview changes before applying them; backups and conflict checks support safe rollback when files have not been edited externally.
 
+## MCP for agents
+
+Starting the GUI also enables the built-in MCP server by default. Connect a local MCP client using Streamable HTTP at `http://127.0.0.1:28000/mcp/`, or copy the actual address from GUI settings if the port differs. The settings switch takes effect immediately and is remembered on restart. Agents share the existing training queue and can inspect datasets, submit experiments, monitor logs and metrics, and read output images. See [MCP setup](docs/human/mcp.md) for connection details and the optional standalone stdio entrypoint.
+
 ## Windows NVIDIA portable
 
 Download `lora-scripts_windows_portable_nvidia.7z` from [Releases](https://github.com/Akegarasu/lora-scripts/releases), extract the complete archive, and double-click `run_gui.bat` inside it.
 
 The default package includes Python 3.11.9, PyTorch 2.14.1 / CUDA 13.0 and the built frontend. A CUDA 12.8 fallback is available as `lora-scripts_windows_portable_nvidia_cu128.7z`, with PyTorch 2.11.0. Both include the matching ONNX GPU runtime and need Windows x64 plus a compatible NVIDIA driver; no separate Python, Node.js or CUDA Toolkit installation is required.
 
-The default CUDA 13 package needs an R580 or newer driver. The cu128 package offers a different CUDA/driver combination; both packages require Turing or newer GPUs, so it does not restore Pascal or Volta support. Model weights and datasets are supplied separately. See [portable selection and release automation](docs/windows-portable.md).
+The default CUDA 13 package needs an R580 or newer driver. The cu128 package offers a different CUDA/driver combination; both packages require Turing or newer GPUs, so it does not restore Pascal or Volta support. Model weights and datasets are supplied separately. See [portable operation and troubleshooting](docs/human/README.md).
 
 ## Install from source
 
@@ -108,7 +84,7 @@ bash scripts/run_gui.sh
 The GUI shell script uses the active Python environment, so activate `venv` in each new terminal. Open [http://127.0.0.1:28000](http://127.0.0.1:28000) after startup.
 Use `bash scripts/install.bash --cuda cu128` to install the CUDA 12.8 profile.
 
-After updating Python dependencies, rerun the installer and restart the GUI. Released versions with frontend auto-download enabled can obtain their matching frontend from GitHub Release, Jihulab or a static mirror. Development checkouts still use the build steps above; see [frontend versioning and distribution](docs/frontend-releases.md).
+After updating Python dependencies, rerun the installer and restart the GUI. Released versions with frontend auto-download enabled can obtain their matching frontend from GitHub Release, Jihulab or a static mirror. Development checkouts still use the build steps above; see [frontend versioning and distribution](docs/agent/dev/releases.md).
 
 ### Docker
 
@@ -130,14 +106,6 @@ The host needs a compatible NVIDIA driver and NVIDIA Container Toolkit. Mount da
 ### Training scripts
 
 For script-based training, edit and run `scripts/train.ps1` on Windows or `scripts/train.sh` on Linux from the repository root. Install dependencies first; on Linux, activate `venv` before running the script. These entrypoints use the same vendored training code as the GUI.
-
-## Releases
-
-Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and both Windows portable packages. Manual runs build the selected branch's latest commit at dispatch time; the existing Git tag input only identifies the destination Release, which is created if needed. The release tag does not have to match the versions in `version.json` or `frontend/package.json`.
-
-Application code and runtime dependency profiles always come from the same source commit. To replace an existing Release's assets with updated code, manually run the workflow from a branch containing the changes; no new tag is needed. Tag pushes and Release events still build the corresponding tag's source.
-
-See [frontend release preparation](docs/frontend-releases.md) and [Windows packaging and retry instructions](docs/windows-portable.md) for the complete process.
 
 ## GUI arguments
 

@@ -4,6 +4,7 @@ import {
   CircleCheckFilled,
   CircleCloseFilled,
   Close,
+  CopyDocument,
   Cpu,
   Loading,
   Monitor,
@@ -11,6 +12,7 @@ import {
   Refresh,
   Sunny,
 } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 
 import type { GpuInfo } from '@/api/types'
 import { useDevicesStore } from '@/stores/devices'
@@ -36,8 +38,32 @@ const serviceLabel = computed(() => {
 })
 
 const isRefreshing = computed(
-  () => refreshingAll.value || settings.loadingHealth || devices.loading,
+  () => refreshingAll.value || settings.loadingHealth || settings.loadingMcp || settings.savingMcp || devices.loading,
 )
+
+const mcpBusy = computed(() => settings.loadingMcp || settings.savingMcp)
+const mcpLabel = computed(() => {
+  if (settings.savingMcp) return '正在更新'
+  if (settings.loadingMcp) return '正在检测'
+  if (!settings.mcp) return '状态未知'
+  if (settings.mcp.running) return '运行中'
+  if (settings.mcp.error) return '启动失败'
+  return settings.mcp.enabled ? '未运行' : '已关闭'
+})
+
+async function changeMcpEnabled(value: boolean | string | number) {
+  if (typeof value === 'boolean') await settings.setMcpEnabled(value)
+}
+
+async function copyMcpEndpoint() {
+  if (!settings.mcp?.endpoint) return
+  try {
+    await navigator.clipboard.writeText(settings.mcp.endpoint)
+    ElMessage.success('已复制 MCP 连接地址')
+  } catch {
+    ElMessage.error('复制失败，请手动选择地址复制')
+  }
+}
 
 function formatBytes(value: number) {
   if (!Number.isFinite(value) || value <= 0) return '0 GB'
@@ -64,7 +90,7 @@ async function refreshAll() {
   if (refreshingAll.value) return
   refreshingAll.value = true
   try {
-    await Promise.allSettled([settings.loadHealth(), devices.loadGpus()])
+    await Promise.allSettled([settings.loadHealth(), settings.loadMcpSettings(), devices.loadGpus()])
   } finally {
     refreshingAll.value = false
   }
@@ -72,6 +98,7 @@ async function refreshAll() {
 
 onMounted(() => {
   if (!settings.health && !settings.loadingHealth) void settings.loadHealth()
+  void settings.loadMcpSettings()
   if (!devices.loading) void devices.loadGpus()
 })
 </script>
@@ -210,6 +237,55 @@ onMounted(() => {
             <dd><code>{{ settings.apiBase }}</code></dd>
           </div>
         </dl>
+
+        <section class="mcp-settings" aria-labelledby="mcp-title" :aria-busy="mcpBusy">
+          <div class="setting-row mcp-toggle-row">
+            <span>
+              <strong id="mcp-title">MCP 服务</strong>
+              <small id="mcp-description">允许 agent 连接训练工作台。开关立即生效，下次启动沿用。</small>
+            </span>
+            <el-switch
+              :model-value="settings.mcp?.enabled ?? false"
+              :loading="mcpBusy"
+              :disabled="mcpBusy || !settings.mcp"
+              aria-labelledby="mcp-title"
+              aria-describedby="mcp-description"
+              @change="changeMcpEnabled"
+            />
+          </div>
+          <div class="mcp-status-row">
+            <span
+              class="status-badge"
+              :class="{
+                online: !mcpBusy && settings.mcp?.running,
+                pending: mcpBusy,
+                inactive: !mcpBusy && settings.mcp && !settings.mcp.enabled && !settings.mcp.running && !settings.mcp.error,
+              }"
+              role="status"
+              aria-live="polite"
+            >
+              <el-icon v-if="mcpBusy" class="spin" aria-hidden="true"><Loading /></el-icon>
+              {{ mcpLabel }}
+            </span>
+            <span class="mcp-note">关闭服务不会停止已开始的训练。</span>
+          </div>
+          <div v-if="settings.mcp?.endpoint" class="mcp-endpoint">
+            <span class="mcp-endpoint-label">连接地址 · Streamable HTTP</span>
+            <div class="mcp-endpoint-value">
+              <code>{{ settings.mcp.endpoint }}</code>
+              <el-button text :icon="CopyDocument" aria-label="复制 MCP 连接地址" @click="copyMcpEndpoint">复制</el-button>
+            </div>
+          </div>
+          <div v-if="settings.mcpError || settings.mcp?.error" class="inline-message error" role="alert">
+            <CircleCloseFilled aria-hidden="true" />
+            <div>
+              <strong>{{ settings.mcpError ? 'MCP 设置请求失败' : 'MCP 服务未能启动' }}</strong>
+              <p v-if="settings.mcpError">{{ settings.mcpError }}</p>
+              <p v-if="settings.mcp?.error">{{ settings.mcp.error }}</p>
+              <el-button text :icon="Refresh" :disabled="mcpBusy" @click="settings.loadMcpSettings">重新检测</el-button>
+            </div>
+          </div>
+        </section>
       </article>
 
       <article v-else class="settings-panel gpu-panel" aria-labelledby="gpu-title">
@@ -645,6 +721,61 @@ onMounted(() => {
 .mode-chip.development {
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+.mcp-settings {
+  margin-top: 24px;
+}
+
+.mcp-toggle-row small {
+  line-height: 1.6;
+}
+
+.mcp-toggle-row .el-switch {
+  flex: 0 0 auto;
+}
+
+.mcp-status-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.status-badge.inactive {
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+}
+
+.mcp-note,
+.mcp-endpoint-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mcp-endpoint {
+  margin-top: 16px;
+}
+
+.mcp-endpoint-value {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mcp-endpoint-value code {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.mcp-endpoint-value .el-button {
+  flex: 0 0 auto;
 }
 
 .gpu-header-status {

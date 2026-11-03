@@ -12,7 +12,9 @@ from starlette.exceptions import HTTPException
 
 from mikazuki.app.api_v2 import router as api_v2_router
 from mikazuki.app.caption_api import router as caption_api_router
+from mikazuki.app.settings_api import router as settings_api_router
 from mikazuki.app.tag_editor_api import router as tag_editor_api_router
+from mikazuki.mcp.integration import MCPService
 from mikazuki.storage.paths import app_root
 
 mimetypes.add_type("application/javascript", ".js")
@@ -34,12 +36,14 @@ class SPAStaticFiles(StaticFiles):
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    if sys.platform == "win32" and os.environ.get("MIKAZUKI_DEV", "0") != "1":
-        webbrowser.open(f'http://{os.environ["MIKAZUKI_HOST"]}:{os.environ["MIKAZUKI_PORT"]}')
-    yield
+    async with _app.state.mcp_service.lifespan():
+        if sys.platform == "win32" and os.environ.get("MIKAZUKI_DEV", "0") != "1":
+            webbrowser.open(f'http://{os.environ.get("MIKAZUKI_HOST", "127.0.0.1")}:{os.environ.get("MIKAZUKI_PORT", "28000")}')
+        yield
 
 
 app = FastAPI(lifespan=lifespan)
+app.state.mcp_service = MCPService(app)
 
 
 cors_config = os.environ.get("MIKAZUKI_APP_CORS", "")
@@ -67,6 +71,8 @@ async def add_cache_control_header(request, call_next):
 app.include_router(api_v2_router, prefix="/api/v2")
 app.include_router(caption_api_router, prefix="/api/v2/caption")
 app.include_router(tag_editor_api_router, prefix="/api/v2/tag-editor")
+app.include_router(settings_api_router, prefix="/api/v2/settings")
+app.mount("/mcp", app.state.mcp_service, name="mcp")
 
 
 @app.get("/")

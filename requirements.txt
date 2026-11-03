@@ -44,6 +44,8 @@ fastapi==0.162.0
 pydantic==2.14.2
 uvicorn[standard]==0.54.0
 httpx==0.28.1
+# GUI starts the built-in Streamable HTTP MCP endpoint by default.
+mcp>=1.28,<2
 requests==2.34.2
 peewee==3.19.0
 # Bounded-time regular expressions for Tag Editor batch replacements.

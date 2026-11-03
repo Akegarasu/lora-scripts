@@ -241,7 +241,7 @@ def prepare_environment(
         raise RuntimeError(
             "The current sd-scripts dependencies require PyTorch >= 2.6. "
             "Install the CUDA build matching your GPU first; "
-            "see docs/moss-image-training.md."
+            "see docs/human/moss-image.md."
         )
     validate_requirements(str(base_dir_path() / "requirements.txt"))
     setup_windows_bitsandbytes()

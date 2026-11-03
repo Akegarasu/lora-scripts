@@ -76,6 +76,7 @@ def launch(args: argparse.Namespace | None = None) -> None:
     os.environ["MIKAZUKI_HOST"] = args.host
     os.environ["MIKAZUKI_PORT"] = str(port)
     host = "0.0.0.0" if args.listen else args.host
+    os.environ["MIKAZUKI_BIND_HOST"] = host
 
     import uvicorn
 

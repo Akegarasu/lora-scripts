@@ -14,8 +14,10 @@ from mikazuki.app.events import (
 )
 from mikazuki.catalog import get_catalog_service
 from mikazuki.compiler import TrainDraft, compile_draft
+from mikazuki.compiler.models import SimpleDatasetDraft
 from mikazuki.frontend_release import release_version_payload
 from mikazuki.jobs import get_job_runner, get_job_store
+from mikazuki.jobs.artifacts import JobArtifactError, read_job_artifacts
 from mikazuki.jobs.logs import read_log_from, tail_log
 from mikazuki.jobs.metrics import get_job_metrics_service, parse_tag_filter
 from mikazuki.jobs.models import TERMINAL_STATES
@@ -82,6 +84,27 @@ async def get_trainer_params(
     }
 
 
+@router.get("/training/schema")
+async def get_training_schema():
+    """Describe the supported structured draft without tightening its runtime model."""
+    schema = TrainDraft.model_json_schema()
+    dataset_schema = SimpleDatasetDraft.model_json_schema()
+    dataset_schema["properties"]["mode"]["enum"] = ["simple"]
+    dataset_schema["properties"]["root"]["description"] = (
+        "Directory on the backend machine directly containing the training images and caption sidecars. "
+        "Simple mode does not recursively train images in subdirectories."
+    )
+    definitions = schema.setdefault("$defs", {})
+    definitions.update(dataset_schema.pop("$defs", {}))
+    definitions["SimpleDatasetDraft"] = dataset_schema
+    schema["properties"]["dataset"] = {
+        "anyOf": [{"$ref": "#/$defs/SimpleDatasetDraft"}, {"type": "null"}],
+        "default": None,
+        "title": "Dataset",
+    }
+    return schema
+
+
 @router.post("/compile")
 async def compile_train_draft(
     draft: TrainDraft,
@@ -118,6 +141,21 @@ async def get_job(job_id: str):
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
     return job.model_dump(exclude_none=True)
+
+
+@router.get("/jobs/{job_id}/artifacts")
+async def get_job_artifacts(job_id: str):
+    job = get_job_store().get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job not found")
+    try:
+        return await asyncio.to_thread(read_job_artifacts, job)
+    except FileNotFoundError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    except JobArtifactError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except OSError as error:
+        raise HTTPException(status_code=503, detail="job artifacts could not be read") from error
 
 
 @router.get("/jobs/{job_id}/logs")

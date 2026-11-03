@@ -1,43 +1,15 @@
-<div align="center">
-
-<img src="https://github.com/Akegarasu/lora-scripts/assets/36563862/3b177f4a-d92a-4da4-85c8-a0d163061a40" width="200" height="200" alt="SD-Trainer" style="border-radius: 25px">
-
 # SD-Trainer
 
-_✨ 享受 Stable Diffusion 训练！ ✨_
-
-</div>
-
-<p align="center">
-  <a href="https://github.com/Akegarasu/lora-scripts" style="margin: 2px;">
-    <img alt="GitHub 仓库星标" src="https://img.shields.io/github/stars/Akegarasu/lora-scripts">
-  </a>
-  <a href="https://github.com/Akegarasu/lora-scripts" style="margin: 2px;">
-    <img alt="GitHub 仓库分支" src="https://img.shields.io/github/forks/Akegarasu/lora-scripts">
-  </a>
-  <a href="LICENSE" style="margin: 2px;">
-    <img src="https://img.shields.io/github/license/Akegarasu/lora-scripts" alt="许可证">
-  </a>
-  <a href="https://github.com/Akegarasu/lora-scripts/releases" style="margin: 2px;">
-    <img src="https://img.shields.io/github/v/release/Akegarasu/lora-scripts?color=blueviolet&include_prereleases" alt="发布版本">
-  </a>
-</p>
-
-<p align="center">
-  <a href="https://github.com/Akegarasu/lora-scripts/releases">下载</a>
-  ·
-  <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README.md">文档</a>
-  ·
-  <a href="https://github.com/Akegarasu/lora-scripts/blob/main/README-zh.md">中文README</a>
-</p>
-
 LoRA-scripts（SD-Trainer）是基于 [kohya-ss/sd-scripts](https://github.com/kohya-ss/sd-scripts) 的本地训练与数据集工作台。v2 界面集成训练配置、Caption 生成、人工标签编辑、任务日志和训练指标。
+
+[English](README.md) · [人类操作指南](docs/human/README.md) · [MCP 接入](docs/human/mcp.md) · [Agent 使用文档](docs/agent/usage/README.md) · [Agent 开发文档](docs/agent/dev/README.md)
+
 
 ## 训练工作台
 
 选择训练器，配置模型资产和数据集，在启动任务前查看参数帮助与配置检查结果。表单随训练器展示对应参数，支持常用/全部参数切换、搜索和配置完成度检查。
 
-当前目录提供 SD、SDXL、SD3、FLUX.1、Chroma、Lumina、HunyuanImage 2.1、Anima 和 MOSS-Image Base / SFT LoRA；实验性训练器会在界面中标注。训练代码直接收录于 `scripts/dev`，已同步 sd-scripts v0.12.3。MOSS-Image 的模型与依赖要求见[安装配置指南](docs/moss-image-training.md)。
+当前目录提供 SD、SDXL、SD3、FLUX.1、Chroma、Lumina、HunyuanImage 2.1、Anima 和 MOSS-Image Base / SFT LoRA；实验性训练器会在界面中标注。训练代码直接收录于 `scripts/dev`，已同步 sd-scripts v0.12.3。MOSS-Image 的模型与依赖要求见[安装配置指南](docs/human/moss-image.md)。
 
 ![v2 训练工作台](assets/screenshots/training-workspace.jpg)
 
@@ -51,13 +23,17 @@ Caption 工作台可扫描数据集，使用 WD/CL 标签器、BLIP/GIT 系列�
 
 独立的 Tag 编辑器支持逐图编辑、筛选、标签建议、批量增删、文本或正则替换以及格式整理。批量修改先预览再应用；备份与冲突检测支持在文件未被外部修改时安全回滚。
 
+## 通过 MCP 让 agent 操作
+
+GUI 启动时默认同时开启内置 MCP。在本机 MCP 客户端选择 Streamable HTTP，连接 `http://127.0.0.1:28000/mcp/`；端口不同时，从 GUI 设置复制实际地址。设置中的开关即时生效，并在下次启动时保留。Agent 可以查看数据、提交实验、监控日志与指标、读取输出样图，使用与网页相同的训练队列。连接详情与可选的独立 stdio 入口见 [MCP 接入说明](docs/human/mcp.md)。
+
 ## Windows NVIDIA 便携版
 
 从 [Releases](https://github.com/Akegarasu/lora-scripts/releases) 下载 `lora-scripts_windows_portable_nvidia.7z`，完整解压后双击包内的 `run_gui.bat`。
 
 默认包包含 Python 3.11.9、PyTorch 2.14.1 / CUDA 13.0 和构建好的前端。另提供 `lora-scripts_windows_portable_nvidia_cu128.7z`，使用 PyTorch 2.11.0 / CUDA 12.8。两者均内置匹配的 ONNX GPU 运行时，需要 Windows x64 与兼容的 NVIDIA 驱动，无需另装 Python、Node.js 或 CUDA Toolkit。
 
-默认 CUDA 13 包需要 R580 或更新驱动。cu128 包提供另一种 CUDA/驱动组合；两个包均要求 Turing 或更新架构，不恢复 Pascal、Volta 显卡支持。模型权重与训练数据需自行准备。详见[便携版选择与发布说明](docs/windows-portable.md)。
+默认 CUDA 13 包需要 R580 或更新驱动。cu128 包提供另一种 CUDA/驱动组合；两个包均要求 Turing 或更新架构，不恢复 Pascal、Volta 显卡支持。模型权重与训练数据需自行准备。详见[便携版使用与排障](docs/human/README.md)。
 
 ## 从源码安装
 
@@ -108,7 +84,7 @@ bash scripts/run_gui.sh
 GUI 启动脚本使用当前激活的 Python，因此每次新开终端都需要先激活 `venv`。启动后打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)。
 安装 CUDA 12.8 版本时使用 `bash scripts/install.bash --cuda cu128`。
 
-更新 Python 依赖后，应重新运行安装器并重启 GUI。已启用前端自动下载的发布版本可以从 GitHub Release、Jihulab 或静态镜像获取匹配前端；开发版本仍需按上面的步骤构建。详见[前端版本与分发说明](docs/frontend-releases.md)。
+更新 Python 依赖后，应重新运行安装器并重启 GUI。已启用前端自动下载的发布版本可以从 GitHub Release、Jihulab 或静态镜像获取匹配前端；开发版本仍需按上面的步骤构建。详见[前端版本与分发说明](docs/agent/dev/releases.md)。
 
 ### Docker
 
@@ -130,14 +106,6 @@ docker build --build-arg PYTORCH_IMAGE=pytorch/pytorch:2.11.0-cuda12.8-cudnn9-ru
 ### 通过脚本训练
 
 安装依赖后，也可在仓库根目录编辑并运行 Windows 的 `scripts/train.ps1` 或 Linux 的 `scripts/train.sh`。Linux 需要先激活 `venv`。这些入口与 GUI 使用同一份随仓库分发的训练代码。
-
-## 发布
-
-推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和两个 Windows 便携包。手动运行使用所选分支在触发时的最新提交；填写的已有 Git tag 只指定上传目标 Release，工作流会在需要时创建该 Release。发布 tag 无需与 `version.json` 或 `frontend/package.json` 中的版本一致。
-
-应用代码及其依赖配置始终取自同一源码提交。更新后可选择包含修改的分支手动运行，覆盖已有 Release 的附件，无需创建新 tag；推送 tag 和发布 Release 事件仍构建对应 tag 的源码。
-
-完整流程见[前端版本准备](docs/frontend-releases.md)和 [Windows 打包与重试说明](docs/windows-portable.md)。
 
 ## GUI 参数
 
