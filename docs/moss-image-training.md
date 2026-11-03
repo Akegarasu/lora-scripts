@@ -12,7 +12,7 @@
 自备更旧的 CUDA 环境时，需通过 `ONNXRUNTIME_VERSION` 指定兼容版本，或使用 `--skip-prepare-onnxruntime` 自行维护。
 已移除与 NumPy 2 不兼容的旧 glibc → ONNX Runtime 1.16.3 自动降级。
 
-应用依赖一并迁移至 FastAPI 0.162、Pydantic 2.14.2、httpx 0.28 和 NumPy 2.2.6，移除了默认流程不再需要的 pytorch-lightning、open-clip-torch 和 pandas。应将代码与依赖一起升级；发布时使用包含配套迁移的新 tag，补打旧 tag 仍读取该 tag 原有的根依赖。
+应用依赖一并迁移至 FastAPI 0.162、Pydantic 2.14.2、httpx 0.28 和 NumPy 2.2.6，移除了默认流程不再需要的 pytorch-lightning、open-clip-torch 和 pandas。应将代码与依赖一起升级；手动发布时选择包含配套迁移的分支，可将新构建上传到已有 Release，无需新建 tag。推送 tag 和发布 Release 事件仍构建对应 tag 的源码。
 
 从旧依赖栈迁移时建议保留原 `venv`，另建 Python 3.11 环境再运行安装器。仅更新 requirements 不会自动移除旧环境中的 open-clip-torch 等遗留包，它们对旧 protobuf 的约束可能与新依赖冲突。
 

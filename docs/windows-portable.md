@@ -18,12 +18,13 @@ cu128 是 CUDA/驱动兼容回退，两个包的 PyTorch 均要求 Turing 或更
 
 1. **发布 Release**：发布正式版或预发布版时，自动构建该 Release 的 tag 并上传附件。
 2. **手动补包或重跑**：在 Actions 中选择 **Release frontend and Windows portable** → **Run workflow**，
-   填写已有 Git `tag`。构建源码取自这个 tag；不会用所选工作流分支的 HEAD 替代，也不会创建或移动 tag。Release 不存在时会自动创建。
+   选择包含所需代码的分支，填写目标 Release 的已有 Git `tag`。构建使用所选分支在触发时的最新提交，`tag` 只指定上传目标；无需创建新 tag，也不会移动原 tag。Release 不存在时会自动创建。
 3. **推送 `v*` tag**：发布前端和 Release 后，通过 `workflow_call` 显式调用便携版流程。
    这是因为 [GITHUB_TOKEN 创建的 Release 不会触发新的 Release 工作流](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
-打包脚本、CUDA 配置和启动器取自本次工作流的 commit，应用源码及根 `requirements.txt` 取自目标 tag。
-单纯修复打包工具后可以补打兼容的旧 tag；本次 FastAPI/Pydantic、NumPy 等升级涉及配套代码迁移，应发布包含这些修改的新 tag，不能靠补打旧源码获得新的基础依赖。
+打包脚本、构建工具依赖和启动器取自本次工作流的 commit；应用源码、根 `requirements.txt` 以及 PyTorch/ONNX 配置均取自本次构建确定的源码提交。
+手动运行时，这个提交是所选分支在触发时的最新提交；推送 tag 或发布 Release 时则是对应 tag 的提交。
+更新代码或依赖后，选择包含修改的分支并填写原 Release 的 tag，即可覆盖附件。缺少对应 CUDA 配置时，构建会在下载或安装依赖前说明所用源码提交并停止。
 目标 tag 无需与 `version.json` 的 `tag` 一致。
 构建信息仍使用源码中的应用与前端版本，详见[前端版本与分发说明](frontend-releases.md)。
 重跑会覆盖同名附件；只需内置 `GITHUB_TOKEN` 的 `contents: write` 权限，无需额外 PAT。
@@ -33,7 +34,7 @@ cu128 是 CUDA/驱动兼容回退，两个包的 PyTorch 均要求 Turing 或更
 前端只构建一次，Windows 打包任务直接使用同一轮 CI 的前端制品：
 
 ```text
-推送 tag / 发布 Release / 手动指定 tag
+推送 tag / 发布 Release / 手动选择分支和目标 Release tag
   └─ 读取构建信息 → 安装锁定依赖（pnpm 缓存）→ 前端测试 → 类型检查与构建
       └─ 打包 frontend-dist.zip + SHA-256 → 保存 Actions artifact
           └─ 上传 GitHub Release（已存在时覆盖同名附件）
@@ -43,7 +44,7 @@ cu128 是 CUDA/驱动兼容回退，两个包的 PyTorch 均要求 Turing 或更
 ```
 
 pnpm 版本固定在 `frontend/package.json` 的 `packageManager`，CI 从该字段安装，避免多处维护版本号。
-前后端均使用 tag 解析出的同一个 commit，手动执行时也不会混入工作流分支的源码。
+前端和两个 Windows 包均使用本次构建确定的同一个 commit；任务执行期间分支继续更新也不会混入后续提交。
 同 tag 的发布串行执行，避免并发覆盖附件。Windows 使用同一轮 matrix，设置 `fail-fast: false`；一个 CUDA 包失败不会取消另一个包，附件名也不会互相覆盖。Jihulab 镜像失败不会阻断 Windows 任务。
 Actions artifact 保留 7 天；期间可用 **Re-run failed jobs** 重试失败的上传或便携包任务，复用已有前端构建。
 超过保留期则重新运行整个工作流。

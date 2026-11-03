@@ -133,9 +133,9 @@ docker build --build-arg PYTORCH_IMAGE=pytorch/pytorch:2.11.0-cuda12.8-cudnn9-ru
 
 ## 发布
 
-推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和两个 Windows 便携包。手动运行需填写已有 Git tag，工作流会在需要时创建 Release。发布 tag 无需与 `version.json` 或 `frontend/package.json` 中的版本一致。
+推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和两个 Windows 便携包。手动运行使用所选分支在触发时的最新提交；填写的已有 Git tag 只指定上传目标 Release，工作流会在需要时创建该 Release。发布 tag 无需与 `version.json` 或 `frontend/package.json` 中的版本一致。
 
-本次依赖升级应使用包含配套代码迁移的新 tag 发布。补打旧 tag 仍使用该 tag 原有的应用依赖，不会把旧源码升级为新版依赖栈。
+应用代码及其依赖配置始终取自同一源码提交。更新后可选择包含修改的分支手动运行，覆盖已有 Release 的附件，无需创建新 tag；推送 tag 和发布 Release 事件仍构建对应 tag 的源码。
 
 完整流程见[前端版本准备](docs/frontend-releases.md)和 [Windows 打包与重试说明](docs/windows-portable.md)。
 

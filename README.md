@@ -133,9 +133,9 @@ For script-based training, edit and run `scripts/train.ps1` on Windows or `scrip
 
 ## Releases
 
-Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and both Windows portable packages. Manual runs require an existing Git tag; the workflow creates the Release if needed. The release tag does not have to match the versions in `version.json` or `frontend/package.json`.
+Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and both Windows portable packages. Manual runs build the selected branch's latest commit at dispatch time; the existing Git tag input only identifies the destination Release, which is created if needed. The release tag does not have to match the versions in `version.json` or `frontend/package.json`.
 
-Release this dependency upgrade from a tag containing the accompanying code changes. Rebuilding an older tag uses its original application requirements and does not upgrade that source to the new dependency stack.
+Application code and runtime dependency profiles always come from the same source commit. To replace an existing Release's assets with updated code, manually run the workflow from a branch containing the changes; no new tag is needed. Tag pushes and Release events still build the corresponding tag's source.
 
 See [frontend release preparation](docs/frontend-releases.md) and [Windows packaging and retry instructions](docs/windows-portable.md) for the complete process.
 

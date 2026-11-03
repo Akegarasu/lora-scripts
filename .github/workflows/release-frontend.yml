@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing Git tag to build and publish
+        description: Release tag to upload to (build source is the selected branch)
         required: true
         type: string
 
@@ -32,10 +32,12 @@ jobs:
     env:
       RELEASE_TAG: ${{ inputs.tag || github.event.release.tag_name || github.ref_name }}
     steps:
-      - name: Checkout release tag
+      - name: Checkout build source
         uses: actions/checkout@v6
         with:
-          ref: refs/tags/${{ env.RELEASE_TAG }}
+          # Manual runs build the selected ref's commit at dispatch time.
+          # The input tag only selects the Release receiving the artifacts.
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || format('refs/tags/{0}', env.RELEASE_TAG) }}
           persist-credentials: false
 
       - name: Setup Python
@@ -57,6 +59,8 @@ jobs:
           # Release naming is independent of the application's build metadata.
           channel = "stable" if re.fullmatch(r"v?\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?", tag) else "prerelease"
           commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          print(f"Build source commit: {commit}")
+          print(f"Release destination: {tag}")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
               output.write(f"tag={tag}\ncommit={commit}\nchannel={channel}\n")
               output.write(f"frontend-version={release.frontend.version}\n")

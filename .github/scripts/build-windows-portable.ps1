@@ -34,8 +34,6 @@ if ($env:OS -ne "Windows_NT") {
 $repositoryRoot = (Resolve-Path -LiteralPath $SourceDirectory).Path
 $portableConfig = Join-Path $PSScriptRoot "../portable"
 $dependencyProfiles = Join-Path $PSScriptRoot "../../requirements"
-$gpuRequirements = Join-Path $dependencyProfiles "pytorch-$Cuda.txt"
-$onnxRequirements = Join-Path $dependencyProfiles "onnxruntime-$Cuda.txt"
 $cudaVersion = if ($Cuda -eq "cu130") { "13.0" } else { "12.8" }
 $xformersCuda = if ($Cuda -eq "cu130") { 1300 } else { 1208 }
 $frontendDist = Join-Path $repositoryRoot "frontend/dist"
@@ -55,8 +53,6 @@ if ($hostMinor.Trim() -ne $expectedMinor) {
     throw "The full host Python must be $expectedMinor x64 to build compatible wheels."
 }
 $sevenZip = (Get-Command 7z -CommandType Application -TotalCount 1 -ErrorAction Stop).Source
-& $hostPython -m pip install --upgrade -r (Join-Path $dependencyProfiles "tooling.txt")
-Assert-NativeSuccess "Packaging tool installation"
 
 if (!$OutputDirectory) {
     $temporaryBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
@@ -85,6 +81,22 @@ Assert-NativeSuccess "Source export"
 & tar -xf $sourceArchive -C $stageRoot
 Assert-NativeSuccess "Source extraction"
 
+# Runtime dependencies belong to the exported application revision. Mixing an
+# old tag's requirements.txt with newer workflow CUDA/ONNX profiles can make
+# resolution impossible, and the app reads these same profiles at startup.
+$rootRequirements = Join-Path $stageRoot "requirements.txt"
+$gpuRequirements = Join-Path $stageRoot "requirements/pytorch-$Cuda.txt"
+$onnxRequirements = Join-Path $stageRoot "requirements/onnxruntime-$Cuda.txt"
+foreach ($requirementFile in @($rootRequirements, $gpuRequirements, $onnxRequirements)) {
+    if (!(Test-Path -LiteralPath $requirementFile -PathType Leaf)) {
+        $sourceCommit = & git -C $repositoryRoot rev-parse --short HEAD
+        Assert-NativeSuccess "Source revision lookup"
+        throw "Application source $sourceCommit is missing $requirementFile. Select a source branch or tag containing the dual-CUDA dependency configuration."
+    }
+}
+& $hostPython -m pip install --upgrade -r (Join-Path $dependencyProfiles "tooling.txt")
+Assert-NativeSuccess "Packaging tool installation"
+
 foreach ($relativePath in @(".github", ".agents", ".vscode", "frontend-old", "frontend")) {
     Remove-BuildPath -Path (Join-Path $stageRoot $relativePath) -Root $stageRoot
 }
@@ -107,7 +119,6 @@ $embeddedPython = Join-Path $pythonRoot "python.exe"
 $isolatedPath = Join-Path $pythonRoot "python$($pythonRelease.Major)$($pythonRelease.Minor)._pth"
 Remove-Item -LiteralPath $isolatedPath
 
-$rootRequirements = Join-Path $stageRoot "requirements.txt"
 $portableRequirements = Join-Path $portableConfig "requirements.txt"
 # xformers has identical wheel names on PyPI/cu128/cu130, but different CUDA
 # binaries. Download the GPU wheels from exactly one index and pass their paths
