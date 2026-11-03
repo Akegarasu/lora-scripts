@@ -37,6 +37,16 @@ jobs:
           ref: ${{ inputs.source-sha }}
           persist-credentials: false
 
+      - name: Checkout packaging tools from the workflow revision
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .release-tools
+          sparse-checkout: |
+            .github/scripts
+            .github/portable
+          persist-credentials: false
+
       - name: Setup Python for building wheels
         uses: actions/setup-python@v6
         with:
@@ -68,7 +78,8 @@ jobs:
 
       - name: Build and test portable archive
         run: >-
-          ./.github/scripts/build-windows-portable.ps1
+          ./.release-tools/.github/scripts/build-windows-portable.ps1
+          -SourceDirectory "$env:GITHUB_WORKSPACE"
           -OutputDirectory "$env:RUNNER_TEMP/windows-portable"
           -PythonVersion "$env:PYTHON_VERSION"
 

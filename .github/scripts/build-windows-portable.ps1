@@ -2,7 +2,8 @@
 param(
     [string]$OutputDirectory,
     [ValidatePattern('^\d+\.\d+\.\d+$')]
-    [string]$PythonVersion = "3.11.9"
+    [string]$PythonVersion = "3.11.9",
+    [string]$SourceDirectory = (Join-Path $PSScriptRoot "../..")
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,7 +29,8 @@ function Remove-BuildPath([string]$Path, [string]$Root) {
 if ($env:OS -ne "Windows_NT") {
     throw "This builder requires Windows x64."
 }
-$repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$repositoryRoot = (Resolve-Path -LiteralPath $SourceDirectory).Path
+$portableConfig = Join-Path $PSScriptRoot "../portable"
 $frontendDist = Join-Path $repositoryRoot "frontend/dist"
 foreach ($file in @("index.html", "build-info.json")) {
     if (!(Test-Path -LiteralPath (Join-Path $frontendDist $file) -PathType Leaf)) {
@@ -36,7 +38,8 @@ foreach ($file in @("index.html", "build-info.json")) {
     }
 }
 
-$hostPython = (Get-Command python -CommandType Application -ErrorAction Stop).Source
+# Resolve one executable in PATH order; hosted runners contain several Pythons.
+$hostPython = (Get-Command python -CommandType Application -TotalCount 1 -ErrorAction Stop).Source
 $pythonRelease = [version]$PythonVersion
 $expectedMinor = "$($pythonRelease.Major).$($pythonRelease.Minor)"
 $hostMinor = & $hostPython -c "import struct, sys; assert struct.calcsize('P') == 8; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
@@ -44,7 +47,7 @@ Assert-NativeSuccess "Host Python check"
 if ($hostMinor.Trim() -ne $expectedMinor) {
     throw "The full host Python must be $expectedMinor x64 to build compatible wheels."
 }
-$sevenZip = (Get-Command 7z -CommandType Application -ErrorAction Stop).Source
+$sevenZip = (Get-Command 7z -CommandType Application -TotalCount 1 -ErrorAction Stop).Source
 
 if (!$OutputDirectory) {
     $temporaryBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
@@ -77,8 +80,8 @@ foreach ($relativePath in @(".github", ".agents", ".vscode", "frontend-old", "fr
 }
 New-Item -ItemType Directory -Path (Join-Path $stageRoot "frontend") | Out-Null
 Copy-Item -LiteralPath $frontendDist -Destination (Join-Path $stageRoot "frontend/dist") -Recurse
-Copy-Item -LiteralPath (Join-Path $repositoryRoot ".github/portable/run_gui.bat") -Destination $stageRoot
-Copy-Item -LiteralPath (Join-Path $repositoryRoot ".github/portable/README.txt") -Destination (Join-Path $stageRoot "README-portable.txt")
+Copy-Item -LiteralPath (Join-Path $portableConfig "run_gui.bat") -Destination $stageRoot
+Copy-Item -LiteralPath (Join-Path $portableConfig "README.txt") -Destination (Join-Path $stageRoot "README-portable.txt")
 foreach ($directory in @("config", "models", "train", "output", "logs", "huggingface")) {
     New-Item -ItemType Directory -Path (Join-Path $stageRoot $directory) -Force | Out-Null
 }
@@ -94,7 +97,7 @@ $isolatedPath = Join-Path $pythonRoot "python$($pythonRelease.Major)$($pythonRel
 Remove-Item -LiteralPath $isolatedPath
 
 $rootRequirements = Join-Path $stageRoot "requirements.txt"
-$portableRequirements = Join-Path $repositoryRoot ".github/portable/requirements.txt"
+$portableRequirements = Join-Path $portableConfig "requirements.txt"
 & $hostPython -m pip wheel --wheel-dir $wheelhouse --prefer-binary --no-cache-dir `
     --extra-index-url https://download.pytorch.org/whl/cu128 `
     -r $rootRequirements -r $portableRequirements
@@ -136,7 +139,7 @@ try {
     }
 }
 
-& $hostPython (Join-Path $repositoryRoot ".github/scripts/smoke_windows_portable.py") $stageRoot
+& $hostPython (Join-Path $PSScriptRoot "smoke_windows_portable.py") $stageRoot
 Assert-NativeSuccess "Portable application smoke test"
 
 Push-Location $workRoot

@@ -16,7 +16,8 @@
 3. **推送 `v*` tag**：发布前端和 Release 后，通过 `workflow_call` 显式调用便携版流程。
    这是因为 [GITHUB_TOKEN 创建的 Release 不会触发新的 Release 工作流](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
-目标 tag 必须已包含便携版构建脚本，但无需与 `version.json` 的 `tag` 一致。
+打包脚本、便携版依赖配置和启动器取自本次工作流的 commit，应用源码取自目标 tag；修复打包流程后可以补打旧 tag。
+目标 tag 无需与 `version.json` 的 `tag` 一致。
 构建信息仍使用源码中的应用与前端版本，详见[前端版本与分发说明](frontend-releases.md)。
 重跑会覆盖同名附件；只需内置 `GITHUB_TOKEN` 的 `contents: write` 权限，无需额外 PAT。
 
@@ -38,6 +39,7 @@ pnpm 版本固定在 `frontend/package.json` 的 `packageManager`，CI 从该字
 同 tag 的发布串行执行，避免并发覆盖附件；Jihulab 镜像失败不会阻断 Windows 任务。
 Actions artifact 保留 7 天；期间可用 **Re-run failed jobs** 重试失败的上传或便携包任务，复用已有前端构建。
 超过保留期则重新运行整个工作流。
+如果修改了工作流或打包工具，应从包含修复的分支执行 **Run workflow** 并填写原 tag；重试旧运行不会载入新修复。
 
 ## 构建内容与验证
 
