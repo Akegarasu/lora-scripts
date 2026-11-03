@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Literal, Optional, Union
 
-from pydantic import BaseModel, Field, root_validator, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from mikazuki.captioning.models import SAFE_CAPTION_EXTENSIONS
 
@@ -24,8 +24,7 @@ TagEditorChangeState = Literal[
 
 
 class StrictModel(BaseModel):
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
 
 class TagEditorInspectRequest(StrictModel):
@@ -36,7 +35,8 @@ class TagEditorInspectRequest(StrictModel):
     maxImages: int = Field(default=10_000, ge=1, le=50_000)
     initialLimit: int = Field(default=100, ge=1, le=200)
 
-    @validator("captionExtension")
+    @field_validator("captionExtension")
+    @classmethod
     def validate_caption_extension(cls, value: str) -> str:
         extension = value.strip().lower()
         if not extension.startswith("."):
@@ -108,26 +108,26 @@ class TagEditorItemsResponse(StrictModel):
 
 class TagEditorScope(StrictModel):
     mode: Literal["include", "filter"]
-    includeIds: List[str] = Field(default_factory=list, max_items=5_000)
+    includeIds: List[str] = Field(default_factory=list, max_length=5_000)
     query: str = Field(default="", max_length=200)
     state: TagEditorItemState = "all"
-    exclusions: List[str] = Field(default_factory=list, max_items=5_000)
+    exclusions: List[str] = Field(default_factory=list, max_length=5_000)
 
-    @root_validator(skip_on_failure=True)
-    def validate_scope(cls, values):
-        mode = values.get("mode")
-        include_ids = values.get("includeIds") or []
-        exclusions = values.get("exclusions") or []
+    @model_validator(mode="after")
+    def validate_scope(self) -> TagEditorScope:
+        mode = self.mode
+        include_ids = self.includeIds
+        exclusions = self.exclusions
         if len(include_ids) != len(set(include_ids)) or len(exclusions) != len(set(exclusions)):
             raise ValueError("作用域中的项目 id 不能重复")
         if mode == "include":
             if not include_ids:
                 raise ValueError("显式选择作用域至少需要一个项目")
-            if exclusions or values.get("query") or values.get("state") != "all":
+            if exclusions or self.query or self.state != "all":
                 raise ValueError("显式选择作用域不能同时携带筛选条件或排除项")
         elif include_ids:
             raise ValueError("筛选作用域不能同时携带显式选择项目")
-        return values
+        return self
 
 
 class TagEditorSetOperation(StrictModel):
@@ -138,12 +138,13 @@ class TagEditorSetOperation(StrictModel):
 class TagEditorAddOperation(StrictModel):
     type: Literal["add"]
     mode: Literal["tags", "text"] = "tags"
-    values: List[str] = Field(min_items=1, max_items=1_000)
+    values: List[str] = Field(min_length=1, max_length=1_000)
     position: Literal["start", "end"] = "end"
     separator: str = Field(default=", ", min_length=1, max_length=32)
     deduplicate: bool = True
 
-    @validator("values")
+    @field_validator("values")
+    @classmethod
     def validate_values(cls, value: List[str]) -> List[str]:
         normalized = [item.strip() for item in value if item.strip()]
         if not normalized:
@@ -156,12 +157,13 @@ class TagEditorAddOperation(StrictModel):
 class TagEditorRemoveOperation(StrictModel):
     type: Literal["remove"]
     mode: Literal["tags", "text"] = "tags"
-    values: List[str] = Field(min_items=1, max_items=1_000)
+    values: List[str] = Field(min_length=1, max_length=1_000)
     matchCase: bool = False
     wholeWord: bool = True
     separator: str = Field(default=", ", min_length=1, max_length=32)
 
-    @validator("values")
+    @field_validator("values")
+    @classmethod
     def validate_values(cls, value: List[str]) -> List[str]:
         normalized = [item.strip() for item in value if item.strip()]
         if not normalized:
@@ -203,7 +205,7 @@ TagEditorOperation = Union[
 class TagEditorPreviewRequest(StrictModel):
     revision: str
     scope: TagEditorScope
-    operations: List[TagEditorOperation] = Field(min_items=1, max_items=20)
+    operations: List[TagEditorOperation] = Field(min_length=1, max_length=20)
     sampleLimit: int = Field(default=30, ge=1, le=50)
 
 

@@ -55,11 +55,15 @@ The separate Tag Editor supports individual edits, filtering, tag suggestions, b
 
 Download `lora-scripts_windows_portable_nvidia.7z` from [Releases](https://github.com/Akegarasu/lora-scripts/releases), extract the complete archive, and double-click `run_gui.bat` inside it.
 
-The package includes Python, CUDA 12.8 / PyTorch 2.7.0 dependencies and the built frontend. It needs Windows x64 and a compatible NVIDIA driver; no separate Python, Node.js or CUDA Toolkit installation is required. Model weights and datasets are supplied separately. See [portable usage and release automation](docs/windows-portable.md).
+The default package includes Python 3.11.9, PyTorch 2.14.1 / CUDA 13.0 and the built frontend. A CUDA 12.8 fallback is available as `lora-scripts_windows_portable_nvidia_cu128.7z`, with PyTorch 2.11.0. Both include the matching ONNX GPU runtime and need Windows x64 plus a compatible NVIDIA driver; no separate Python, Node.js or CUDA Toolkit installation is required.
+
+The default CUDA 13 package needs an R580 or newer driver. The cu128 package offers a different CUDA/driver combination; both packages require Turing or newer GPUs, so it does not restore Pascal or Volta support. Model weights and datasets are supplied separately. See [portable selection and release automation](docs/windows-portable.md).
 
 ## Install from source
 
-Python 3.11 x64 is recommended; Python 3.10 is also supported. Git is required for the source checkout. Building the frontend also requires Node.js 22 with Corepack; Node.js is not needed to run a built frontend. The installers provide PyTorch 2.7.0, torchvision 0.22.0 and CUDA 12.8. To use another compatible PyTorch build, install it into the project environment first and pass `-SkipTorch` on Windows or `--skip-torch` on Linux; PyTorch must be at least 2.6.
+Python 3.11 x64 is the recommended and tested version for the default CUDA 13.0 installation. Python 3.10 source installations must select the cu128 profile. Git is required for the source checkout. Building the frontend requires Node.js 22 LTS (at least 22.12) or 24+ with Corepack; Node.js is not needed to run a built frontend.
+
+The default installer provides PyTorch 2.14.1, torchvision 0.29.1 and xFormers 0.0.35 for CUDA 13.0. Select `-Cuda cu128` on Windows or `--cuda cu128` on Linux for PyTorch 2.11.0 / torchvision 0.26.0. To keep another compatible PyTorch build, install it into the project environment first and pass `-SkipTorch` or `--skip-torch`; PyTorch must be at least 2.6. Startup selects ONNX Runtime to match the installed CUDA PyTorch build.
 
 ```sh
 git clone https://github.com/Akegarasu/lora-scripts
@@ -89,6 +93,7 @@ Run from the repository root in PowerShell:
 ```
 
 Use `.\scripts\install-cn.ps1` instead for the installation mirrors in mainland China.
+For the CUDA 12.8 profile, use `.\scripts\install.ps1 -Cuda cu128` or `.\scripts\install-cn.ps1 -Cuda cu128`.
 
 ### Linux
 
@@ -101,16 +106,23 @@ bash scripts/run_gui.sh
 ```
 
 The GUI shell script uses the active Python environment, so activate `venv` in each new terminal. Open [http://127.0.0.1:28000](http://127.0.0.1:28000) after startup.
+Use `bash scripts/install.bash --cuda cu128` to install the CUDA 12.8 profile.
 
 After updating Python dependencies, rerun the installer and restart the GUI. Released versions with frontend auto-download enabled can obtain their matching frontend from GitHub Release, Jihulab or a static mirror. Development checkouts still use the build steps above; see [frontend versioning and distribution](docs/frontend-releases.md).
 
 ### Docker
 
-The Dockerfile builds the frontend and packages this checkout with PyTorch 2.7.0 / CUDA 12.8:
+The Dockerfile builds the frontend and packages this checkout with PyTorch 2.14.1 / CUDA 13.0:
 
 ```sh
 docker build -t lora-scripts:local .
 docker run --gpus all -p 28000:28000 lora-scripts:local
+```
+
+To build the CUDA 12.8 variant, set both build arguments:
+
+```sh
+docker build --build-arg PYTORCH_IMAGE=pytorch/pytorch:2.11.0-cuda12.8-cudnn9-runtime --build-arg CUDA_FLAVOR=cu128 -t lora-scripts:cu128 .
 ```
 
 The host needs a compatible NVIDIA driver and NVIDIA Container Toolkit. Mount datasets, model files and outputs into the corresponding directories under `/app/lora-scripts` to preserve them outside the container.
@@ -121,7 +133,9 @@ For script-based training, edit and run `scripts/train.ps1` on Windows or `scrip
 
 ## Releases
 
-Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and Windows portable package. Manual runs require an existing Git tag; the workflow creates the Release if needed. The release tag does not have to match the versions in `version.json` or `frontend/package.json`.
+Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and both Windows portable packages. Manual runs require an existing Git tag; the workflow creates the Release if needed. The release tag does not have to match the versions in `version.json` or `frontend/package.json`.
+
+Release this dependency upgrade from a tag containing the accompanying code changes. Rebuilding an older tag uses its original application requirements and does not upgrade that source to the new dependency stack.
 
 See [frontend release preparation](docs/frontend-releases.md) and [Windows packaging and retry instructions](docs/windows-portable.md) for the complete process.
 

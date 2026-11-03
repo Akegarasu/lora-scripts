@@ -1,5 +1,4 @@
 import os
-import platform
 import shlex
 import subprocess
 import sys
@@ -10,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 from packaging.version import Version
 
 from mikazuki.log import log
@@ -93,32 +93,60 @@ def validate_requirements(requirements_file: str):
                 run_pip(command, line, live=True)
 
 
+def pinned_requirement_version(requirements_file: Path, package: str) -> str:
+    """Read the project's exact pin that applies to this Python/platform."""
+    for raw_line in requirements_file.read_text(encoding="utf-8").splitlines():
+        line = raw_line.split(" #", 1)[0].strip()
+        if not line or line.startswith(("#", "-")):
+            continue
+        requirement = Requirement(line)
+        if canonicalize_name(requirement.name) != canonicalize_name(package):
+            continue
+        if requirement.marker is not None and not requirement.marker.evaluate():
+            continue
+        for specifier in requirement.specifier:
+            if specifier.operator == "==" and "*" not in specifier.version:
+                return specifier.version
+    raise RuntimeError(f"No matching exact pin for {package} in {requirements_file}")
+
+
 def setup_windows_bitsandbytes():
     if sys.platform != "win32":
         return
 
-    bnb_package = "bitsandbytes==0.46.0"
     bnb_path = Path(sysconfig.get_paths()["purelib"]) / "bitsandbytes"
 
     installed_bnb = is_installed("bitsandbytes")  # don't check version here
     bnb_cuda_setup = any(bnb_path.glob("libbitsandbytes_cuda*.dll"))
 
     if not installed_bnb or not bnb_cuda_setup:
+        bnb_version = pinned_requirement_version(base_dir_path() / "requirements.txt", "bitsandbytes")
+        bnb_package = f"bitsandbytes=={bnb_version}"
         log.error("detected wrong install of bitsandbytes, reinstall it")
-        run_pip("uninstall bitsandbytes -y", "bitsandbytes", live=True)
-        run_pip(f"install {bnb_package}", bnb_package, live=True)
+        run_pip(["uninstall", "-y", "bitsandbytes"], "bitsandbytes", live=True)
+        run_pip(["install", bnb_package], bnb_package, live=True)
 
 
 def setup_onnxruntime(
         onnx_version: Optional[str] = None,
         index_url: Optional[str] = None
 ):
-    if sys.platform == "linux":
-        libc_ver = platform.libc_ver()
-        if libc_ver[0] == "glibc" and Version(libc_ver[1]) <= Version("2.27"):
-            onnx_version = "1.16.3"
+    onnx_version = os.environ.get("ONNXRUNTIME_VERSION") or onnx_version
+    if not onnx_version:
+        import torch
 
-    onnx_version = os.environ.get("ONNXRUNTIME_VERSION", onnx_version)
+        cuda_major = (torch.version.cuda or "").split(".", 1)[0]
+        if cuda_major not in {"", "12", "13"} or (
+            cuda_major == "12" and Version(torch.version.cuda) < Version("12.8")
+        ):
+            raise RuntimeError(
+                f"Cannot choose ONNX Runtime automatically for PyTorch CUDA {torch.version.cuda}. "
+                "Set ONNXRUNTIME_VERSION to a compatible version or pass --skip-prepare-onnxruntime."
+            )
+        profile = "cu130" if cuda_major == "13" else "cu128"
+        onnx_version = pinned_requirement_version(
+            base_dir_path() / "requirements" / f"onnxruntime-{profile}.txt", "onnxruntime-gpu"
+        )
 
     # CPU and GPU distributions own the same files; the GPU package already
     # includes the CPU provider. Repair older installs that shipped both.
@@ -129,11 +157,9 @@ def setup_onnxruntime(
     else:
         cpu_installed = True
 
-    requirement = f"onnxruntime-gpu=={onnx_version}" if onnx_version else "onnxruntime-gpu"
+    requirement = f"onnxruntime-gpu=={onnx_version}"
     gpu_ready = is_installed(requirement)
     if cpu_installed:
-        if gpu_ready and not onnx_version:
-            onnx_version = version("onnxruntime-gpu")
         run_pip(["uninstall", "-y", "onnxruntime", "onnxruntime-gpu"], "ONNX Runtime", live=True)
     elif gpu_ready:
         return

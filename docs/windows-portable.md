@@ -1,10 +1,16 @@
 # Windows NVIDIA 便携版发布
 
 便携包参考 [ComfyUI 的 Windows 打包流程](https://github.com/Comfy-Org/ComfyUI/blob/master/.github/workflows/windows_release_package.yml)，
-使用 Windows runner 构建依赖 wheel、嵌入式 Python 和 7-Zip，输出：
+使用 Windows runner 构建依赖 wheel、嵌入式 Python 和 7-Zip。每轮同时输出两个包及各自的 SHA-256：
 
-- `lora-scripts_windows_portable_nvidia.7z`
-- `lora-scripts_windows_portable_nvidia.7z.sha256`
+| 附件 | CUDA | PyTorch / torchvision | ONNX Runtime GPU |
+| --- | --- | --- | --- |
+| `lora-scripts_windows_portable_nvidia.7z`（默认） | 13.0 | 2.14.1 / 0.29.1 | 1.31.1 |
+| `lora-scripts_windows_portable_nvidia_cu128.7z`（回退） | 12.8 | 2.11.0 / 0.26.0 | 1.26.0 |
+
+校验文件在对应附件名后追加 `.sha256`。两个包均使用 Python 3.11.9 x64 和 xFormers 0.0.35；xFormers 从各自 CUDA 官方索引获取。
+CUDA 13 默认包要求 [R580 或更新驱动](https://docs.nvidia.com/deploy/cuda-compatibility/minor-version-compatibility.html)。
+cu128 是 CUDA/驱动兼容回退，两个包的 PyTorch 均要求 Turing 或更新 GPU；[PyTorch 2.11 的 cu128 构建已移除 Volta](https://dev-discuss.pytorch.org/t/dropping-volta-support-from-cuda-12-8-binaries-for-release-2-11/3290)，也不包含 Pascal、Maxwell 支持。
 
 ## 触发方式
 
@@ -16,7 +22,8 @@
 3. **推送 `v*` tag**：发布前端和 Release 后，通过 `workflow_call` 显式调用便携版流程。
    这是因为 [GITHUB_TOKEN 创建的 Release 不会触发新的 Release 工作流](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
-打包脚本、便携版依赖配置和启动器取自本次工作流的 commit，应用源码取自目标 tag；修复打包流程后可以补打旧 tag。
+打包脚本、CUDA 配置和启动器取自本次工作流的 commit，应用源码及根 `requirements.txt` 取自目标 tag。
+单纯修复打包工具后可以补打兼容的旧 tag；本次 FastAPI/Pydantic、NumPy 等升级涉及配套代码迁移，应发布包含这些修改的新 tag，不能靠补打旧源码获得新的基础依赖。
 目标 tag 无需与 `version.json` 的 `tag` 一致。
 构建信息仍使用源码中的应用与前端版本，详见[前端版本与分发说明](frontend-releases.md)。
 重跑会覆盖同名附件；只需内置 `GITHUB_TOKEN` 的 `contents: write` 权限，无需额外 PAT。
@@ -30,24 +37,27 @@
   └─ 读取构建信息 → 安装锁定依赖（pnpm 缓存）→ 前端测试 → 类型检查与构建
       └─ 打包 frontend-dist.zip + SHA-256 → 保存 Actions artifact
           └─ 上传 GitHub Release（已存在时覆盖同名附件）
-              ├─ Windows：下载同一 artifact → 校验 checksum/版本/commit → 便携包
+              ├─ Windows cu130：下载同一 artifact → 校验 checksum/版本/commit → 默认便携包
+              ├─ Windows cu128：下载同一 artifact → 校验 checksum/版本/commit → 回退便携包
               └─ Jihulab：下载同一 artifact → 校验 checksum → 镜像上传
 ```
 
 pnpm 版本固定在 `frontend/package.json` 的 `packageManager`，CI 从该字段安装，避免多处维护版本号。
 前后端均使用 tag 解析出的同一个 commit，手动执行时也不会混入工作流分支的源码。
-同 tag 的发布串行执行，避免并发覆盖附件；Jihulab 镜像失败不会阻断 Windows 任务。
+同 tag 的发布串行执行，避免并发覆盖附件。Windows 使用同一轮 matrix，设置 `fail-fast: false`；一个 CUDA 包失败不会取消另一个包，附件名也不会互相覆盖。Jihulab 镜像失败不会阻断 Windows 任务。
 Actions artifact 保留 7 天；期间可用 **Re-run failed jobs** 重试失败的上传或便携包任务，复用已有前端构建。
 超过保留期则重新运行整个工作流。
 如果修改了工作流或打包工具，应从包含修复的分支执行 **Run workflow** 并填写原 tag；重试旧运行不会载入新修复。
 
 ## 构建内容与验证
 
-- 使用 Node.js 22、pnpm 10.26.2 和锁文件执行 `pnpm install --frozen-lockfile`、`pnpm test`、`pnpm run build`。
+- 使用 Node.js 22 LTS（至少 22.12）、`packageManager` 固定的 pnpm 和锁文件执行 `pnpm install --frozen-lockfile`、`pnpm test`、`pnpm run build`。
 - 调用前端打包器确认 `build-info.json` 与源码版本一致，同时上传 `frontend-dist.zip` 和 SHA-256；
   将同一份 `frontend/dist` 放入便携包，首次启动无需另行下载前端或安装 Node.js。
-- 使用 Python 3.11.9 x64、PyTorch 2.7.0 / torchvision 0.22.0（CUDA 12.8）、xformers 0.0.30，
-  安装根 `requirements.txt` 和 ONNX Runtime GPU。额外依赖版本集中在 `.github/portable/requirements.txt`。
+- 使用上表中的两组 GPU 运行时，安装根 `requirements.txt` 中的应用与训练依赖。
+  PyTorch/torchvision/xFormers 版本集中在 `requirements/pytorch-cu130.txt` 和 `requirements/pytorch-cu128.txt`；
+  ONNX Runtime 分别由 `requirements/onnxruntime-cu130.txt`、`requirements/onnxruntime-cu128.txt` 管理，构建工具由 `requirements/tooling.txt` 管理。
+- 从所选 PyTorch 官方 CUDA 索引获取 PyTorch、torchvision 和 xFormers，再安装通用依赖，避免同名 xFormers wheel 混入另一种 CUDA 构建。
 - 从 `git archive HEAD` 导出源码，包含 `scripts/dev` 和后端资源；
   不打包本机虚拟环境、模型、数据集、缓存或 Git 凭据。模型和训练数据由用户自行准备。
 - 在完整 Python 中构建 wheels，再安装到便携 Python；不直接复制无法可靠搬移的虚拟环境。
@@ -58,6 +68,11 @@ Actions artifact 保留 7 天；期间可用 **Re-run failed jobs** 重试失败
 - 输出 SHA-256，并在单个附件达到 GitHub 的 2 GiB 上限前报错，避免上传不完整的包。
   压缩前移除三份不参与运行的 Torch 静态构建库，并使用 LZMA2/BCJ2 压缩；保留运行时 DLL。
 
+2026-11-03 的本地验证中，两组依赖均在嵌入式 Python 3.11.9 下通过 `pip check`、GPU 库导入、训练入口、CPU 优化器步骤及 GUI/前端检查。
+该验证将独立环境中已安装的依赖复制到临时便携目录，用于检查嵌入式运行时和压缩体积；尚未在 GitHub Actions 执行完整的 wheel 构建与离线安装流程。
+使用与发布脚本相同的压缩参数，cu130 验证包为 1,857,112,690 bytes（约 1.73 GiB），cu128 为 1,870,451,033 bytes（约 1.74 GiB）；
+两包均通过 `7z t` 完整性检查且低于单附件上限，无需分卷。验证包包含额外的 ONNX 测试依赖，实际 CI 产物大小可能略有差异。
+
 ## 使用
 
 完整解压后，双击 `lora-scripts_windows_portable/run_gui.bat`。启动器会使用包内的
@@ -67,5 +82,7 @@ Actions artifact 保留 7 天；期间可用 **Re-run failed jobs** 重试失败
 run_gui.bat --listen
 ```
 
-需要 Windows x64、支持 CUDA 12.8 的 NVIDIA 驱动；无需预装 Python、Node.js 或 CUDA Toolkit。
+包内 `runtime-info.json` 记录当前 CUDA 配置和 Python 版本，`installed-packages.txt` 记录实际安装的依赖版本。
+
+需要 Windows x64、满足所选包要求的 NVIDIA GPU 和驱动；无需预装 Python、Node.js 或 CUDA Toolkit。
 模型下载和首次生成模型缓存仍可能需要网络。

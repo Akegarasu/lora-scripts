@@ -208,7 +208,7 @@ def compile_draft(
             _write_text(dataset_path, dataset_toml)
         if sample_text and sample_path:
             _write_text(sample_path, sample_text)
-        _write_text(draft_path, draft.json(ensure_ascii=False, indent=2))
+        _write_text(draft_path, draft.model_dump_json(ensure_ascii=False, indent=2))
         _write_text(
             command_path,
             json.dumps({"command": command, "cwd": _display_path(root)}, ensure_ascii=False, indent=2),

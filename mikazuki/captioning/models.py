@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 CaptionOutputMode = Literal["tags", "caption", "hybrid"]
@@ -112,7 +112,8 @@ class CaptionDatasetInspectRequest(BaseModel):
     maxImages: int = Field(default=10_000, ge=1, le=50_000)
     initialLimit: int = Field(default=100, ge=1, le=200)
 
-    @validator("captionExtension")
+    @field_validator("captionExtension")
+    @classmethod
     def validate_caption_extension(cls, value: str) -> str:
         extension = value.strip()
         if not extension.startswith("."):

@@ -1,5 +1,7 @@
 param(
-    [switch]$SkipTorch
+    [switch]$SkipTorch,
+    [ValidateSet("cu130", "cu128")]
+    [string]$Cuda = "cu130"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,16 +27,25 @@ if (Test-Path -LiteralPath "python/python.exe") {
     $pythonExe = Join-Path (Get-Location) "venv/Scripts/python.exe"
 }
 
-Write-Output "安装训练依赖（使用国内 PyPI 镜像；PyTorch 使用官方 CUDA 12.8 源）。"
+$minimumMinor = if (!$SkipTorch -and $Cuda -eq "cu130") { 11 } else { 10 }
+& $pythonExe -c "import sys; minimum = (3, int(sys.argv[1])); sys.exit('Python 3.%s+ is required; use -Cuda cu128 for Python 3.10.' % sys.argv[1]) if sys.version_info < minimum else None" $minimumMinor
+Check-Install "Python 版本不满足要求。"
+& $pythonExe -m pip install --upgrade -r requirements/tooling.txt
+Check-Install "打包工具安装失败。"
+
+Write-Output "安装训练依赖（使用国内 PyPI 镜像；PyTorch 使用官方 $Cuda 源）。"
 if (!$SkipTorch) {
-    & $pythonExe -m pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --index-url https://download.pytorch.org/whl/cu128
-    Check-Install "PyTorch 安装失败。"
-    & $pythonExe -m pip install --no-deps xformers==0.0.30 --index-url https://download.pytorch.org/whl/cu128
-    Check-Install "xformers 安装失败。"
+    # CUDA indexes can publish different xformers wheels under the same version.
+    & $pythonExe -m pip install --upgrade --force-reinstall -r "requirements/pytorch-$Cuda.txt" --index-url "https://download.pytorch.org/whl/$Cuda"
+    Check-Install "PyTorch 和 xformers 安装失败（$Cuda）。"
 }
 
 & $pythonExe -c "import torch; from packaging.version import Version; assert Version(torch.__version__.split('+')[0]) >= Version('2.6'), 'sd-scripts requires PyTorch >= 2.6; install the CUDA build matching your GPU first.'"
 Check-Install "PyTorch 环境不满足要求。"
-& $pythonExe -m pip install --upgrade -r requirements.txt
+$dependencyArguments = @("--upgrade", "-r", "requirements.txt", "-r", "requirements/tooling.txt")
+if (!$SkipTorch) {
+    $dependencyArguments += @("-r", "requirements/onnxruntime-$Cuda.txt", "-c", "requirements/pytorch-$Cuda.txt")
+}
+& $pythonExe -m pip install @dependencyArguments
 Check-Install "训练界面依赖安装失败。"
 Write-Output "安装完毕"

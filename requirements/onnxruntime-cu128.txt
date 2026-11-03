@@ -1,0 +1,3 @@
+# CUDA 12 / cuDNN 9. Newer ONNX Runtime releases default to CUDA 13.
+onnxruntime-gpu==1.26.0; python_version >= "3.11"
+onnxruntime-gpu==1.23.2; python_version < "3.11"

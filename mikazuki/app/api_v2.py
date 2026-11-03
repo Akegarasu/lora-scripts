@@ -52,7 +52,7 @@ async def health():
 async def list_trainers():
     catalog = get_catalog_service()
     return {
-        "trainers": [item.dict() for item in catalog.list_trainers()],
+        "trainers": [item.model_dump() for item in catalog.list_trainers()],
         "manifestHash": catalog.manifest_hash,
     }
 
@@ -62,13 +62,13 @@ async def get_trainer(trainer_id: str):
     trainer = get_catalog_service().get_trainer(trainer_id)
     if trainer is None:
         raise HTTPException(status_code=404, detail="trainer not found")
-    return trainer.dict(exclude_none=True)
+    return trainer.model_dump(exclude_none=True)
 
 
 @router.get("/trainers/{trainer_id}/params")
 async def get_trainer_params(
     trainer_id: str,
-    view: str = Query(default="recommended", regex="^(required|recommended|advanced|all)$"),
+    view: str = Query(default="recommended", pattern="^(required|recommended|advanced|all)$"),
 ):
     catalog = get_catalog_service()
     trainer = catalog.get_trainer(trainer_id)
@@ -91,7 +91,7 @@ async def compile_train_draft(
     result = compile_draft(draft, persist=persist, validate_paths=validate_paths)
     if result.errors and any(item.code == "trainer.not_found" for item in result.errors):
         raise HTTPException(status_code=404, detail=result.errors[0].message)
-    return result.dict(exclude_none=True)
+    return result.model_dump(exclude_none=True)
 
 
 @router.post("/jobs")
@@ -100,7 +100,7 @@ async def create_job(
     validate_paths: bool = Query(default=True),
 ):
     result = await get_job_runner().start_job(draft, validate_paths=validate_paths)
-    payload = result.dict(exclude_none=True)
+    payload = result.model_dump(exclude_none=True)
     if result.compile.errors:
         return JSONResponse(status_code=400, content=payload)
     return payload
@@ -109,7 +109,7 @@ async def create_job(
 @router.get("/jobs")
 async def list_jobs(limit: int = Query(default=50, ge=1, le=200)):
     jobs = get_job_store().list_jobs(limit=limit)
-    return {"jobs": [job.dict(exclude_none=True) for job in jobs]}
+    return {"jobs": [job.model_dump(exclude_none=True) for job in jobs]}
 
 
 @router.get("/jobs/{job_id}")
@@ -117,7 +117,7 @@ async def get_job(job_id: str):
     job = get_job_store().get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
-    return job.dict(exclude_none=True)
+    return job.model_dump(exclude_none=True)
 
 
 @router.get("/jobs/{job_id}/logs")
@@ -230,7 +230,7 @@ async def get_job_events(job_id: str):
                 break
 
             if job.state != last_state:
-                yield _format_sse("state", job.dict(exclude_none=True))
+                yield _format_sse("state", job.model_dump(exclude_none=True))
                 last_state = job.state
 
             cursor, lines = await asyncio.to_thread(read_log_from, job.logPath or "", cursor=cursor)
@@ -249,7 +249,7 @@ async def terminate_job(job_id: str):
     job = get_job_runner().terminate_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="job not found")
-    return job.dict(exclude_none=True)
+    return job.model_dump(exclude_none=True)
 
 
 @router.get("/files")
@@ -262,7 +262,7 @@ async def browse_files(
         items = list_files(kind=kind, root=root, path=path or None)
     except BrowsePathError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    return {"items": [item.dict() for item in items]}
+    return {"items": [item.model_dump() for item in items]}
 
 
 @router.get("/files/file-manager-capability")

@@ -43,7 +43,7 @@ class CaptionStoreTests(unittest.TestCase):
             datasetId="ds_persistence",
             modelId="wd-v1-4-convnext-tagger-v2",
             outputMode="tags",
-            params={"generalThreshold": 0.42},
+            params={"generalThreshold": 0.42, "prompt": "描述这张图片"},
         )
         items = [
             {
@@ -75,7 +75,7 @@ class CaptionStoreTests(unittest.TestCase):
         self.assertEqual(job.logPath, "C:/logs/caption_persistence.log")
         self.assertIsNotNone(job.endedAt)
         self.assertEqual(job.failed, 1)
-        self.assertEqual(stored_request.params, {"generalThreshold": 0.42})
+        self.assertEqual(stored_request.params, {"generalThreshold": 0.42, "prompt": "描述这张图片"})
         self.assertEqual(running_item.state, "failed")
         self.assertIn("服务重启", running_item.error)
         self.assertEqual(pending_item.state, "pending")

@@ -3,7 +3,9 @@ param(
     [string]$OutputDirectory,
     [ValidatePattern('^\d+\.\d+\.\d+$')]
     [string]$PythonVersion = "3.11.9",
-    [string]$SourceDirectory = (Join-Path $PSScriptRoot "../..")
+    [string]$SourceDirectory = (Join-Path $PSScriptRoot "../.."),
+    [ValidateSet("cu130", "cu128")]
+    [string]$Cuda = "cu130"
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,6 +33,11 @@ if ($env:OS -ne "Windows_NT") {
 }
 $repositoryRoot = (Resolve-Path -LiteralPath $SourceDirectory).Path
 $portableConfig = Join-Path $PSScriptRoot "../portable"
+$dependencyProfiles = Join-Path $PSScriptRoot "../../requirements"
+$gpuRequirements = Join-Path $dependencyProfiles "pytorch-$Cuda.txt"
+$onnxRequirements = Join-Path $dependencyProfiles "onnxruntime-$Cuda.txt"
+$cudaVersion = if ($Cuda -eq "cu130") { "13.0" } else { "12.8" }
+$xformersCuda = if ($Cuda -eq "cu130") { 1300 } else { 1208 }
 $frontendDist = Join-Path $repositoryRoot "frontend/dist"
 foreach ($file in @("index.html", "build-info.json")) {
     if (!(Test-Path -LiteralPath (Join-Path $frontendDist $file) -PathType Leaf)) {
@@ -48,6 +55,8 @@ if ($hostMinor.Trim() -ne $expectedMinor) {
     throw "The full host Python must be $expectedMinor x64 to build compatible wheels."
 }
 $sevenZip = (Get-Command 7z -CommandType Application -TotalCount 1 -ErrorAction Stop).Source
+& $hostPython -m pip install --upgrade -r (Join-Path $dependencyProfiles "tooling.txt")
+Assert-NativeSuccess "Packaging tool installation"
 
 if (!$OutputDirectory) {
     $temporaryBase = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [IO.Path]::GetTempPath() }
@@ -55,7 +64,8 @@ if (!$OutputDirectory) {
 }
 $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-$archivePath = Join-Path $OutputDirectory "lora-scripts_windows_portable_nvidia.7z"
+$archiveName = if ($Cuda -eq "cu130") { "lora-scripts_windows_portable_nvidia.7z" } else { "lora-scripts_windows_portable_nvidia_cu128.7z" }
+$archivePath = Join-Path $OutputDirectory $archiveName
 $checksumPath = "$archivePath.sha256"
 foreach ($path in @($archivePath, $checksumPath)) {
     if (Test-Path -LiteralPath $path) {
@@ -82,6 +92,7 @@ New-Item -ItemType Directory -Path (Join-Path $stageRoot "frontend") | Out-Null
 Copy-Item -LiteralPath $frontendDist -Destination (Join-Path $stageRoot "frontend/dist") -Recurse
 Copy-Item -LiteralPath (Join-Path $portableConfig "run_gui.bat") -Destination $stageRoot
 Copy-Item -LiteralPath (Join-Path $portableConfig "README.txt") -Destination (Join-Path $stageRoot "README-portable.txt")
+@{ cuda = $Cuda; python = $PythonVersion } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $stageRoot "runtime-info.json") -Encoding utf8
 foreach ($directory in @("config", "models", "train", "output", "logs", "huggingface")) {
     New-Item -ItemType Directory -Path (Join-Path $stageRoot $directory) -Force | Out-Null
 }
@@ -98,14 +109,20 @@ Remove-Item -LiteralPath $isolatedPath
 
 $rootRequirements = Join-Path $stageRoot "requirements.txt"
 $portableRequirements = Join-Path $portableConfig "requirements.txt"
+# xformers has identical wheel names on PyPI/cu128/cu130, but different CUDA
+# binaries. Download the GPU wheels from exactly one index and pass their paths
+# to the resolver so PyPI cannot substitute a wheel from another CUDA build.
+& $hostPython -m pip download --dest $wheelhouse --only-binary=:all: --no-deps --no-cache-dir `
+    --index-url "https://download.pytorch.org/whl/$Cuda" -r $gpuRequirements
+Assert-NativeSuccess "CUDA wheel download ($Cuda)"
+$gpuWheels = @(Get-ChildItem -LiteralPath $wheelhouse -Filter '*.whl' | ForEach-Object { $_.FullName })
 & $hostPython -m pip wheel --wheel-dir $wheelhouse --prefer-binary --no-cache-dir `
-    --extra-index-url https://download.pytorch.org/whl/cu128 `
-    -r $rootRequirements -r $portableRequirements
+    -r $rootRequirements -r $portableRequirements -r $onnxRequirements @gpuWheels
 Assert-NativeSuccess "Dependency wheel build"
 # The full interpreter builds any source-only wheels; the embedded runtime
 # receives only wheel installs, including its own pip and setuptools.
 & $hostPython -m pip --python $embeddedPython install --no-index --find-links $wheelhouse --no-compile --ignore-installed `
-    -r $rootRequirements -r $portableRequirements
+    -r $rootRequirements -r $portableRequirements -r $gpuRequirements -r $onnxRequirements
 Assert-NativeSuccess "Portable dependency installation"
 Remove-BuildPath -Path $wheelhouse -Root $workRoot
 # Like ComfyUI, omit these large static build libraries from the runtime
@@ -129,7 +146,22 @@ try {
     $env:PYTHONDONTWRITEBYTECODE = "1"
     & $embeddedPython -s -m pip check
     Assert-NativeSuccess "Portable dependency consistency check"
-    & $embeddedPython -s -c "import platform, torch, torchvision, xformers, bitsandbytes, onnxruntime; assert platform.python_version() == '$PythonVersion'; assert torch.version.cuda == '12.8'; print('Portable Python and NVIDIA runtime imports passed')"
+    $runtimeCheck = @'
+import json
+import platform
+import sys
+from pathlib import Path
+import torch, torchvision, xformers, bitsandbytes, onnxruntime
+from xformers import _cpp_lib
+assert platform.python_version() == sys.argv[1]
+assert torch.version.cuda == sys.argv[2], torch.version.cuda
+build = json.loads((Path(xformers.__file__).parent / 'cpp_lib.json').read_text())
+assert build['version']['cuda'] == int(sys.argv[3]), build['version']
+assert _cpp_lib._cpp_library_load_exception is None, _cpp_lib._cpp_library_load_exception
+assert 'CUDAExecutionProvider' in onnxruntime.get_available_providers()
+print(f'Python {platform.python_version()}, torch {torch.__version__}, CUDA {torch.version.cuda}, ONNX {onnxruntime.__version__}: imports passed')
+'@
+    & $embeddedPython -s -c $runtimeCheck $PythonVersion $cudaVersion $xformersCuda
     Assert-NativeSuccess "Portable runtime imports"
     & $embeddedPython -s -m pip freeze --all | Set-Content -LiteralPath (Join-Path $stageRoot "installed-packages.txt") -Encoding utf8
     Assert-NativeSuccess "Installed package manifest"

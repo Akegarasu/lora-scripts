@@ -1,0 +1,5 @@
+# Default NVIDIA runtime. Install only from https://download.pytorch.org/whl/cu130.
+# xformers has the same version/filename on multiple indexes but different CUDA builds.
+torch==2.14.1+cu130
+torchvision==0.29.1+cu130
+xformers==0.0.35

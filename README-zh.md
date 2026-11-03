@@ -55,11 +55,15 @@ Caption 工作台可扫描数据集，使用 WD/CL 标签器、BLIP/GIT 系列�
 
 从 [Releases](https://github.com/Akegarasu/lora-scripts/releases) 下载 `lora-scripts_windows_portable_nvidia.7z`，完整解压后双击包内的 `run_gui.bat`。
 
-包内包含 Python、CUDA 12.8 / PyTorch 2.7.0 依赖和构建好的前端。需要 Windows x64 与兼容的 NVIDIA 驱动，无需另装 Python、Node.js 或 CUDA Toolkit；模型权重与训练数据需自行准备。详见[便携版使用与发布说明](docs/windows-portable.md)。
+默认包包含 Python 3.11.9、PyTorch 2.14.1 / CUDA 13.0 和构建好的前端。另提供 `lora-scripts_windows_portable_nvidia_cu128.7z`，使用 PyTorch 2.11.0 / CUDA 12.8。两者均内置匹配的 ONNX GPU 运行时，需要 Windows x64 与兼容的 NVIDIA 驱动，无需另装 Python、Node.js 或 CUDA Toolkit。
+
+默认 CUDA 13 包需要 R580 或更新驱动。cu128 包提供另一种 CUDA/驱动组合；两个包均要求 Turing 或更新架构，不恢复 Pascal、Volta 显卡支持。模型权重与训练数据需自行准备。详见[便携版选择与发布说明](docs/windows-portable.md)。
 
 ## 从源码安装
 
-推荐 Python 3.11 x64，也支持 Python 3.10；获取源码需要 Git。构建前端还需要带 Corepack 的 Node.js 22，运行已构建的前端不需要 Node.js。安装器默认提供 PyTorch 2.7.0、torchvision 0.22.0 和 CUDA 12.8。如需其他兼容组合，先在项目环境中安装对应的 PyTorch，再传入 Windows 的 `-SkipTorch` 或 Linux 的 `--skip-torch`；PyTorch 至少需要 2.6。
+默认 CUDA 13.0 安装推荐使用已验证的 Python 3.11 x64；Python 3.10 源码安装须选择 cu128。获取源码需要 Git。构建前端还需要带 Corepack 的 Node.js 22 LTS（至少 22.12）或 24+，运行已构建的前端不需要 Node.js。
+
+安装器默认提供 PyTorch 2.14.1、torchvision 0.29.1、xFormers 0.0.35 与 CUDA 13.0。Windows 传入 `-Cuda cu128`、Linux 传入 `--cuda cu128`，可选择 PyTorch 2.11.0 / torchvision 0.26.0。如需保留其他兼容组合，先在项目环境中安装对应的 PyTorch，再传入 `-SkipTorch` 或 `--skip-torch`；PyTorch 至少需要 2.6。启动时会按已安装 PyTorch 的 CUDA 版本选择 ONNX Runtime。
 
 ```sh
 git clone https://github.com/Akegarasu/lora-scripts
@@ -89,6 +93,7 @@ Corepack 使用 `frontend/package.json` 中固定的 pnpm 版本。构建结果�
 ```
 
 使用官方安装源时，将安装命令换成 `.\scripts\install.ps1`。
+安装 CUDA 12.8 版本时使用 `.\scripts\install-cn.ps1 -Cuda cu128` 或 `.\scripts\install.ps1 -Cuda cu128`。
 
 ### Linux
 
@@ -101,16 +106,23 @@ bash scripts/run_gui.sh
 ```
 
 GUI 启动脚本使用当前激活的 Python，因此每次新开终端都需要先激活 `venv`。启动后打开 [http://127.0.0.1:28000](http://127.0.0.1:28000)。
+安装 CUDA 12.8 版本时使用 `bash scripts/install.bash --cuda cu128`。
 
 更新 Python 依赖后，应重新运行安装器并重启 GUI。已启用前端自动下载的发布版本可以从 GitHub Release、Jihulab 或静态镜像获取匹配前端；开发版本仍需按上面的步骤构建。详见[前端版本与分发说明](docs/frontend-releases.md)。
 
 ### Docker
 
-Dockerfile 会构建前端，并将当前源码与 PyTorch 2.7.0 / CUDA 12.8 一起打包：
+Dockerfile 会构建前端，并将当前源码与 PyTorch 2.14.1 / CUDA 13.0 一起打包：
 
 ```sh
 docker build -t lora-scripts:local .
 docker run --gpus all -p 28000:28000 lora-scripts:local
+```
+
+构建 CUDA 12.8 版本时需同时设置两个参数：
+
+```sh
+docker build --build-arg PYTORCH_IMAGE=pytorch/pytorch:2.11.0-cuda12.8-cudnn9-runtime --build-arg CUDA_FLAVOR=cu128 -t lora-scripts:cu128 .
 ```
 
 宿主机需要兼容的 NVIDIA 驱动与 NVIDIA Container Toolkit。请把数据集、模型和输出目录挂载到容器内 `/app/lora-scripts` 下的对应位置，以便在容器外保留文件。
@@ -121,7 +133,9 @@ docker run --gpus all -p 28000:28000 lora-scripts:local
 
 ## 发布
 
-推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和 Windows 便携包。手动运行需填写已有 Git tag，工作流会在需要时创建 Release。发布 tag 无需与 `version.json` 或 `frontend/package.json` 中的版本一致。
+推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和两个 Windows 便携包。手动运行需填写已有 Git tag，工作流会在需要时创建 Release。发布 tag 无需与 `version.json` 或 `frontend/package.json` 中的版本一致。
+
+本次依赖升级应使用包含配套代码迁移的新 tag 发布。补打旧 tag 仍使用该 tag 原有的应用依赖，不会把旧源码升级为新版依赖栈。
 
 完整流程见[前端版本准备](docs/frontend-releases.md)和 [Windows 打包与重试说明](docs/windows-portable.md)。
 

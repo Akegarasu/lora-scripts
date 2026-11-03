@@ -33,6 +33,7 @@ class JobStoreTests(unittest.TestCase):
         store.update_job(
             "job_run_persistence",
             state="succeeded",
+            name="中文训练任务",
             endedAt="2026-08-15T12:30:00+08:00",
             exitCode=0,
         )
@@ -43,7 +44,11 @@ class JobStoreTests(unittest.TestCase):
         self.assertIsNotNone(loaded)
         self.assertEqual(loaded.state, "succeeded")
         self.assertEqual(loaded.exitCode, 0)
-        self.assertTrue((self.root / "run_persistence" / "job.json").is_file())
+        self.assertEqual(loaded.name, "中文训练任务")
+        self.assertIn(
+            "中文训练任务",
+            (self.root / "run_persistence" / "job.json").read_text(encoding="utf-8"),
+        )
 
     def test_nonterminal_job_is_failed_after_service_restart(self) -> None:
         store = JobStore(self.root)

@@ -66,7 +66,7 @@ async def list_caption_dataset_items(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     query: str = Query(default="", max_length=200),
-    caption_state: str = Query(default="all", regex="^(all|with|without|error)$"),
+    caption_state: str = Query(default="all", pattern="^(all|with|without|error)$"),
 ):
     try:
         return await asyncio.to_thread(
@@ -157,7 +157,7 @@ async def list_caption_job_items(
     limit: int = Query(default=100, ge=1, le=500),
     state: Optional[str] = Query(
         default=None,
-        regex="^(pending|running|succeeded|failed|skipped|conflict|canceled)$",
+        pattern="^(pending|running|succeeded|failed|skipped|conflict|canceled)$",
     ),
     query: str = Query(default="", max_length=200),
 ):
@@ -267,7 +267,7 @@ async def get_caption_job_events(
                 break
             if first or job.revision > current:
                 current = job.revision
-                payload = job.dict()
+                payload = job.model_dump()
                 yield _sse("progress", payload, event_id=current)
                 if job.state != last_state:
                     yield _sse("state", payload)

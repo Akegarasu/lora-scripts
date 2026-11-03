@@ -1,3 +1,5 @@
+ARG PYTORCH_IMAGE=pytorch/pytorch:2.14.1-cuda13.0-cudnn9-runtime
+
 FROM node:22-bookworm-slim AS frontend-build
 
 WORKDIR /build/frontend
@@ -9,7 +11,9 @@ COPY frontend/index.html frontend/tsconfig.json frontend/vite.config.ts ./
 COPY version.json /build/version.json
 RUN pnpm run build
 
-FROM pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
+FROM ${PYTORCH_IMAGE}
+
+ARG CUDA_FLAVOR=cu130
 
 EXPOSE 28000
 
@@ -25,8 +29,16 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
 
 WORKDIR /app/lora-scripts
 COPY requirements.txt ./
-RUN python -m pip install --no-cache-dir --no-deps xformers==0.0.30 --index-url https://download.pytorch.org/whl/cu128 \
-    && python -m pip install --no-cache-dir -r requirements.txt
+COPY requirements ./requirements
+RUN case "$CUDA_FLAVOR" in cu130|cu128) ;; *) echo "CUDA_FLAVOR must be cu130 or cu128" >&2; exit 1 ;; esac \
+    && python -m pip install --no-cache-dir --upgrade -r requirements/tooling.txt \
+    && python -m pip install --no-cache-dir --upgrade \
+        --index-url "https://download.pytorch.org/whl/${CUDA_FLAVOR}" \
+        -r "requirements/pytorch-${CUDA_FLAVOR}.txt" \
+    && python -m pip install --no-cache-dir -r requirements.txt \
+        -r requirements/tooling.txt \
+        -r "requirements/onnxruntime-${CUDA_FLAVOR}.txt" \
+        -c "requirements/pytorch-${CUDA_FLAVOR}.txt"
 
 # Package this checkout; local environments, weights and training data stay outside the image.
 COPY gui.py version.json LICENSE ./

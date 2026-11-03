@@ -227,7 +227,7 @@ class CaptionDatasetRegistryTests(unittest.TestCase):
         (self.train / "broken.jpg").write_bytes(b"not-a-jpeg")
 
         response = self.inspect()
-        errors = {item.name: item.dict().get("errorCode") for item in response.items}
+        errors = {item.name: item.model_dump().get("errorCode") for item in response.items}
 
         self.assertIn("image.invalid", errors["broken.jpg"])
         self.assertIn("caption.invalid", errors["invalid.png"])
@@ -275,7 +275,7 @@ class CaptionDatasetRegistryTests(unittest.TestCase):
 
         self.assertEqual(response.dataset.total, 2)
         for item in response.items:
-            public = item.dict()
+            public = item.model_dump()
             self.assertEqual(public.get("errorCode"), "caption.path_collision")
             self.assertFalse(public.get("writable"))
             record = self.registry.get_record(response.dataset.id, item.id)

@@ -38,10 +38,10 @@ async def list_tag_editor_items(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=100, ge=1, le=500),
     query: str = Query(default="", max_length=200),
-    state: str = Query(default="all", regex="^(all|with|missing|empty|errors|duplicate)$"),
+    state: str = Query(default="all", pattern="^(all|with|missing|empty|errors|duplicate)$"),
     sort: str = Query(
         default="path_asc",
-        regex="^(path_asc|path_desc|caption_asc|modified_desc)$",
+        pattern="^(path_asc|path_desc|caption_asc|modified_desc)$",
     ),
 ):
     try:

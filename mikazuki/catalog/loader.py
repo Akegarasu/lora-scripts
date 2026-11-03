@@ -119,7 +119,7 @@ class CatalogService:
                     "title": group.title,
                     "description": group.description,
                     "order": group.order,
-                    "params": [p.dict(exclude_none=True) for p in params_sorted],
+                    "params": [p.model_dump(exclude_none=True) for p in params_sorted],
                 }
             )
 
@@ -192,9 +192,9 @@ class CatalogService:
         return [ParamGroup(**item) for item in overlay.get("groups", [])]
 
     def _merge_groups(self, base: Iterable[ParamGroup], patch: Iterable[ParamGroup]) -> List[ParamGroup]:
-        groups = {group.id: group.dict() for group in base}
+        groups = {group.id: group.model_dump() for group in base}
         for group in patch:
-            groups[group.id] = _deep_update(groups.get(group.id, {}), group.dict())
+            groups[group.id] = _deep_update(groups.get(group.id, {}), group.model_dump())
         return [ParamGroup(**value) for value in groups.values()]
 
     def _include_param(self, param: ParamDefinition, view: str) -> bool:

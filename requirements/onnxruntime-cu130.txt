@@ -1,0 +1,2 @@
+# CUDA 13 / cuDNN 9. Requires Python 3.11+.
+onnxruntime-gpu==1.31.1

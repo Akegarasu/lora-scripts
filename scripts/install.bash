@@ -5,42 +5,54 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 project_dir="$(dirname -- "$script_dir")"
 create_venv=true
 skip_torch=false
+cuda_flavor=cu130
 
 while (( $# > 0 )); do
     case "$1" in
         --disable-venv) create_venv=false; shift ;;
         --skip-torch) skip_torch=true; shift ;;
+        --cuda)
+            if [[ $# -lt 2 || ( "$2" != cu130 && "$2" != cu128 ) ]]; then
+                echo "Usage: $0 [--disable-venv] [--skip-torch] [--cuda cu130|cu128]" >&2
+                exit 2
+            fi
+            cuda_flavor="$2"
+            shift 2
+            ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
     esac
 done
 
 cd "$project_dir"
+if ! python_exe=$(command -v python3 || command -v python); then
+    echo "Python 3.11+ is required for cu130; Python 3.10 is supported with --cuda cu128." >&2
+    exit 1
+fi
 if $create_venv; then
     if [[ ! -f venv/bin/python ]]; then
-        python3 -m venv venv
+        "$python_exe" -m venv venv
     fi
     source venv/bin/activate
+    python_exe="$project_dir/venv/bin/python"
 fi
+
+minimum_minor=10
+if ! $skip_torch && [[ "$cuda_flavor" == cu130 ]]; then
+    minimum_minor=11
+fi
+"$python_exe" -c "import sys; minimum = (3, int(sys.argv[1])); sys.exit('Python 3.%s+ is required; use --cuda cu128 for Python 3.10.' % sys.argv[1]) if sys.version_info < minimum else None" "$minimum_minor"
+"$python_exe" -m pip install --upgrade -r requirements/tooling.txt
 
 if ! $skip_torch; then
-    cuda_version=$(nvidia-smi 2>/dev/null | grep -oP 'CUDA (?:UMD )?Version: \K[\d.]+' | head -1 || true)
-    if [[ -z "$cuda_version" ]]; then
-        cuda_version=$(nvcc --version 2>/dev/null | grep -oP 'release \K[\d.]+' | head -1 || true)
-    fi
-    cuda_major_version=${cuda_version%%.*}
-    cuda_minor_version=${cuda_version#*.}
-    cuda_minor_version=${cuda_minor_version%%.*}
-    echo "CUDA Version: $cuda_version"
-
-    if [[ -n "$cuda_version" ]] && (( cuda_major_version > 12 || (cuda_major_version == 12 && cuda_minor_version >= 8) )); then
-        python -m pip install torch==2.7.0+cu128 torchvision==0.22.0+cu128 --index-url https://download.pytorch.org/whl/cu128
-        python -m pip install --no-deps xformers==0.0.30 --index-url https://download.pytorch.org/whl/cu128
-    else
-        echo "Install a matching CUDA build of PyTorch >= 2.6 and torchvision first, then rerun with --skip-torch (detected CUDA: $cuda_version). See docs/moss-image-training.md." >&2
-        exit 1
-    fi
+    # CUDA indexes can publish different xformers wheels under the same version.
+    "$python_exe" -m pip install --upgrade --force-reinstall -r "requirements/pytorch-$cuda_flavor.txt" \
+        --index-url "https://download.pytorch.org/whl/$cuda_flavor"
 fi
 
-python -c "import torch; from packaging.version import Version; assert Version(torch.__version__.split('+')[0]) >= Version('2.6'), 'sd-scripts requires PyTorch >= 2.6'"
-python -m pip install --upgrade -r requirements.txt
+"$python_exe" -c "import torch; from packaging.version import Version; assert Version(torch.__version__.split('+')[0]) >= Version('2.6'), 'sd-scripts requires PyTorch >= 2.6'"
+dependency_args=(--upgrade -r requirements.txt -r requirements/tooling.txt)
+if ! $skip_torch; then
+    dependency_args+=(-r "requirements/onnxruntime-$cuda_flavor.txt" -c "requirements/pytorch-$cuda_flavor.txt")
+fi
+"$python_exe" -m pip install "${dependency_args[@]}"
 echo "Install completed"

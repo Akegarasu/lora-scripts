@@ -1,0 +1,4 @@
+pip==26.3
+# PyTorch 2.11 Windows wheels require setuptools <82.
+setuptools==81.0.0
+wheel==0.48.0

@@ -146,7 +146,7 @@ class TagEditorService:
                 raise TagEditorConflictError("已有过多数据集正在写入，请等待变更批次完成后再扫描")
             for item in active:
                 self._registry.get_snapshot(item.source_id)
-        source = self._registry.inspect(CaptionDatasetInspectRequest(**request.dict()))
+        source = self._registry.inspect(CaptionDatasetInspectRequest(**request.model_dump()))
         snapshot = TagEditorSnapshot(
             id=source.dataset.id,
             source_id=source.dataset.id,
@@ -365,7 +365,7 @@ class TagEditorService:
         bounded_diffs = [
             TagEditorDiff(
                 **{
-                    **diff.dict(),
+                    **diff.model_dump(),
                     "before": diff.before[:MAX_DIFF_CHARS],
                     "after": diff.after[:MAX_DIFF_CHARS],
                 }
@@ -373,7 +373,7 @@ class TagEditorService:
             for diff in diffs
         ]
         return TagEditorPreviewResponse(
-            **summary.dict(),
+            **summary.model_dump(),
             diffs=bounded_diffs,
             issues=issues[: request.sampleLimit],
         )
@@ -403,7 +403,7 @@ class TagEditorService:
             summary.backupExisting = request.backupExisting
             snapshot.active_change_id = summary.id
             self._persist_summary(summary)
-            return summary.copy(deep=True)
+            return summary.model_copy(deep=True)
 
     def apply_change_set(self, change_set_id: str) -> TagEditorChangeSetSummary:
         try:
@@ -437,7 +437,7 @@ class TagEditorService:
                 summary.canRollback = False
                 summary.endedAt = _now()
                 self._persist_summary(summary)
-                return summary.copy(deep=True)
+                return summary.model_copy(deep=True)
 
     def _apply_change_set(self, change_set_id: str) -> TagEditorChangeSetSummary:
         with self._lock:
@@ -573,11 +573,11 @@ class TagEditorService:
             snapshot.active_change_id = None
             summary.resultRevision = snapshot.revision
             self._persist_summary(summary)
-            return summary.copy(deep=True)
+            return summary.model_copy(deep=True)
 
     def get_change(self, change_set_id: str) -> TagEditorChangeSetSummary:
         with self._lock:
-            return self._get_change(change_set_id).summary.copy(deep=True)
+            return self._get_change(change_set_id).summary.model_copy(deep=True)
 
     def list_changes(self, limit: int = 20) -> TagEditorChangeSetListResponse:
         if limit < 1 or limit > 100:
@@ -585,7 +585,7 @@ class TagEditorService:
         summaries: Dict[str, TagEditorChangeSetSummary] = {}
         with self._lock:
             for change in self._changes.values():
-                summaries[change.summary.id] = change.summary.copy(deep=True)
+                summaries[change.summary.id] = change.summary.model_copy(deep=True)
         if self._history_root.is_dir():
             for path in self._history_root.glob("chg_*/summary.json"):
                 try:
@@ -614,7 +614,7 @@ class TagEditorService:
             total=len(entries),
             offset=offset,
             limit=limit,
-            items=[TagEditorChangeResult.parse_obj(entry) for entry in page],
+            items=[TagEditorChangeResult.model_validate(entry) for entry in page],
         )
 
     def queue_rollback(self, change_set_id: str) -> TagEditorChangeSetSummary:
@@ -630,7 +630,7 @@ class TagEditorService:
             summary.rolledBack = 0
             summary.rollbackConflicts = 0
             self._persist_summary(summary)
-            return summary.copy(deep=True)
+            return summary.model_copy(deep=True)
 
     def rollback_change_set(self, change_set_id: str) -> TagEditorChangeSetSummary:
         with self._lock:
@@ -710,7 +710,7 @@ class TagEditorService:
                 snapshot.revision = _opaque_id("rev")
                 summary.resultRevision = snapshot.revision
             self._persist_summary(summary)
-            return summary.copy(deep=True)
+            return summary.model_copy(deep=True)
 
     def _get_snapshot(self, dataset_id: str) -> TagEditorSnapshot:
         with self._lock:
@@ -881,14 +881,14 @@ class TagEditorService:
 
     def _persist_summary(self, summary: TagEditorChangeSetSummary) -> None:
         root = self._change_root(summary.id, create=True)
-        _atomic_json(root / "summary.json", summary.dict())
+        _atomic_json(root / "summary.json", summary.model_dump())
 
     def _load_summary(self, change_id: str) -> Optional[TagEditorChangeSetSummary]:
         path = self._change_root(change_id) / "summary.json"
         if not path.is_file():
             return None
         try:
-            summary = TagEditorChangeSetSummary.parse_obj(
+            summary = TagEditorChangeSetSummary.model_validate(
                 json.loads(path.read_text(encoding="utf-8"))
             )
             if summary.state in {"queued", "applying", "rolling_back"}:

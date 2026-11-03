@@ -3,7 +3,10 @@ import tempfile
 import unittest
 from importlib.metadata import PackageNotFoundError
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
+
+from packaging.markers import default_environment
 
 from mikazuki import launch_utils
 
@@ -78,35 +81,71 @@ class LaunchUtilsTests(unittest.TestCase):
             launch_utils.prepare_environment(prepare_onnxruntime=False)
             self.assertEqual(Path(validate.call_args.args[0]), launch_utils.base_dir_path() / "requirements.txt")
 
-    def test_missing_bitsandbytes_directory_can_be_repaired(self):
+    def test_missing_bitsandbytes_directory_is_repaired_using_project_pin(self):
         with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "requirements.txt").write_text("bitsandbytes==0.99.0\n", encoding="utf-8")
             with patch.object(launch_utils.sys, "platform", "win32"), patch.object(
                 launch_utils.sysconfig, "get_paths", return_value={"purelib": directory}
+            ), patch.object(
+                launch_utils, "base_dir_path", return_value=root
             ), patch.object(launch_utils, "is_installed", return_value=False), patch.object(
                 launch_utils, "run_pip"
             ) as run_pip:
                 launch_utils.setup_windows_bitsandbytes()
                 self.assertEqual(run_pip.call_count, 2)
-                self.assertEqual(run_pip.call_args.args[0], "install bitsandbytes==0.46.0")
+                self.assertEqual(run_pip.call_args.args[0], ["install", "bitsandbytes==0.99.0"])
 
-    def test_old_glibc_uses_compatible_onnxruntime(self):
-        with patch.object(launch_utils.sys, "platform", "linux"), patch.object(
-            launch_utils.platform, "libc_ver", return_value=("glibc", "2.9")
-        ), patch.dict(launch_utils.os.environ, {}, clear=True), patch.object(
-            launch_utils, "is_installed", return_value=False
-        ), patch.object(launch_utils, "run_pip"), patch.object(launch_utils, "pip_install") as install:
-            launch_utils.setup_onnxruntime()
-            self.assertEqual(install.call_args.args, ("onnxruntime-gpu", "1.16.3"))
+    def test_healthy_bitsandbytes_needs_no_pip_calls(self):
+        with tempfile.TemporaryDirectory() as directory:
+            bnb = Path(directory) / "bitsandbytes"
+            bnb.mkdir()
+            (bnb / "libbitsandbytes_cuda130.dll").touch()
+            with patch.object(launch_utils.sys, "platform", "win32"), patch.object(
+                launch_utils.sysconfig, "get_paths", return_value={"purelib": directory}
+            ), patch.object(launch_utils, "is_installed", return_value=True), patch.object(
+                launch_utils, "run_pip"
+            ) as run_pip:
+                launch_utils.setup_windows_bitsandbytes()
+                run_pip.assert_not_called()
 
-    def test_fresh_onnx_install_uses_only_gpu_distribution(self):
-        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
-            launch_utils.os.environ, {}, clear=True
-        ), patch.object(launch_utils, "version", side_effect=PackageNotFoundError), patch.object(
-            launch_utils, "run_pip"
-        ) as uninstall, patch.object(launch_utils, "pip_install") as install:
-            launch_utils.setup_onnxruntime()
-            uninstall.assert_not_called()
-            install.assert_called_once_with("onnxruntime-gpu", None, index_url=None, live=True)
+    def test_unmanaged_cuda_requires_an_explicit_onnx_override(self):
+        for cuda in ("11.8", "12.4", "14.0"):
+            with self.subTest(cuda=cuda):
+                torch = SimpleNamespace(version=SimpleNamespace(cuda=cuda))
+                with patch.dict("sys.modules", {"torch": torch}), patch.dict(
+                    launch_utils.os.environ, {}, clear=True
+                ), patch.object(launch_utils, "run_pip") as uninstall, patch.object(
+                    launch_utils, "pip_install"
+                ) as install:
+                    with self.assertRaisesRegex(
+                        RuntimeError, "ONNXRUNTIME_VERSION.*--skip-prepare-onnxruntime"
+                    ):
+                        launch_utils.setup_onnxruntime()
+                    uninstall.assert_not_called()
+                    install.assert_not_called()
+
+    def test_default_onnx_pin_follows_cuda_and_python_profiles(self):
+        cases = [
+            ("13.0", "3.11", "1.31.1"),
+            ("12.8", "3.11", "1.26.0"),
+            ("12.8", "3.10", "1.23.2"),
+            (None, "3.11", "1.26.0"),
+        ]
+        for cuda, python, expected in cases:
+            with self.subTest(cuda=cuda, python=python):
+                marker_environment = {**default_environment(), "python_version": python}
+                torch = SimpleNamespace(version=SimpleNamespace(cuda=cuda))
+                with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+                    launch_utils.os.environ, {}, clear=True
+                ), patch.dict("sys.modules", {"torch": torch}), patch(
+                    "packaging.markers.default_environment", return_value=marker_environment
+                ), patch.object(launch_utils, "version", side_effect=PackageNotFoundError), patch.object(
+                    launch_utils, "run_pip"
+                ) as uninstall, patch.object(launch_utils, "pip_install") as install:
+                    launch_utils.setup_onnxruntime()
+                    uninstall.assert_not_called()
+                    install.assert_called_once_with("onnxruntime-gpu", expected, index_url=None, live=True)
 
     def test_matching_onnx_gpu_needs_no_pip_calls(self):
         def installed_version(name):
@@ -114,7 +153,7 @@ class LaunchUtilsTests(unittest.TestCase):
                 return "1.20.1"
             raise PackageNotFoundError(name)
 
-        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+        with patch.dict("sys.modules", {"torch": None}), patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
             launch_utils.os.environ, {}, clear=True
         ), patch.object(launch_utils, "version", side_effect=installed_version), patch.object(
             launch_utils, "run_pip"
@@ -123,17 +162,38 @@ class LaunchUtilsTests(unittest.TestCase):
             uninstall.assert_not_called()
             install.assert_not_called()
 
-    def test_overlapping_onnx_packages_are_replaced_without_version_upgrade(self):
+    def test_matching_default_onnx_pin_needs_no_pip_calls(self):
+        def installed_version(name):
+            if name == "onnxruntime-gpu":
+                return "1.31.1"
+            raise PackageNotFoundError(name)
+
+        torch = SimpleNamespace(version=SimpleNamespace(cuda="13.0"))
+        with patch.dict("sys.modules", {"torch": torch}), patch.object(
+            launch_utils.sys, "platform", "win32"
+        ), patch.dict(launch_utils.os.environ, {}, clear=True), patch.object(
+            launch_utils, "version", side_effect=installed_version
+        ), patch.object(launch_utils, "run_pip") as uninstall, patch.object(
+            launch_utils, "pip_install"
+        ) as install:
+            launch_utils.setup_onnxruntime()
+            uninstall.assert_not_called()
+            install.assert_not_called()
+
+    def test_overlapping_onnx_packages_are_replaced_with_selected_profile(self):
+        torch = SimpleNamespace(version=SimpleNamespace(cuda="13.0"))
         with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
             launch_utils.os.environ, {}, clear=True
-        ), patch.object(launch_utils, "version", return_value="1.20.1"), patch.object(
+        ), patch.dict("sys.modules", {"torch": torch}), patch.object(
+            launch_utils, "version", return_value="1.20.1"
+        ), patch.object(
             launch_utils, "run_pip"
         ) as uninstall, patch.object(launch_utils, "pip_install") as install:
             launch_utils.setup_onnxruntime()
             uninstall.assert_called_once_with(
                 ["uninstall", "-y", "onnxruntime", "onnxruntime-gpu"], "ONNX Runtime", live=True
             )
-            install.assert_called_once_with("onnxruntime-gpu", "1.20.1", index_url=None, live=True)
+            install.assert_called_once_with("onnxruntime-gpu", "1.31.1", index_url=None, live=True)
 
     def test_onnx_environment_pin_replaces_gpu_without_explicit_uninstall(self):
         def installed_version(name):
@@ -141,7 +201,7 @@ class LaunchUtilsTests(unittest.TestCase):
                 return "1.19.0"
             raise PackageNotFoundError(name)
 
-        with patch.object(launch_utils.sys, "platform", "win32"), patch.dict(
+        with patch.dict("sys.modules", {"torch": None}), patch.dict(
             launch_utils.os.environ, {"ONNXRUNTIME_VERSION": "1.20.1"}, clear=True
         ), patch.object(launch_utils, "version", side_effect=installed_version), patch.object(
             launch_utils, "run_pip"

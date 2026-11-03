@@ -33,7 +33,7 @@ class MemoryJobStore:
             job = self._jobs.get(job_id)
             if job is None:
                 return None
-            data = job.dict()
+            data = job.model_dump()
             data.update(fields)
             updated = JobRecord(**data)
             self._jobs[job_id] = updated

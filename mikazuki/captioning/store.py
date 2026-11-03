@@ -185,7 +185,7 @@ class CaptionStore:
                 dataset_id=summary.datasetId,
                 source_root=str(items[0]["source_root"]),
                 log_path=summary.logPath,
-                request_json=request.json(ensure_ascii=False),
+                request_json=request.model_dump_json(ensure_ascii=False),
                 total=len(items),
                 processed=stats["processed"],
                 succeeded=stats["succeeded"],
@@ -221,7 +221,7 @@ class CaptionStore:
             row = self._Job.get_or_none(self._Job.id == job_id)
             if row is None:
                 return None
-            return CaptionJobCreateRequest.parse_raw(row.request_json)
+            return CaptionJobCreateRequest.model_validate_json(row.request_json)
 
     def get_source_root(self, job_id: str) -> Optional[Path]:
         with self._lock, self._database:
@@ -247,7 +247,7 @@ class CaptionStore:
                 raise CaptionStoreConflict("只有已生成并等待复核的任务可以提交")
             (
                 self._Job.update(
-                    commit_json=request.json(ensure_ascii=False),
+                    commit_json=request.model_dump_json(ensure_ascii=False),
                     state="queued",
                     ended_at=None,
                     message="写入任务已进入队列。",
@@ -265,7 +265,7 @@ class CaptionStore:
             row = self._Job.get_by_id(job_id)
             if row.commit_json is None:
                 return CaptionCommitRequest()
-            return CaptionCommitRequest.parse_raw(row.commit_json)
+            return CaptionCommitRequest.model_validate_json(row.commit_json)
 
     def update_job(self, job_id: str, **fields: Any) -> Optional[CaptionJobSummary]:
         columns = {
@@ -377,7 +377,7 @@ class CaptionStore:
         for name, value in fields.items():
             column = columns[name]
             if name == "tags":
-                value = json.dumps([item.dict() for item in value], ensure_ascii=False)
+                value = json.dumps([item.model_dump() for item in value], ensure_ascii=False)
             elif name in {"raw", "existingFingerprint"}:
                 value = _json_dump(value)
             values[column] = value
@@ -596,7 +596,7 @@ class CaptionStore:
             existingText=row.existing_text,
             generatedText=row.generated_text,
             finalText=row.final_text,
-            tags=[CaptionTag.parse_obj(item) for item in json.loads(row.tags_json)],
+            tags=[CaptionTag.model_validate(item) for item in json.loads(row.tags_json)],
             error=row.error,
             written=row.written,
             edited=row.edited,

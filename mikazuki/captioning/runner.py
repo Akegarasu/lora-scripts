@@ -86,7 +86,7 @@ class CaptionRunner:
             validated_params = self.catalog.validate_params(request.modelId, request.params)
             if validated_params.get("minPixels", 0) > validated_params.get("maxPixels", float("inf")):
                 raise ValueError("最小视觉像素不能高于最大视觉像素")
-            request = request.copy(update={"params": validated_params})
+            request = request.model_copy(update={"params": validated_params})
         except ValueError as exc:
             raise CaptionJobValidationError(str(exc)) from exc
 

@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ValidationMessage(BaseModel):
@@ -14,7 +14,8 @@ class RuntimeDraft(BaseModel):
     gpuIds: List[str] = Field(default_factory=list)
     numCpuThreadsPerProcess: int = Field(default=8, ge=1)
 
-    @validator("gpuIds", pre=True)
+    @field_validator("gpuIds", mode="before")
+    @classmethod
     def normalize_gpu_ids(cls, value: Any) -> Any:
         if value is None:
             return []
@@ -31,7 +32,8 @@ class RuntimeDraft(BaseModel):
                 normalized.append(raw_gpu_id)
         return normalized
 
-    @validator("gpuIds")
+    @field_validator("gpuIds")
+    @classmethod
     def reject_duplicate_gpu_ids(cls, value: List[str]) -> List[str]:
         seen = set()
         for gpu_id in value:

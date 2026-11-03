@@ -39,7 +39,7 @@ class JobRunner:
         created_at = _now()
         job_id = f"job_{compiled.runId}"
         log_path = jobs_log_dir() / f"{job_id}.log"
-        artifacts = compiled.artifacts.dict(exclude_none=True)
+        artifacts = compiled.artifacts.model_dump(exclude_none=True)
         env = self._build_env(draft)
 
         job = JobRecord(

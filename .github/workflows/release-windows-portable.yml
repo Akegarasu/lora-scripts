@@ -17,8 +17,17 @@ permissions:
 
 jobs:
   package:
+    name: Package NVIDIA (${{ matrix.cuda }})
     runs-on: windows-2022
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - cuda: cu130
+            asset: lora-scripts_windows_portable_nvidia.7z
+          - cuda: cu128
+            asset: lora-scripts_windows_portable_nvidia_cu128.7z
     permissions:
       contents: write
     defaults:
@@ -30,6 +39,8 @@ jobs:
       PYTHON_VERSION: '3.11.9'
       PYTHONUTF8: '1'
       PIP_DISABLE_PIP_VERSION_CHECK: '1'
+      CUDA_FLAVOR: ${{ matrix.cuda }}
+      PORTABLE_ASSET: ${{ matrix.asset }}
     steps:
       - name: Checkout the same source as the frontend build
         uses: actions/checkout@v6
@@ -45,6 +56,7 @@ jobs:
           sparse-checkout: |
             .github/scripts
             .github/portable
+            requirements
           persist-credentials: false
 
       - name: Setup Python for building wheels
@@ -82,12 +94,13 @@ jobs:
           -SourceDirectory "$env:GITHUB_WORKSPACE"
           -OutputDirectory "$env:RUNNER_TEMP/windows-portable"
           -PythonVersion "$env:PYTHON_VERSION"
+          -Cuda "$env:CUDA_FLAVOR"
 
       - name: Upload portable release assets
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "$env:RELEASE_TAG" --repo "$env:GITHUB_REPOSITORY" --clobber `
-            "$env:RUNNER_TEMP/windows-portable/lora-scripts_windows_portable_nvidia.7z" `
-            "$env:RUNNER_TEMP/windows-portable/lora-scripts_windows_portable_nvidia.7z.sha256"
+            "$env:RUNNER_TEMP/windows-portable/$env:PORTABLE_ASSET" `
+            "$env:RUNNER_TEMP/windows-portable/$env:PORTABLE_ASSET.sha256"
           if ($LASTEXITCODE -ne 0) { throw 'Release asset upload failed.' }

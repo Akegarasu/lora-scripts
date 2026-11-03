@@ -34,7 +34,7 @@ class JobStore:
             job = self._jobs.get(job_id)
             if job is None:
                 return None
-            data = job.dict()
+            data = job.model_dump()
             data.update(fields)
             updated = JobRecord(**data)
             self._persist_job(updated)
@@ -57,12 +57,12 @@ class JobStore:
     def _load_jobs(self) -> None:
         for path in self.root.glob("*/job.json"):
             try:
-                job = JobRecord.parse_raw(path.read_text(encoding="utf-8"))
+                job = JobRecord.model_validate_json(path.read_text(encoding="utf-8"))
             except (OSError, ValueError) as exc:
                 log.warning("Unable to load job manifest %s: %s", path, exc)
                 continue
             if job.state not in TERMINAL_STATES:
-                job = job.copy(
+                job = job.model_copy(
                     update={
                         "state": "failed",
                         "endedAt": job.endedAt or _now(),
@@ -77,7 +77,7 @@ class JobStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path = path.with_suffix(".json.tmp")
         temporary_path.write_text(
-            job.json(ensure_ascii=False, indent=2),
+            job.model_dump_json(ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
         temporary_path.replace(path)

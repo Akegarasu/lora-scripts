@@ -168,7 +168,7 @@ class CaptionModelCatalog:
             status_reason = None if cached else "模型将在首次使用时下载到本地缓存"
             devices = self._device_resolver(descriptor)
 
-        capabilities = descriptor.capabilities.copy(update={"devices": devices})
+        capabilities = descriptor.capabilities.model_copy(update={"devices": devices})
         return CaptionModelSummary(
             id=descriptor.id,
             title=descriptor.title,

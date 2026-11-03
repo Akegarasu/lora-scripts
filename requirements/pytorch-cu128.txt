@@ -1,0 +1,4 @@
+# CUDA 12.8 fallback. Install only from https://download.pytorch.org/whl/cu128.
+torch==2.11.0+cu128
+torchvision==0.26.0+cu128
+xformers==0.0.35

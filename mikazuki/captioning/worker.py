@@ -24,7 +24,7 @@ def generate_job(job_id: str, store: Optional[CaptionStore] = None) -> None:
 
     results = CaptionResultWriter(store, job_id, request, source_root)
     manager = get_caption_model_manager()
-    runtime = request.runtime.copy(update={"keepModelLoaded": True})
+    runtime = request.runtime.model_copy(update={"keepModelLoaded": True})
     store.update_job(
         job_id,
         state="loading",
