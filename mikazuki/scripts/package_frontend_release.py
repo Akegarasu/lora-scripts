@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
 import os
 import sys
 import zipfile
@@ -19,26 +18,8 @@ from mikazuki.frontend_release import (
 def package_frontend(
     root: Path,
     output_dir: Path,
-    *,
-    expected_tag: str = "",
 ) -> tuple[Path, Path]:
     release = load_release_info(root / "version.json")
-    if expected_tag and expected_tag != release.tag:
-        raise FrontendReleaseError(
-            f"发布 tag {expected_tag!r} 与 version.json 中的 {release.tag!r} 不一致"
-        )
-    if release.channel == "stable" and not release.frontend.auto_download:
-        raise FrontendReleaseError("稳定版本必须启用 frontend.autoDownload")
-
-    package_json = root / "frontend" / "package.json"
-    try:
-        package_version = json.loads(package_json.read_text(encoding="utf-8")).get("version")
-    except (OSError, json.JSONDecodeError, AttributeError) as error:
-        raise FrontendReleaseError(f"无法读取 frontend/package.json 版本：{error}") from error
-    if package_version != release.version:
-        raise FrontendReleaseError(
-            "frontend/package.json 的版本与 version.json 不一致"
-        )
 
     dist = root / "frontend" / "dist"
     build = load_frontend_build_info(dist)
@@ -77,13 +58,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="打包 Mikazuki 前端 Release 制品")
     parser.add_argument("--root", type=Path, default=project_root())
     parser.add_argument("--output", type=Path, default=Path("release"))
-    parser.add_argument("--expected-tag", default="")
     args = parser.parse_args()
     try:
         archive, checksum = package_frontend(
             args.root.resolve(),
             args.output.resolve(),
-            expected_tag=args.expected_tag,
         )
     except FrontendReleaseError as error:
         print(f"error: {error}", file=sys.stderr)

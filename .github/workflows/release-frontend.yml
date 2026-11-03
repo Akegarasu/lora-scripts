@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing release tag to rebuild (must match version.json)
+        description: Existing Git tag to build and publish
         required: true
         type: string
 
@@ -43,34 +43,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Validate release metadata before building
+      - name: Collect release build metadata
         id: release
-        env:
-          GH_TOKEN: ${{ github.token }}
-          EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Manual runs update an existing release; tag pushes may create one.
-          if [[ "$EVENT_NAME" != "push" ]]; then
-            gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json tagName
-          fi
           python - <<'PY'
-          import json
           import os
+          import re
           import subprocess
-          from pathlib import Path
           from mikazuki.frontend_release import load_release_info
 
           release = load_release_info()
-          package = json.loads(Path("frontend/package.json").read_text(encoding="utf-8"))
-          if release.tag != os.environ["RELEASE_TAG"]:
-              raise SystemExit("Release tag does not match version.json")
-          if package["version"] != release.version:
-              raise SystemExit("frontend/package.json version does not match version.json")
-          if release.channel == "stable" and not release.frontend.auto_download:
-              raise SystemExit("Stable releases must enable frontend.autoDownload")
+          tag = os.environ["RELEASE_TAG"]
+          # Release naming is independent of the application's build metadata.
+          channel = "stable" if re.fullmatch(r"v?\d+\.\d+\.\d+(?:\+[0-9A-Za-z.-]+)?", tag) else "prerelease"
           commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
-              output.write(f"tag={release.tag}\ncommit={commit}\nchannel={release.channel}\n")
+              output.write(f"tag={tag}\ncommit={commit}\nchannel={channel}\n")
               output.write(f"frontend-version={release.frontend.version}\n")
           with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as output:
               output.write(f"MIKAZUKI_BUILD_COMMIT={commit}\n")
@@ -101,9 +89,7 @@ jobs:
         run: pnpm run build
 
       - name: Package frontend
-        run: >-
-          python -m mikazuki.scripts.package_frontend_release
-          --output release --expected-tag "$RELEASE_TAG"
+        run: python -m mikazuki.scripts.package_frontend_release --output release
 
       - name: Share frontend release assets
         uses: actions/upload-artifact@v6

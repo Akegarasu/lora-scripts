@@ -12,12 +12,12 @@
 
 1. **发布 Release**：发布正式版或预发布版时，自动构建该 Release 的 tag 并上传附件。
 2. **手动补包或重跑**：在 Actions 中选择 **Release frontend and Windows portable** → **Run workflow**，
-   填写已有 Release 的 `tag`。构建源码取自这个 tag；不会用所选工作流分支的 HEAD 替代，也不会创建或移动 tag。
+   填写已有 Git `tag`。构建源码取自这个 tag；不会用所选工作流分支的 HEAD 替代，也不会创建或移动 tag。Release 不存在时会自动创建。
 3. **推送 `v*` tag**：发布前端和 Release 后，通过 `workflow_call` 显式调用便携版流程。
    这是因为 [GITHUB_TOKEN 创建的 Release 不会触发新的 Release 工作流](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。
 
-目标 tag 必须已包含便携版构建脚本，且与 `version.json` 的 `tag` 一致。
-应用与前端版本也必须一致；准备版本的步骤见[前端版本与分发说明](frontend-releases.md)。
+目标 tag 必须已包含便携版构建脚本，但无需与 `version.json` 的 `tag` 一致。
+构建信息仍使用源码中的应用与前端版本，详见[前端版本与分发说明](frontend-releases.md)。
 重跑会覆盖同名附件；只需内置 `GITHUB_TOKEN` 的 `contents: write` 权限，无需额外 PAT。
 
 ## 前端构建与分发
@@ -26,7 +26,7 @@
 
 ```text
 推送 tag / 发布 Release / 手动指定 tag
-  └─ 校验版本 → 安装锁定依赖（pnpm 缓存）→ 前端测试 → 类型检查与构建
+  └─ 读取构建信息 → 安装锁定依赖（pnpm 缓存）→ 前端测试 → 类型检查与构建
       └─ 打包 frontend-dist.zip + SHA-256 → 保存 Actions artifact
           └─ 上传 GitHub Release（已存在时覆盖同名附件）
               ├─ Windows：下载同一 artifact → 校验 checksum/版本/commit → 便携包
@@ -42,7 +42,7 @@ Actions artifact 保留 7 天；期间可用 **Re-run failed jobs** 重试失败
 ## 构建内容与验证
 
 - 使用 Node.js 22、pnpm 10.26.2 和锁文件执行 `pnpm install --frozen-lockfile`、`pnpm test`、`pnpm run build`。
-- 调用现有前端打包器校验版本及 `build-info.json`，同时上传 `frontend-dist.zip` 和 SHA-256；
+- 调用前端打包器确认 `build-info.json` 与源码版本一致，同时上传 `frontend-dist.zip` 和 SHA-256；
   将同一份 `frontend/dist` 放入便携包，首次启动无需另行下载前端或安装 Node.js。
 - 使用 Python 3.11.9 x64、PyTorch 2.7.0 / torchvision 0.22.0（CUDA 12.8）、xformers 0.0.30，
   安装根 `requirements.txt` 和 ONNX Runtime GPU。额外依赖版本集中在 `.github/portable/requirements.txt`。

@@ -52,7 +52,6 @@ jobs:
       - name: Verify and unpack frontend
         run: |
           $version = Get-Content version.json -Raw | ConvertFrom-Json
-          if ($version.tag -cne $env:RELEASE_TAG) { throw 'Release tag does not match version.json.' }
           $expected = ((Get-Content release/frontend-dist.zip.sha256 -Raw).Trim() -split '\s+')[0]
           $actual = (Get-FileHash release/frontend-dist.zip -Algorithm SHA256).Hash
           if ($expected -notmatch '^[0-9a-fA-F]{64}$' -or $actual -ine $expected) {

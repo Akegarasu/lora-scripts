@@ -10,15 +10,18 @@
 
 ## 发布流程
 
-准备稳定版本时：
+创建并推送 `v*` tag（例如 `v2.1.0`）、发布 Release，或手动指定已有 Git tag，
+都会触发 `release-frontend.yml`。工作流运行前端测试、类型检查与构建，并将以下文件上传到实际指定的 tag：
 
-1. 将 `version.json` 中的 `version`、`tag` 和 `frontend.version` 更新为目标版本。
-2. 将 `channel` 改为 `stable`，并将 `frontend.autoDownload` 改为 `true`。
-3. 同步更新 `frontend/package.json` 的版本。
-4. 提交后创建并推送同名 tag，例如 `v2.1.0`。
-5. `release-frontend.yml` 会运行前端测试、类型检查与构建，并发布以下两个文件：
-   - `frontend-dist.zip`
-   - `frontend-dist.zip.sha256`
+- `frontend-dist.zip`
+- `frontend-dist.zip.sha256`
+
+发布 tag 无需与 `version.json` 的 `tag` 或版本一致，也不要求同步 `frontend/package.json` 的版本或启用自动下载。
+Release 不存在时会自动创建：`vX.Y.Z`（可带 `+build` 后缀）作为正式版，其他 tag 作为预发布版；已有 Release 保留原设置并覆盖同名附件。
+
+应用版本和前端构建信息仍取自 `version.json`，CI 不会改写这些元数据。
+如需让源码检出后自动下载前端，应在打 tag 前将该文件的 `tag` 设为实际发布 tag，并启用 `frontend.autoDownload`；
+应用版本、前端版本和 `channel` 按实际发布内容更新。未启用自动下载时，源码运行仍需手动构建前端。
 
 前端仅构建一次，结果通过 Actions artifact 同时用于 GitHub Release、Jihulab 镜像和 Windows 包。
 GitHub 前端附件发布成功后，会自动调用 Windows NVIDIA 便携版构建，将前端、后端和 Python/CUDA 依赖一起打包为
@@ -33,7 +36,7 @@ cd frontend
 pnpm install --frozen-lockfile
 pnpm run build
 cd ..
-python -m mikazuki.scripts.package_frontend_release --output release --expected-tag v2.1.0
+python -m mikazuki.scripts.package_frontend_release --output release
 ```
 
 ## 下载源

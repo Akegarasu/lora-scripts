@@ -121,7 +121,7 @@ docker run --gpus all -p 28000:28000 lora-scripts:local
 
 ## 发布
 
-发布版本 tag 前，先同步 `version.json` 和 `frontend/package.json`。推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和 Windows 便携包。手动运行需填写已有 Release 的 tag。
+推送 `v*` tag、发布 Release，或手动运行 **Release frontend and Windows portable**，都会构建一次前端，并将同一制品用于前端 ZIP 和 Windows 便携包。手动运行需填写已有 Git tag，工作流会在需要时创建 Release。发布 tag 无需与 `version.json` 或 `frontend/package.json` 中的版本一致。
 
 完整流程见[前端版本准备](docs/frontend-releases.md)和 [Windows 打包与重试说明](docs/windows-portable.md)。
 

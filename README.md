@@ -121,7 +121,7 @@ For script-based training, edit and run `scripts/train.ps1` on Windows or `scrip
 
 ## Releases
 
-Keep `version.json` and `frontend/package.json` aligned before publishing a version tag. Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and Windows portable package. Manual runs require an existing Release tag.
+Pushing a `v*` tag, publishing a Release, or manually running **Release frontend and Windows portable** builds the frontend once and uses that artifact for the frontend ZIP and Windows portable package. Manual runs require an existing Git tag; the workflow creates the Release if needed. The release tag does not have to match the versions in `version.json` or `frontend/package.json`.
 
 See [frontend release preparation](docs/frontend-releases.md) and [Windows packaging and retry instructions](docs/windows-portable.md) for the complete process.
 

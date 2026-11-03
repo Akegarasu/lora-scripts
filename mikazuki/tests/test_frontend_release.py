@@ -333,11 +333,7 @@ class FrontendReleaseTests(unittest.TestCase):
         self.write_dist("2.1.0")
         output = self.root / "release"
 
-        archive, checksum = package_frontend(
-            self.root,
-            output,
-            expected_tag="v2.1.0",
-        )
+        archive, checksum = package_frontend(self.root, output)
 
         self.assertTrue(archive.is_file())
         self.assertTrue(checksum.is_file())
@@ -347,12 +343,23 @@ class FrontendReleaseTests(unittest.TestCase):
             self.assertIn("index.html", bundle.namelist())
             self.assertIn("build-info.json", bundle.namelist())
 
-    def test_stable_package_requires_auto_download(self) -> None:
+    def test_packaging_does_not_require_auto_download_or_package_version(self) -> None:
         self.write_version(auto_download=False)
         self.write_dist("2.1.0")
+        (self.root / "frontend" / "package.json").write_text(
+            json.dumps({"version": "2.0.0-dev"}), encoding="utf-8"
+        )
+
+        archive, checksum = package_frontend(self.root, self.root / "release")
+
+        self.assertTrue(archive.is_file())
+        self.assertTrue(checksum.is_file())
+
+    def test_packaging_rejects_stale_frontend_build(self) -> None:
+        self.write_dist("2.0.0")
 
         with self.assertRaises(FrontendReleaseError):
-            package_frontend(self.root, self.root / "release", expected_tag="v2.1.0")
+            package_frontend(self.root, self.root / "release")
 
 
 if __name__ == "__main__":
